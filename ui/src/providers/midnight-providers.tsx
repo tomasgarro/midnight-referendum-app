@@ -11,8 +11,9 @@ interface MidnightProvidersContextValue {
 
 const MidnightProvidersContext = createContext<MidnightProvidersContextValue | null>(null);
 
+const REAL_RUNTIME_ENABLED = import.meta.env.VITE_APP_MODE === 'preview';
 /** Set to run the wallet-less sponsored-relayer path. */
-const RELAYER_URL = import.meta.env.VITE_RELAYER_URL?.trim() || '';
+const RELAYER_URL = REAL_RUNTIME_ENABLED ? import.meta.env.VITE_RELAYER_URL?.trim() || '' : '';
 const PROOF_SERVER_URL =
   import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || 'http://localhost:6300';
 const NETWORK_ID = import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || 'preview';
@@ -35,6 +36,16 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
 
   useEffect(() => {
     let cancelled = false;
+
+    // Demo is a hard runtime boundary, not only presentation. Even stale or
+    // inherited deployment variables must not activate a wallet, relayer,
+    // indexer, or proof-server path in a public synthetic build.
+    if (!REAL_RUNTIME_ENABLED) {
+      setProviders(null);
+      setReferendumV2Providers(null);
+      setError(null);
+      return;
+    }
 
     // Relayer mode is the default civic path: the citizen has no wallet, so
     // providers must come up without one. The wallet path stays available for

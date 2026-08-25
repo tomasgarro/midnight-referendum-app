@@ -5,10 +5,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "ui/dist",
   "cleanUrls": true,
+  "git": {
+    "deploymentEnabled": false
+  },
   "rewrites": [
     {
       "source": "/((?!assets/).*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
   "headers": [
