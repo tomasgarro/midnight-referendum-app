@@ -1,0 +1,46 @@
+# Install inside nginx's http context (for example /etc/nginx/conf.d/).
+limit_req_zone $binary_remote_addr zone=cico_passport_ip:10m rate=20r/m;
+
+server {
+    listen 443 ssl http2;
+    server_name passport-preview.example.org;
+
+    ssl_certificate /etc/letsencrypt/live/passport-preview.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/passport-preview.example.org/privkey.pem;
+
+    server_tokens off;
+    client_max_body_size 64k;
+
+    location = /health {
+        proxy_pass http://127.0.0.1:8791;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 10s;
+    }
+
+    location /v1/ {
+        limit_req zone=cico_passport_ip burst=10 nodelay;
+        proxy_pass http://127.0.0.1:8791;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 30s;
+        proxy_buffering off;
+    }
+
+    location / {
+        return 404;
+    }
+}
+
+server {
+    listen 80;
+    server_name passport-preview.example.org;
+    return 301 https://$host$request_uri;
+}

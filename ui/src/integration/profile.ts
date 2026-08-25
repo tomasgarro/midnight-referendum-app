@@ -1,6 +1,6 @@
-import type { PassportSession } from "midnight-referendum-api";
+import type { CivicPassportSession, PassportSession } from 'midnight-referendum-api';
 
-const LOCAL_PROFILE_ID_KEY = "referendum_civico_local_profile_id";
+const LOCAL_PROFILE_ID_KEY = 'referendum_civico_local_profile_id';
 
 function shortHash(value: string): string {
   let first = 0x811c9dc5;
@@ -22,7 +22,7 @@ function localProfileId(): string {
     localStorage.setItem(LOCAL_PROFILE_ID_KEY, created);
     return created;
   } catch {
-    return `local-${shortHash("referendum-civico-session")}`;
+    return `local-${shortHash('referendum-civico-session')}`;
   }
 }
 
@@ -30,8 +30,12 @@ function localProfileId(): string {
  * Creates a display identifier only. It is not used for eligibility,
  * commitments, nullifiers, or any Compact private input.
  */
-export function deriveProfileId(session: PassportSession | null): string {
-  const address = session?.passportContract?.address;
+export function deriveProfileId(session: PassportSession | CivicPassportSession | null): string {
+  const address = session
+    ? 'sessionId' in session
+      ? session.accountAddress
+      : session.passportContract?.address
+    : undefined;
   if (!address) return localProfileId();
   return `passport-${shortHash(`referendum-civico:profile:v1:${address}`)}`;
 }

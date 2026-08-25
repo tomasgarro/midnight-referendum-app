@@ -1,6 +1,6 @@
-import { ArrowRight, CircleNotch, SignOut, Wallet } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
-import { useWallet } from "@/hooks/use-wallet";
+import { ArrowRight, CircleNotch, SignOut, Wallet } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import { useWallet } from '@/hooks/use-wallet';
 
 function truncateAddress(address: string): string {
   if (address.length <= 16) return address;
@@ -10,7 +10,7 @@ function truncateAddress(address: string): string {
 export function WalletWidget() {
   const { status, shieldedAddress, error, connect, disconnect } = useWallet();
 
-  if (status === "connecting") {
+  if (status === 'connecting') {
     return (
       <Button variant="outline" disabled>
         <CircleNotch className="animate-spin" />
@@ -19,7 +19,7 @@ export function WalletWidget() {
     );
   }
 
-  if (status === "connected" && shieldedAddress) {
+  if (status === 'connected' && shieldedAddress) {
     return (
       <div className="flex items-center gap-2">
         <span className="text-sm font-mono text-muted-foreground">
@@ -39,7 +39,7 @@ export function WalletWidget() {
         Conectar Lace
         <ArrowRight />
       </Button>
-      {status === "error" && error && (
+      {status === 'error' && error && (
         <p className="max-w-64 text-right text-xs text-destructive">{error}</p>
       )}
     </div>

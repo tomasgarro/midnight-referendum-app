@@ -16,7 +16,7 @@
  * a single scalar per sample and discarded.
  */
 
-export type LivenessPrompt = "turn-left" | "turn-right" | "lean-closer" | "nod";
+export type LivenessPrompt = 'turn-left' | 'turn-right' | 'lean-closer' | 'nod';
 
 export interface LivenessStep {
   prompt: LivenessPrompt;
@@ -32,13 +32,13 @@ export interface LivenessSample {
 }
 
 export const PROMPT_COPY: Record<LivenessPrompt, string> = {
-  "turn-left": "Girá la cabeza hacia la izquierda",
-  "turn-right": "Girá la cabeza hacia la derecha",
-  "lean-closer": "Acercate un poco a la cámara",
-  nod: "Asentí con la cabeza",
+  'turn-left': 'Girá la cabeza hacia la izquierda',
+  'turn-right': 'Girá la cabeza hacia la derecha',
+  'lean-closer': 'Acercate un poco a la cámara',
+  nod: 'Asentí con la cabeza',
 };
 
-const ALL_PROMPTS: LivenessPrompt[] = ["turn-left", "turn-right", "lean-closer", "nod"];
+const ALL_PROMPTS: LivenessPrompt[] = ['turn-left', 'turn-right', 'lean-closer', 'nod'];
 
 /** Motion above this counts as the holder responding to the prompt. */
 export const MOTION_THRESHOLD = 0.06;
@@ -83,7 +83,7 @@ export function motionEnergy(previous: Uint8ClampedArray, next: Uint8ClampedArra
   return counted === 0 ? 0 : total / counted / 255;
 }
 
-export type StepVerdict = "passed" | "no-motion" | "too-much-motion";
+export type StepVerdict = 'passed' | 'no-motion' | 'too-much-motion';
 
 /**
  * A step passes when motion crosses the threshold at least once inside the
@@ -91,14 +91,14 @@ export type StepVerdict = "passed" | "no-motion" | "too-much-motion";
  */
 export function evaluateStep(samples: LivenessSample[], step: LivenessStep): StepVerdict {
   const inWindow = samples.filter((sample) => sample.at >= 0 && sample.at <= step.windowMs);
-  if (inWindow.length === 0) return "no-motion";
+  if (inWindow.length === 0) return 'no-motion';
 
   const peak = Math.max(...inWindow.map((sample) => sample.energy));
   const mean = inWindow.reduce((sum, sample) => sum + sample.energy, 0) / inWindow.length;
 
-  if (mean >= CHAOS_THRESHOLD) return "too-much-motion";
-  if (peak < MOTION_THRESHOLD) return "no-motion";
-  return "passed";
+  if (mean >= CHAOS_THRESHOLD) return 'too-much-motion';
+  if (peak < MOTION_THRESHOLD) return 'no-motion';
+  return 'passed';
 }
 
 export interface LivenessOutcome {
@@ -112,7 +112,7 @@ export function evaluateLiveness(
   samplesByStep: LivenessSample[][],
 ): LivenessOutcome {
   const verdicts = script.map((step, index) => evaluateStep(samplesByStep[index] ?? [], step));
-  const failedAt = verdicts.findIndex((verdict) => verdict !== "passed");
+  const failedAt = verdicts.findIndex((verdict) => verdict !== 'passed');
   return {
     passed: script.length > 0 && failedAt === -1,
     verdicts,
@@ -122,11 +122,11 @@ export function evaluateLiveness(
 
 export function livenessFailureCopy(verdict: StepVerdict): string {
   switch (verdict) {
-    case "no-motion":
-      return "No detectamos movimiento. Asegurate de que se te vea bien y repetí el gesto.";
-    case "too-much-motion":
-      return "Demasiado movimiento para leer el gesto. Sostené el teléfono más firme.";
+    case 'no-motion':
+      return 'No detectamos movimiento. Asegurate de que se te vea bien y repetí el gesto.';
+    case 'too-much-motion':
+      return 'Demasiado movimiento para leer el gesto. Sostené el teléfono más firme.';
     default:
-      return "";
+      return '';
   }
 }

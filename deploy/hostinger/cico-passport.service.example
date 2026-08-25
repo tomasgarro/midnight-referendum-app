@@ -1,0 +1,42 @@
+[Unit]
+Description=CICO Passport Preview evidence and credential issuer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cico-passport
+Group=cico-passport
+WorkingDirectory=/srv/cico-passport/current
+EnvironmentFile=/etc/cico-passport/cico.env
+ExecStart=/usr/bin/node cico-service/dist/server.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=10min
+TimeoutStopSec=60s
+KillSignal=SIGTERM
+UMask=0077
+
+# The state journal contains credential recovery material. Only this service
+# may write it; the application and configuration trees stay read-only.
+StateDirectory=cico-passport
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/cico-passport
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

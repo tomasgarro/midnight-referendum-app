@@ -2,20 +2,14 @@ import {
   CompactTypeBytes,
   CompactTypeVector,
   persistentHash,
-} from "@midnight-ntwrk/compact-runtime";
-import type {
-  EligibilityAttestation,
-  PassportSession,
-} from "./types.js";
+} from '@midnight-ntwrk/compact-runtime';
+import type { EligibilityAttestation, PassportSession } from './types.js';
 
 const commitmentHash = new CompactTypeVector(2, new CompactTypeBytes(32));
 
 /** Matches the Compact eligibility leaf used by the referendum contract. */
 export function eligibilityCommitmentForSecret(secret: Uint8Array): Uint8Array {
-  return persistentHash(commitmentHash, [
-    pad32("referendum:commitment:"),
-    secret,
-  ]);
+  return persistentHash(commitmentHash, [pad32('referendum:commitment:'), secret]);
 }
 
 function pad32(value: string): Uint8Array {
@@ -49,11 +43,11 @@ export function createFixtureEligibilityProvider(
       return {
         voterSecret,
         attestation: {
-          provider: "fixture",
+          provider: 'fixture',
           eventId,
           subjectCommitment: eligibilityCommitmentForSecret(voterSecret),
           issuedAt: now.toISOString(),
-          claims: { ageOver18: true, residency: "fixture" },
+          claims: { ageOver18: true, residency: 'fixture' },
         },
       };
     },
@@ -62,7 +56,7 @@ export function createFixtureEligibilityProvider(
 
 /** Explicit extension point; it stays disabled until an attestation verifier exists. */
 export function createExternalEligibilityProvider(
-  provider: Exclude<EligibilityAttestation["provider"], "fixture">,
+  provider: Exclude<EligibilityAttestation['provider'], 'fixture'>,
 ): EligibilityProvider {
   return {
     async attest() {

@@ -1,24 +1,25 @@
-import WebSocket from "ws";
+import WebSocket from 'ws';
+
 // The wallet SDK's indexer client expects a global WebSocket, which Node does
 // not provide in the shape it wants. This must run before the SDK is used.
 (globalThis as unknown as { WebSocket: unknown }).WebSocket ??= WebSocket;
 
-import * as ledger from "@midnight-ntwrk/ledger-v8";
-import { InMemoryTransactionHistoryStorage } from "@midnight-ntwrk/wallet-sdk-abstractions";
-import { DustWallet } from "@midnight-ntwrk/wallet-sdk-dust-wallet";
+import * as ledger from '@midnight-ntwrk/ledger-v8';
+import { InMemoryTransactionHistoryStorage } from '@midnight-ntwrk/wallet-sdk-abstractions';
+import { DustWallet } from '@midnight-ntwrk/wallet-sdk-dust-wallet';
 import {
-  WalletFacade,
-  WalletEntrySchema,
   type DefaultConfiguration,
-} from "@midnight-ntwrk/wallet-sdk-facade";
-import { HDWallet, Roles } from "@midnight-ntwrk/wallet-sdk-hd";
-import { ShieldedWallet } from "@midnight-ntwrk/wallet-sdk-shielded";
+  WalletEntrySchema,
+  WalletFacade,
+} from '@midnight-ntwrk/wallet-sdk-facade';
+import { HDWallet, Roles } from '@midnight-ntwrk/wallet-sdk-hd';
+import { ShieldedWallet } from '@midnight-ntwrk/wallet-sdk-shielded';
 import {
-  UnshieldedWallet,
   createKeystore,
   PublicKey as UnshieldedPublicKey,
-} from "@midnight-ntwrk/wallet-sdk-unshielded-wallet";
-import type { RelayerConfig } from "./config.js";
+  UnshieldedWallet,
+} from '@midnight-ntwrk/wallet-sdk-unshielded-wallet';
+import type { RelayerConfig } from './config.js';
 
 export interface RelayerWallet {
   facade: WalletFacade;
@@ -38,10 +39,10 @@ export interface RelayerWallet {
 export const BALANCE_TTL_MS = 60 * 60 * 1000;
 
 export async function startRelayerWallet(config: RelayerConfig): Promise<RelayerWallet> {
-  const seed = Buffer.from(config.seedHex, "hex");
+  const seed = Buffer.from(config.seedHex, 'hex');
   const hd = HDWallet.fromSeed(seed);
-  if (hd.type !== "seedOk") {
-    throw new Error("RELAYER_SEED could not be turned into an HD wallet.");
+  if (hd.type !== 'seedOk') {
+    throw new Error('RELAYER_SEED could not be turned into an HD wallet.');
   }
 
   const derived = hd.hdWallet
@@ -51,8 +52,8 @@ export async function startRelayerWallet(config: RelayerConfig): Promise<Relayer
   // Drop the root key as soon as the three role keys exist, so it does not sit
   // in memory for the lifetime of a long-running server.
   hd.hdWallet.clear();
-  if (derived.type !== "keysDerived") {
-    throw new Error("Could not derive the relayer role keys from the seed.");
+  if (derived.type !== 'keysDerived') {
+    throw new Error('Could not derive the relayer role keys from the seed.');
   }
 
   const shieldedSecretKeys = ledger.ZswapSecretKeys.fromSeed(derived.keys[Roles.Zswap]);
@@ -142,7 +143,7 @@ export async function balanceAndFinalize(
   console.log(`[relayer] balanced: recipe=${recipe.type} dustSpends=${spendCount}`);
   if (recipeBalancing && spendCount === 0) {
     console.warn(
-      "[relayer] WARNING: dust balancing selected no coins — the node will reject this as NotNormalized",
+      '[relayer] WARNING: dust balancing selected no coins — the node will reject this as NotNormalized',
     );
   }
   return wallet.facade.finalizeRecipe(recipe);
@@ -151,23 +152,23 @@ export async function balanceAndFinalize(
 /** Proven but unbound — what arrives at /balance. */
 export function deserializeUnbound(hex: string): UnboundTransaction {
   return ledger.Transaction.deserialize(
-    "signature",
-    "proof",
-    "pre-binding",
-    Uint8Array.from(Buffer.from(hex, "hex")),
+    'signature',
+    'proof',
+    'pre-binding',
+    Uint8Array.from(Buffer.from(hex, 'hex')),
   );
 }
 
 /** Fully bound — what arrives at /submit. */
 export function deserializeFinalized(hex: string): ledger.FinalizedTransaction {
   return ledger.Transaction.deserialize(
-    "signature",
-    "proof",
-    "binding",
-    Uint8Array.from(Buffer.from(hex, "hex")),
+    'signature',
+    'proof',
+    'binding',
+    Uint8Array.from(Buffer.from(hex, 'hex')),
   );
 }
 
 export function serializeFinalized(tx: ledger.FinalizedTransaction): string {
-  return Buffer.from(tx.serialize()).toString("hex");
+  return Buffer.from(tx.serialize()).toString('hex');
 }

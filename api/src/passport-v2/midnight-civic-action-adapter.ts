@@ -1,0 +1,322 @@
+import type { MerkleTreePath } from '@midnight-ntwrk/compact-runtime';
+import { ageClassCode, assuranceCode, isoTimestampSeconds, padBytes32 } from './crypto.js';
+import {
+  assertReferendumRegistryBinding,
+  createFrozenCredentialRegistryReference,
+  findCredentialPath,
+  parseCredentialRegistryV1,
+  parseReferendumV2,
+  type ReferendumV2PrivateState,
+} from './midnight-v2.js';
+import {
+  createReferendumV2Executor,
+  type ReferendumV2Executor,
+  type ReferendumV2ExecutorConfig,
+  type ReferendumV2Providers,
+} from './midnight-v2-executors.js';
+import type {
+  CivicActionPort,
+  CivicCredentialPort,
+  CivicCredentialPrivateMaterial,
+  CivicCredentialPrivateStatePort,
+} from './ports.js';
+import type { CanonicalReceipt, CastVoteRequest, PublicCohortRequest } from './types.js';
+import { CivicCredentialError } from './types.js';
+
+const privateStateActionTails = new WeakMap<object, Promise<void>>();
+
+export interface ReferendumV2CatalogEntry {
+  readonly referendumId: string;
+  readonly contractAddress: string;
+  readonly config: ReferendumV2ExecutorConfig;
+}
+
+export interface MidnightCivicActionStateResolver {
+  assertCanonicalBinding(entry: ReferendumV2CatalogEntry): Promise<void>;
+  resolveCredentialPath(
+    entry: ReferendumV2CatalogEntry,
+    credentialLeaf: Uint8Array,
+  ): Promise<MerkleTreePath<Uint8Array>>;
+}
+
+export interface MidnightCivicActionAdapterOptions {
+  readonly providers: ReferendumV2Providers;
+  readonly credential: CivicCredentialPort & CivicCredentialPrivateStatePort;
+  readonly referenda: readonly ReferendumV2CatalogEntry[];
+  readonly randomBytes?: (length: number) => Uint8Array;
+  readonly stateResolver?: MidnightCivicActionStateResolver;
+  readonly executorFactory?: (
+    providers: ReferendumV2Providers,
+    config: ReferendumV2ExecutorConfig,
+  ) => ReferendumV2Executor;
+  /** Optional durable/indexer-backed lookup used after reload or an uncertain response. */
+  readonly receiptResolver?: (transactionId: string) => Promise<CanonicalReceipt | null>;
+}
+
+/**
+ * Browser-owned v2 vote adapter. It prepares the Compact witness locally and
+ * calls the Midnight executor; no HTTP action request ever receives `choice`.
+ */
+export class MidnightCivicActionAdapter implements CivicActionPort {
+  readonly adapterName = 'midnight-browser-civic-actions-v2';
+
+  private readonly providers: ReferendumV2Providers;
+  private readonly credential: CivicCredentialPort & CivicCredentialPrivateStatePort;
+  private readonly referenda: ReadonlyMap<string, ReferendumV2CatalogEntry>;
+  private readonly randomBytes: (length: number) => Uint8Array;
+  private readonly stateResolver: MidnightCivicActionStateResolver;
+  private readonly executorFactory: NonNullable<
+    MidnightCivicActionAdapterOptions['executorFactory']
+  >;
+  private readonly receiptResolver?: MidnightCivicActionAdapterOptions['receiptResolver'];
+  private readonly receipts = new Map<string, CanonicalReceipt>();
+  private readonly pendingVotes = new Map<
+    string,
+    {
+      readonly choice: CastVoteRequest['choice'];
+      readonly authorizationHandle: string;
+      readonly operation: Promise<CanonicalReceipt>;
+    }
+  >();
+
+  constructor(options: MidnightCivicActionAdapterOptions) {
+    this.providers = options.providers;
+    this.credential = options.credential;
+    this.referenda = new Map(
+      options.referenda.map((entry) => {
+        if (!entry.referendumId.trim() || !entry.contractAddress.trim()) {
+          throw new TypeError('Referendum catalog IDs and addresses must not be empty');
+        }
+        return [entry.referendumId, entry] as const;
+      }),
+    );
+    if (this.referenda.size !== options.referenda.length) {
+      throw new TypeError('Referendum catalog IDs must be unique');
+    }
+    this.randomBytes = options.randomBytes ?? secureRandomBytes;
+    this.stateResolver = options.stateResolver ?? createCanonicalStateResolver(options.providers);
+    this.executorFactory = options.executorFactory ?? createReferendumV2Executor;
+    this.receiptResolver = options.receiptResolver;
+  }
+
+  async castVote(request: CastVoteRequest): Promise<CanonicalReceipt> {
+    const existing = this.pendingVotes.get(request.referendumId);
+    if (existing) {
+      if (
+        existing.choice !== request.choice ||
+        existing.authorizationHandle !== request.authorization.handle
+      ) {
+        throw new CivicCredentialError(
+          'CONFLICT',
+          'A different vote is already pending for this referendum',
+        );
+      }
+      return existing.operation;
+    }
+    const operation = withPrivateStateActionLock(actionLockKey(this.providers), () =>
+      this.castVoteOnce(request),
+    );
+    this.pendingVotes.set(request.referendumId, {
+      choice: request.choice,
+      authorizationHandle: request.authorization.handle,
+      operation,
+    });
+    try {
+      return await operation;
+    } finally {
+      if (this.pendingVotes.get(request.referendumId)?.operation === operation) {
+        this.pendingVotes.delete(request.referendumId);
+      }
+    }
+  }
+
+  private async castVoteOnce(request: CastVoteRequest): Promise<CanonicalReceipt> {
+    const entry = this.referenda.get(request.referendumId);
+    if (!entry) throw new CivicCredentialError('POLICY_NOT_SATISFIED', 'Unknown referendum');
+
+    const authorization = await this.credential.getActionAuthorization();
+    if (!authorization || authorization.handle !== request.authorization.handle) {
+      throw new CivicCredentialError(
+        'CREDENTIAL_NOT_FOUND',
+        'The civic credential authorization is missing or stale',
+      );
+    }
+    const material = await this.credential.getPrivateCredentialMaterial();
+    if (!material) {
+      throw new CivicCredentialError(
+        'CREDENTIAL_NOT_FOUND',
+        'The browser has no issued private credential material',
+      );
+    }
+
+    await this.stateResolver.assertCanonicalBinding(entry);
+    const voterPath = await this.stateResolver.resolveCredentialPath(
+      entry,
+      material.credentialLeaf,
+    );
+    const voteSalt = this.randomBytes(32);
+    const privateState = buildReferendumV2VoterPrivateState(
+      material,
+      voterPath,
+      request.choice,
+      voteSalt,
+    );
+    const executor = this.executorFactory(this.providers, entry.config);
+    await executor.join(entry.contractAddress, privateState);
+    const receipt = await executor.castVote();
+    assertVoteReceipt(receipt, entry.contractAddress);
+    this.receipts.set(receipt.transactionId, receipt);
+    return receipt;
+  }
+
+  async recordPublicCohort(_request: PublicCohortRequest): Promise<CanonicalReceipt> {
+    throw new CivicCredentialError(
+      'CAPABILITY_UNAVAILABLE',
+      'Public country cohort disclosure requires a separate audited opt-in contract',
+    );
+  }
+
+  async getCanonicalReceipt(transactionId: string): Promise<CanonicalReceipt | null> {
+    const resolved = await this.receiptResolver?.(transactionId);
+    if (resolved) {
+      if (resolved.transactionId !== transactionId || resolved.status !== 'confirmed') {
+        throw new Error('Canonical receipt resolver returned mismatched public data');
+      }
+      this.receipts.set(transactionId, resolved);
+      return resolved;
+    }
+    return this.receipts.get(transactionId) ?? null;
+  }
+}
+
+export function buildReferendumV2VoterPrivateState(
+  material: CivicCredentialPrivateMaterial,
+  voterPath: MerkleTreePath<Uint8Array>,
+  choice: CastVoteRequest['choice'],
+  voteSalt: Uint8Array,
+): ReferendumV2PrivateState {
+  return {
+    role: 'voter',
+    voterSecret: requireBytes32(material.voterSecret, 'voterSecret'),
+    holderBinding: requireBytes32(material.holderBinding, 'holderBinding'),
+    holderBlind: requireBytes32(material.holderBlind, 'holderBlind'),
+    credentialBlind: requireBytes32(material.credentialBlind, 'credentialBlind'),
+    credentialCountry: padBytes32(material.claims.country),
+    credentialAgeClass: ageClassCode(material.claims.ageClass),
+    credentialAssurance: assuranceCode(material.claims.assurance),
+    credentialClaimEpoch: BigInt(material.claims.credentialEpoch),
+    credentialValidUntil: isoTimestampSeconds(material.claims.validUntil, 'validUntil'),
+    voterPath,
+    voterChoice: choice,
+    voteSalt: requireBytes32(voteSalt, 'voteSalt'),
+  };
+}
+
+function createCanonicalStateResolver(
+  providers: ReferendumV2Providers,
+): MidnightCivicActionStateResolver {
+  return {
+    async assertCanonicalBinding(entry) {
+      const registryState = await providers.publicDataProvider.queryContractState(
+        entry.config.registry.registryContractAddress,
+      );
+      if (!registryState) throw new Error('Credential registry has no canonical state');
+      const reference = createFrozenCredentialRegistryReference(
+        entry.config.registry.registryContractAddress,
+        parseCredentialRegistryV1(registryState.data),
+      );
+      assertReferendumRegistryBinding(reference, {
+        registryId: entry.config.registry.registryId,
+        issuerId: entry.config.registry.issuerId,
+        credentialEpoch: entry.config.registry.credentialEpoch,
+        frozenCredentialRoot: entry.config.registry.frozenRoot,
+      });
+
+      const referendumState = await providers.publicDataProvider.queryContractState(
+        entry.contractAddress,
+      );
+      if (!referendumState) throw new Error('Referendum has no canonical state');
+      const referendum = parseReferendumV2(referendumState.data);
+      assertReferendumRegistryBinding(reference, referendum);
+      if (referendum.phase !== 'COMMIT' || referendum.closed) {
+        throw new Error('Referendum is not accepting votes');
+      }
+      if (!equalBytes(referendum.eventId, entry.config.eventId)) {
+        throw new Error('Referendum event ID does not match the catalog');
+      }
+    },
+    async resolveCredentialPath(entry, credentialLeaf) {
+      const registryState = await providers.publicDataProvider.queryContractState(
+        entry.config.registry.registryContractAddress,
+      );
+      if (!registryState) throw new Error('Credential registry has no canonical state');
+      return findCredentialPath(registryState.data, credentialLeaf);
+    },
+  };
+}
+
+function requireBytes32(value: Uint8Array, label: string): Uint8Array {
+  if (!(value instanceof Uint8Array) || value.length !== 32) {
+    throw new TypeError(`${label} must be exactly 32 bytes`);
+  }
+  return new Uint8Array(value);
+}
+
+function assertVoteReceipt(receipt: CanonicalReceipt, contractAddress: string): void {
+  if (
+    receipt.status !== 'confirmed' ||
+    receipt.action !== 'vote' ||
+    receipt.circuit !== 'castVote' ||
+    receipt.contractAddress !== contractAddress ||
+    receipt.network === 'mainnet'
+  ) {
+    throw new Error('Midnight did not return a canonical v2 vote receipt');
+  }
+}
+
+function secureRandomBytes(length: number): Uint8Array {
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new CivicCredentialError(
+      'ADAPTER_UNAVAILABLE',
+      'Secure browser randomness is unavailable',
+    );
+  }
+  return globalThis.crypto.getRandomValues(new Uint8Array(length));
+}
+
+function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= (left[index] ?? 0) ^ (right[index] ?? 0);
+  }
+  return difference === 0;
+}
+
+function actionLockKey(providers: ReferendumV2Providers): object {
+  const privateStateProvider = providers.privateStateProvider as unknown;
+  return privateStateProvider !== null &&
+    (typeof privateStateProvider === 'object' || typeof privateStateProvider === 'function')
+    ? privateStateProvider
+    : providers;
+}
+
+async function withPrivateStateActionLock<T>(key: object, action: () => Promise<T>): Promise<T> {
+  const previous = privateStateActionTails.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  privateStateActionTails.set(key, current);
+  await previous;
+
+  try {
+    return await action();
+  } finally {
+    release();
+    if (privateStateActionTails.get(key) === current) {
+      privateStateActionTails.delete(key);
+    }
+  }
+}

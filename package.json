@@ -6,30 +6,46 @@
   "workspaces": [
     "ui",
     "api",
-    "relayer"
+    "relayer",
+    "cico-service"
   ],
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
     "compile": "node scripts/compile-contract.mjs",
+    "compile:v2": "node scripts/compile-passport-v2-contracts.mjs",
     "test:sim": "vitest run contracts/referendum/referendum.test.ts",
+    "test:sim:v2": "npm run compile:v2 && npm run test:sim:v2:compiled",
+    "test:sim:v2:compiled": "vitest run contracts/passport-v2-contracts.test.ts",
     "dev": "npm run dev --workspace midnight-referendum-ui --",
-    "validate:contract": "npm run compile && npm run test:sim",
+    "validate:contract": "npm run compile && npm run test:sim && npm run test:sim:v2",
     "sync:contract": "node scripts/sync-contract-assets.mjs",
     "setup:linux": "bash scripts/setup-linux.sh",
     "verify:linux": "bash scripts/verify-linux.sh",
     "relayer": "npm run dev --workspace midnight-referendum-relayer",
     "relayer:address": "npm run address --workspace midnight-referendum-relayer",
     "relayer:dust": "npm run dust --workspace midnight-referendum-relayer",
+    "cico:build": "npm run build --workspace midnight-referendum-cico-service",
+    "cico:start": "npm run start --workspace midnight-referendum-cico-service",
     "deploy:preview": "node --env-file-if-exists=relayer/.env scripts/deploy-referendum.mjs",
-    "build": "npm run sync:contract && npm run build --workspace midnight-referendum-api && npm run build --workspace midnight-referendum-ui",
-    "test": "npm run test:sim && npm run test --workspace midnight-referendum-api && npm run test --workspace midnight-referendum-ui"
+    "build": "npm run sync:contract && npm run build --workspace midnight-referendum-api && npm run build --workspace midnight-referendum-cico-service && npm run build --workspace midnight-referendum-ui",
+    "test": "npm run test:sim && npm run test:sim:v2:compiled && npm run test --workspace midnight-referendum-api && npm run test --workspace midnight-referendum-cico-service && npm run test --workspace midnight-referendum-ui",
+    "test:e2e": "playwright test",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "quality": "biome check .",
+    "quality:fix": "biome check --write .",
+    "verify": "npm run quality && npm run verify:linux -- demo && npm run test:e2e",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.10",
     "@midnight-ntwrk/compact-runtime": "0.16.0",
     "@midnight-ntwrk/ledger-v8": "8.1.0",
     "@midnight-ntwrk/midnight-js-node-zk-config-provider": "^4.1.1",
+    "@playwright/test": "1.62.1",
+    "husky": "9.1.7",
     "typescript": "^5.7.0",
     "vitest": "4.1.0"
   },

@@ -1,4 +1,4 @@
-export type PreviewReadinessState = "demo" | "blocked" | "loading" | "ready";
+export type PreviewReadinessState = 'demo' | 'blocked' | 'loading' | 'ready';
 
 export interface PreviewReadiness {
   state: PreviewReadinessState;
@@ -7,7 +7,7 @@ export interface PreviewReadiness {
 }
 
 export interface PreviewReadinessInput {
-  appMode: "demo" | "preview";
+  appMode: 'demo' | 'preview';
   contractAddress: string | null;
   walletConnected: boolean;
   providersReady: boolean;
@@ -22,19 +22,21 @@ export interface PreviewReadinessInput {
  * the UI, browser tests, and a future deployment smoke check.
  */
 export function getPreviewReadiness(input: PreviewReadinessInput): PreviewReadiness {
-  if (input.appMode === "demo") {
+  if (input.appMode === 'demo') {
     return {
-      state: "demo",
-      label: "Solo lectura local",
-      message: "El modo local permite revisar la interfaz, pero no confirma votos ni crea comprobantes. Configurá Preview para enviar una transacción real.",
+      state: 'demo',
+      label: 'Solo lectura local',
+      message:
+        'El modo local permite revisar la interfaz, pero no confirma votos ni crea comprobantes. Configurá Preview para enviar una transacción real.',
     };
   }
 
   if (!input.contractAddress) {
     return {
-      state: "blocked",
-      label: "Preview requiere contrato",
-      message: "Preview no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS con un contrato desplegado.",
+      state: 'blocked',
+      label: 'Preview requiere contrato',
+      message:
+        'Preview no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS con un contrato desplegado.',
     };
   }
 
@@ -43,31 +45,32 @@ export function getPreviewReadiness(input: PreviewReadinessInput): PreviewReadin
   // providersError below.
   if (!input.relayerMode && !input.walletConnected) {
     return {
-      state: "blocked",
-      label: "Preview requiere wallet",
-      message: "Conectá un wallet DApp Connector para aprobar y balancear la transacción.",
+      state: 'blocked',
+      label: 'Preview requiere wallet',
+      message: 'Conectá un wallet DApp Connector para aprobar y balancear la transacción.',
     };
   }
 
   if (input.providersError) {
     return {
-      state: "blocked",
-      label: "Preview no disponible",
+      state: 'blocked',
+      label: 'Preview no disponible',
       message: `No se pudieron preparar los proveedores de Midnight: ${input.providersError}`,
     };
   }
 
   if (!input.providersReady) {
     return {
-      state: "loading",
-      label: "Preparando Preview",
-      message: "La wallet está conectada, pero los proveedores de Midnight todavía se están preparando.",
+      state: 'loading',
+      label: 'Preparando Preview',
+      message:
+        'La wallet está conectada, pero los proveedores de Midnight todavía se están preparando.',
     };
   }
 
   return {
-    state: "ready",
-    label: "Preview listo",
-    message: "Preview está listo para preparar una transacción real.",
+    state: 'ready',
+    label: 'Preview listo',
+    message: 'Preview está listo para preparar una transacción real.',
   };
 }

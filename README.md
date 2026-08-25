@@ -11,6 +11,24 @@ referendum.
 
 ---
 
+## Passport-v2 status
+
+The repository contains two generations. The original hackathon/DNI contract and its historical Preview transcript remain below as reproducible evidence for the v1 prototype. The active `feat/passport-credential-v2` work replaces country-specific DNI enrollment with a provider-neutral, all-passport architecture:
+
+- Midnight Passport is the session, visible-profile and consent surface.
+- Rarimo is a replaceable NFC/passport-evidence adapter behind the CICO issuer.
+- `CredentialRegistryV1` issues reusable, issuer-bound credentials; each `ReferendumV2` pins an exact frozen registry root and either a global or country policy.
+- The ballot choice, voter secret, holder opening and Compact witness stay in the citizen browser.
+- Only the Midnight indexer can turn a submitted transaction into a confirmed receipt.
+
+The complete wallet-less **local demo** is synthetic and labels itself as such. The real Passport-v2 browser action currently uses wallet-derived Midnight providers; an atomic sponsored action endpoint is still pending. The Rarimo boundary now has a hardened self-hosted-verifier adapter, proof-to-enrollment/holder binding, claim validation, durable replay state, and a runnable Preview-only Midnight issuer process with independent fee-wallet and Compact-authority secrets. A pinned/running verificator, funded/deployed registry, physical NFC transcript and hosted credentials are still external gates.
+
+The V1 registry lifecycle is intentionally staged: participants enroll while an epoch is open, the canonical root is reconciled and frozen, and only then do matching consultations open. A later passport scan enters the next epoch rather than pretending to belong to an older frozen root. See [ADR-006](docs/adr/ADR-006-credential-epoch-lifecycle.md).
+
+The official Midnight Passport SDK currently describes itself as planning/spec work with a reduced beta defined. CICO therefore integrates its available profile bridge through `PassportSessionPort` and keeps nationality, age, private-witness and contract-action capabilities behind replaceable ports rather than claiming Passport exposes them today. See [the product roadmap](docs/ROADMAP.md), [deployment gates](docs/DEPLOYMENT.md), and [ADR-001](docs/adr/ADR-001-passport-first-boundaries.md).
+
+Everything under **Live on Midnight Preview** later in this README is v1 evidence. Those transaction IDs do not prove that Passport-v2 enrollment, `CredentialRegistryV1`, `ReferendumV2`, or the new browser journey have run live.
+
 ## The problem
 
 Digital civic consultation forces a choice that shouldn't have to be made.
@@ -278,11 +296,50 @@ where the edges are.
 | --- | --- |
 | Contract | `71644dd931b8f862119f78c57fd1cc9d8f3601a7a1e892de414c77db24aecd38` |
 | DUST registration tx | `0034a5b1b8d5a004b49fb84d7af0bf177b8ba16ef6a741e95673fa4660a2503f3f` |
+| Eligibility issued tx | `48fbbfa5c27ffb12f0573bce353dd172b0030e91ab860daf5243437bb3e873df` |
+| **`castVote` tx** | `31882c56d7d7589c20abf4a832e4a9c106c648345baa24de860ea67bdfd0f440` |
 
 The deployment went out **through the relayer**, so it is also proof of the
 whole sponsored path: the browser-side provider set balanced an unbound
 transaction against the relayer's coins, proved it on a local proof server,
 and submitted it. No wallet was involved at any point.
+
+A real ballot is now on chain. `castVote` landed in block 331474 with status
+`SucceedEntirely`, authorised purely by Merkle membership and the nullifier —
+the submitting relayer is not the voter and cannot be linked to the ballot.
+Two follow-up checks confirm the contract is actually enforcing what it claims:
+
+- Re-running the same secret is rejected on chain with
+  `failed assert: This voter has already voted in this referendum` — the
+  nullifier prevents double voting.
+- A secret that was never issued fails before any proving with
+  `This wallet is not present in the referendum eligibility tree`.
+
+Reproduce it with [`scripts/cast-vote-e2e.mjs`](scripts/cast-vote-e2e.mjs).
+The tally reads `phase: COMMIT` with an empty `tally` — correct for
+commit–reveal, since ballots stay hidden until the organizer reveals them.
+
+### A referendum counted end to end
+
+The demo contract above is deliberately left open, so a second referendum was
+deployed to carry the whole lifecycle through to a result on Preview:
+`2c25fabe2d223de25b72247f365f17e5bc8370aeb6ad73826fb7cc1cb6ff757b`.
+
+| Step | Transaction |
+| --- | --- |
+| Issue voter A | `c50d8c5df1163ebe123fd7abcdae003c8e7bcfab7c5d6f9dd341e1b49505424b` |
+| Issue voter B | `3bf2f52bd883e434a30aee54ed742eb269ea512cde8271e2ee953516992d2709` |
+| Ballot A (YES) | `a22c248500f7ccf0b0a152a24eb4bf8fa0724c6e5eb68194995107a7711cc543` |
+| Ballot B (NO) | `705321806a191b8d27a63326dad263aea6a01fe4a9fbf2d7915b8c7060251080` |
+| Reveal YES | `ce04e8aef6541e9fc54ed57724555eb4e68f94311fa0ebec2bce47e7ddf044eb` |
+| Reveal NO | `4b1bb5f2e7d2073df3cd11719c2ef5d0844d98b21a193cc9c6d16d1a02b1a8b1` |
+| Finalize | `0c8106db033f8b4bc4fa6b313bbb63770540f6dbc76743becba3cd61b2b1bb42` |
+
+Final on-chain state: `phase=FINALIZED`, `YES=1 NO=1 ABSTAIN=0`. The tally was
+empty until the reveals, which is the commit–reveal property holding on a real
+chain rather than in the simulator. Counting is driven by
+[`scripts/count-referendum.mjs`](scripts/count-referendum.mjs) and is CLI-only
+— the organizer console is still the top item in *To build next*.
 
 ### Working and verified
 
@@ -298,13 +355,17 @@ and submitted it. No wallet was involved at any point.
 - [x] Live tally read from the contract; no hardcoded figures.
 - [x] Local read-only mode that cannot fabricate a receipt.
 - [x] 62 tests; all three workspaces typecheck.
+- [x] **A real `castVote` on Preview**, with double-vote and ineligible-voter
+      rejection both observed on chain (see above).
+- [x] **A referendum carried all the way to a result on Preview** — deploy,
+      issue, two ballots, close, reveal, finalize (see below).
 
 ### Not yet verified
 
-- [ ] **A real `castVote`.** Deploy proves the pipeline, but voting also needs
-      an eligibility commitment in the Merkle tree
-      (`npm run deploy:preview -- --issue <64-hex>`). This is the last gap
-      between "deployed" and "demonstrably voted".
+- [ ] **`castVote` from the browser.** The vote above was proved and submitted
+      from Node against the same providers, relayer, and proof server the UI
+      uses; the browser path shares that code but has not itself put a ballot
+      on chain.
 - [ ] **The camera path against a physical DNI.** Parsing is unit-tested
       against synthetic payloads; live PDF417 decoding has not been run, and
       ZXing thresholds will likely need tuning. Needs a phone on
@@ -312,15 +373,33 @@ and submitted it. No wallet was involved at any point.
 - [ ] **The browser-side relayer path.** `/balance` and `/submit` are proven
       from Node during deploy, not yet from the browser.
 
+### The relayer is a single-coin bottleneck
+
+Worth knowing before a demo, because it looks like a contract bug and is not.
+The relayer holds one DUST coin. Balancing spends it and produces change, but
+the wallet only sees that change once it observes the block, so a second
+submission sent in the meantime spends a coin the chain already consumed and
+the node rejects it with `Invalid Transaction: Custom error: 170`
+(`InvalidDustSpendProof`). The next call then finds `availCoins=0` and fails
+with `Insufficient Funds: could not balance dust`, and DUST does not come back
+on its own: the wallet has locally marked the coin spent for a transaction
+that never landed, so it takes a relayer restart to re-derive state from chain.
+
+Space submissions out by a block, or restart the relayer if it reports
+`dustBalance: 0` while still holding NIGHT. A production relayer would
+serialize submissions behind confirmation of the previous change, and hold a
+pool of coins rather than one.
+
 ### To build next
 
 1. **Organizer console** — `closeVote`, `revealVote`, `finalizeVote` exist in
    the contract and executor but have no UI. Without it a referendum can be
    voted in but never counted. Start at
    [`api/src/index.ts`](api/src/index.ts) `createReferendumExecutor`.
-2. **Verificá should query the indexer.** It currently only searches
-   `localStorage`, so a receipt from another device cannot be checked — which
-   undercuts the public-verifiability claim. See `VerifyView` in
+2. **Verificá should query the indexer.** Preview receipts are currently
+   session-only and choice-free; persistence remains disabled until encrypted
+   IndexedDB key management is designed. Verification must resolve the network
+   and transaction ID against the canonical indexer. See `VerifyView` in
    [`ui/src/App.tsx`](ui/src/App.tsx).
 3. **Results presentation** — reveal-phase timing and a finalized-result view.
 4. **Issuer service.** `--issue` is operator-run; the uniqueness tag needs a

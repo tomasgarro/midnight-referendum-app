@@ -1,18 +1,18 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import {
   MidnightBech32m,
   ShieldedCoinPublicKey,
   ShieldedEncryptionPublicKey,
-} from "@midnight-ntwrk/wallet-sdk-address-format";
-import { loadConfig, type RelayerConfig } from "./config.js";
+} from '@midnight-ntwrk/wallet-sdk-address-format';
+import { loadConfig, type RelayerConfig } from './config.js';
 import {
   balanceAndFinalize,
   deserializeFinalized,
   deserializeUnbound,
+  type RelayerWallet,
   serializeFinalized,
   startRelayerWallet,
-  type RelayerWallet,
-} from "./wallet.js";
+} from './wallet.js';
 
 /**
  * Sponsored relayer for the referendum.
@@ -63,24 +63,28 @@ function bech32EncryptionKey(networkId: string, key: unknown): string {
 function send(response: ServerResponse, status: number, body: Json): void {
   // Balances and sync progress carry BigInts, which JSON.stringify throws on.
   const payload = JSON.stringify(body, (_key, value: unknown) =>
-    typeof value === "bigint" ? value.toString() : value,
+    typeof value === 'bigint' ? value.toString() : value,
   );
   response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "content-length": Buffer.byteLength(payload),
-    "cache-control": "no-store",
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': Buffer.byteLength(payload),
+    'cache-control': 'no-store',
   });
   response.end(payload);
 }
 
-function applyCors(config: RelayerConfig, request: IncomingMessage, response: ServerResponse): boolean {
+function applyCors(
+  config: RelayerConfig,
+  request: IncomingMessage,
+  response: ServerResponse,
+): boolean {
   const origin = request.headers.origin;
   if (!origin) return true;
   if (!config.allowedOrigins.includes(origin)) return false;
-  response.setHeader("access-control-allow-origin", origin);
-  response.setHeader("access-control-allow-headers", "content-type");
-  response.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
-  response.setHeader("vary", "origin");
+  response.setHeader('access-control-allow-origin', origin);
+  response.setHeader('access-control-allow-headers', 'content-type');
+  response.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
+  response.setHeader('vary', 'origin');
   return true;
 }
 
@@ -89,16 +93,16 @@ async function readJson(request: IncomingMessage): Promise<Json> {
   let size = 0;
   for await (const chunk of request) {
     size += (chunk as Buffer).length;
-    if (size > MAX_BODY_BYTES) throw new Error("Request body is too large");
+    if (size > MAX_BODY_BYTES) throw new Error('Request body is too large');
     chunks.push(chunk as Buffer);
   }
   if (chunks.length === 0) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as Json;
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Json;
 }
 
 function hexField(body: Json, field: string): string {
   const value = body[field];
-  if (typeof value !== "string" || !/^[0-9a-fA-F]+$/.test(value) || value.length % 2 !== 0) {
+  if (typeof value !== 'string' || !/^[0-9a-fA-F]+$/.test(value) || value.length % 2 !== 0) {
     throw new Error(`"${field}" must be a hex-encoded transaction`);
   }
   return value.toLowerCase();
@@ -117,13 +121,13 @@ function createQueue() {
 export async function startServer(): Promise<void> {
   const config = loadConfig();
   console.log(`[relayer] network=${config.networkId} indexer=${config.indexerHttpUrl}`);
-  console.log("[relayer] starting wallet and syncing — this can take a few minutes…");
+  console.log('[relayer] starting wallet and syncing — this can take a few minutes…');
 
   let wallet: RelayerWallet;
   try {
     wallet = await startRelayerWallet(config);
   } catch (error) {
-    console.error("[relayer] wallet failed to start:", (error as Error).message);
+    console.error('[relayer] wallet failed to start:', (error as Error).message);
     process.exitCode = 1;
     return;
   }
@@ -139,27 +143,27 @@ export async function startServer(): Promise<void> {
     next: (state) => {
       latest = state;
     },
-    error: (error: unknown) => console.error("[relayer] state stream error:", error),
+    error: (error: unknown) => console.error('[relayer] state stream error:', error),
   });
 
   const server = createServer((request, response) => {
     void (async () => {
       if (!applyCors(config, request, response)) {
-        send(response, 403, { error: "origin_not_allowed" });
+        send(response, 403, { error: 'origin_not_allowed' });
         return;
       }
-      if (request.method === "OPTIONS") {
+      if (request.method === 'OPTIONS') {
         response.writeHead(204);
         response.end();
         return;
       }
 
-      const url = new URL(request.url ?? "/", "http://localhost");
+      const url = new URL(request.url ?? '/', 'http://localhost');
       try {
-        if (request.method === "GET" && url.pathname === "/health") {
+        if (request.method === 'GET' && url.pathname === '/health') {
           const state = latest;
           if (!state) {
-            send(response, 503, { synced: false, detail: "wallet has not produced a state yet" });
+            send(response, 503, { synced: false, detail: 'wallet has not produced a state yet' });
             return;
           }
           send(response, 200, {
@@ -182,11 +186,11 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        if (request.method === "GET" && url.pathname === "/keys") {
+        if (request.method === 'GET' && url.pathname === '/keys') {
           // Derived from the seed, so available long before a full sync.
           const state = latest;
           if (!state) {
-            send(response, 503, { error: "wallet_starting" });
+            send(response, 503, { error: 'wallet_starting' });
             return;
           }
           send(response, 200, {
@@ -199,19 +203,17 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        if (request.method === "POST" && url.pathname === "/balance") {
+        if (request.method === 'POST' && url.pathname === '/balance') {
           const body = await readJson(request);
-          const hex = hexField(body, "tx");
-          const balanced = await enqueue(() =>
-            balanceAndFinalize(wallet, deserializeUnbound(hex)),
-          );
+          const hex = hexField(body, 'tx');
+          const balanced = await enqueue(() => balanceAndFinalize(wallet, deserializeUnbound(hex)));
           send(response, 200, { tx: serializeFinalized(balanced) });
           return;
         }
 
-        if (request.method === "POST" && url.pathname === "/submit") {
+        if (request.method === 'POST' && url.pathname === '/submit') {
           const body = await readJson(request);
-          const hex = hexField(body, "tx");
+          const hex = hexField(body, 'tx');
           const txId = await enqueue(() =>
             wallet.facade.submitTransaction(deserializeFinalized(hex)),
           );
@@ -220,28 +222,28 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        send(response, 404, { error: "not_found" });
+        send(response, 404, { error: 'not_found' });
       } catch (error) {
-        const message = (error as Error).message ?? "relayer_error";
+        const message = (error as Error).message ?? 'relayer_error';
         console.error(`[relayer] ${url.pathname} failed:`, message);
-        send(response, 500, { error: "relayer_error", detail: message });
+        send(response, 500, { error: 'relayer_error', detail: message });
       }
     })();
   });
 
   server.listen(config.port, config.host, () => {
     console.log(`[relayer] listening on http://${config.host}:${config.port}`);
-    console.log(`[relayer] allowed origins: ${config.allowedOrigins.join(", ")}`);
+    console.log(`[relayer] allowed origins: ${config.allowedOrigins.join(', ')}`);
   });
 
   const shutdown = async () => {
-    console.log("\n[relayer] shutting down…");
+    console.log('\n[relayer] shutting down…');
     server.close();
     await wallet.stop().catch(() => undefined);
     process.exit(0);
   };
-  process.on("SIGINT", () => void shutdown());
-  process.on("SIGTERM", () => void shutdown());
+  process.on('SIGINT', () => void shutdown());
+  process.on('SIGTERM', () => void shutdown());
 }
 
 await startServer();
