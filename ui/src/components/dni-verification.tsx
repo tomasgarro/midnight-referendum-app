@@ -51,10 +51,12 @@ const LIVENESS_STEPS = 1;
 const MAX_LIVENESS_FAILURES = 2;
 
 export function DniVerification({
+  demoOnly = false,
   eventSalt,
   onVerified,
   onCancel,
 }: {
+  demoOnly?: boolean;
   eventSalt: string;
   onVerified: (result: DniVerificationResult) => void;
   onCancel: () => void;
@@ -328,18 +330,38 @@ export function DniVerification({
             <IdentificationCard size={32} />
           </div>
           <p className="eyebrow">Verificación de elegibilidad</p>
-          <h1>Escaneá el dorso de tu DNI</h1>
-          <p>
-            Leemos el código de barras del dorso en tu dispositivo para comprobar que tenés{' '}
-            {MINIMUM_VOTING_AGE} años o más y que este documento no votó antes.
-          </p>
+          <h1>{demoOnly ? 'Usá el documento de demostración' : 'Escaneá el dorso de tu DNI'}</h1>
+          {demoOnly ? (
+            <p>
+              Esta versión pública no activa la cámara ni procesa documentos reales. La fixture
+              sintética permite recorrer la interfaz sin verificar una identidad.
+            </p>
+          ) : (
+            <p>
+              Leemos el código de barras del dorso en tu dispositivo para comprobar que tenés{' '}
+              {MINIMUM_VOTING_AGE} años o más y que este documento no votó antes.
+            </p>
+          )}
           <div className="data-summary">
-            <span>
-              <ShieldCheck size={18} /> El documento no sale de tu teléfono
-            </span>
-            <span>
-              <ShieldCheck size={18} /> No guardamos fotos ni tu número
-            </span>
+            {demoOnly ? (
+              <>
+                <span>
+                  <ShieldCheck size={18} /> No se lee ningún documento real
+                </span>
+                <span>
+                  <ShieldCheck size={18} /> No se activa la cámara
+                </span>
+              </>
+            ) : (
+              <>
+                <span>
+                  <ShieldCheck size={18} /> El documento no sale de tu teléfono
+                </span>
+                <span>
+                  <ShieldCheck size={18} /> No guardamos fotos ni tu número
+                </span>
+              </>
+            )}
           </div>
           {error ? (
             <div className="verify-result missing" role="alert">
@@ -349,15 +371,21 @@ export function DniVerification({
               </div>
             </div>
           ) : null}
-          <button type="button" className="primary-button yellow" onClick={() => void beginScan()}>
-            <Camera size={22} /> Activar la cámara
-          </button>
+          {!demoOnly ? (
+            <button
+              type="button"
+              className="primary-button yellow"
+              onClick={() => void beginScan()}
+            >
+              <Camera size={22} /> Activar la cámara
+            </button>
+          ) : null}
           <button
             type="button"
-            className="secondary-link"
+            className={demoOnly ? 'primary-button blue' : 'secondary-link'}
             onClick={() => void selectDemoDocument()}
           >
-            Usar documento de demostración <ArrowRight size={16} />
+            Usar documento de demostración <ArrowRight size={demoOnly ? 20 : 16} />
           </button>
         </>
       ) : null}

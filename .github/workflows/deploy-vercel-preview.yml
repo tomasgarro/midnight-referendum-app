@@ -1,0 +1,109 @@
+name: Deploy synthetic Vercel preview
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: public-synthetic-preview
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    name: Build, deploy, and smoke-test preview
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    environment: public-preview
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Check out protected main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Compact developer tools
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+
+      - name: Add Compact to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned Compact toolchain
+        run: $HOME/.local/bin/compact update 0.31.1
+
+      - name: Verify release source
+        run: |
+          npm run quality
+          npm run verify:linux -- demo
+          npm audit --omit=dev
+          git diff --check
+
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@59.5.0
+
+      - name: Validate deployment credentials and CSP gate
+        run: |
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          vercel --version
+          grep --ignore-case --quiet '"key": "Content-Security-Policy"' vercel.json
+
+      - name: Pull Vercel Preview configuration
+        run: vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+
+      - name: Build synthetic prebuilt artifact
+        run: vercel build --token "$VERCEL_TOKEN"
+        env:
+          VITE_APP_MODE: demo
+          VITE_MIDNIGHT_NETWORK: preview
+          VITE_MIDNIGHT_CONTRACT_ADDRESS: ''
+          VITE_RELAYER_URL: ''
+          VITE_MIDNIGHT_PROOF_SERVER_URL: ''
+          VITE_PASSPORT_V2_API_URL: ''
+          VITE_CICO_REFERENDA_JSON: '[]'
+          VITE_PASSPORT_ORIGIN: ${{ vars.VITE_PASSPORT_ORIGIN || 'https://midnightpassport.com' }}
+
+      - name: Deploy exact prebuilt artifact
+        id: deploy
+        run: |
+          deployment_url="$(vercel deploy --prebuilt --yes --token "$VERCEL_TOKEN")"
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-test static routing and headers
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          curl --fail --silent --show-error --location --output /dev/null "$DEPLOYMENT_URL/"
+          curl --fail --silent --show-error --location --output /dev/null "$DEPLOYMENT_URL/passport-demo"
+          curl --fail --silent --show-error --head "$DEPLOYMENT_URL/" | grep --ignore-case --quiet '^x-content-type-options: nosniff'
+          curl --fail --silent --show-error --head "$DEPLOYMENT_URL/" | grep --ignore-case --quiet '^content-security-policy:'
+
+      - name: Install Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run journeys against deployed preview
+        run: npm run test:e2e
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+          CI: 'true'
+
+      - name: Publish deployment summary
+        run: |
+          echo "## Synthetic Vercel preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: ${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Scope: synthetic Passport journey only; no real credential or vote" >> "$GITHUB_STEP_SUMMARY"

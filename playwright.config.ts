@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const externalBaseUrl = process.env.BASE_URL;
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -12,7 +14,7 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: process.env.BASE_URL ?? 'http://localhost:4173',
+    baseURL: externalBaseUrl ?? 'http://localhost:4173',
     headless: true,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
@@ -25,14 +27,19 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev -- --host localhost --port 4173 --strictPort',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      VITE_APP_MODE: 'demo',
-      VITE_PASSPORT_ORIGIN: 'https://midnightpassport.com',
-    },
-  },
+  webServer: externalBaseUrl
+    ? undefined
+    : {
+        command: 'npm run dev -- --host localhost --port 4173 --strictPort',
+        url: 'http://localhost:4173',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        env: {
+          VITE_APP_MODE: 'demo',
+          VITE_PASSPORT_ORIGIN: 'https://midnightpassport.com',
+          VITE_RELAYER_URL: 'http://127.0.0.1:9',
+          VITE_MIDNIGHT_PROOF_SERVER_URL: 'http://127.0.0.1:10',
+          VITE_PASSPORT_V2_API_URL: 'http://127.0.0.1:11',
+        },
+      },
 });

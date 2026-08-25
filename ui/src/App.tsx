@@ -1498,6 +1498,7 @@ function VoteFlow({
       ) : null}
       {stage === 'document' ? (
         <DniVerification
+          demoOnly={APP_MODE === 'demo'}
           eventSalt={pollId}
           onVerified={onDniVerified}
           onCancel={() => onStage('verify')}
@@ -1721,6 +1722,8 @@ function CivicApp() {
     [],
   );
   const passportV2Runtime = useMemo(() => {
+    if (APP_MODE === 'demo') return { config: null, error: null };
+
     try {
       return {
         config: parsePassportV2RuntimeConfig(
