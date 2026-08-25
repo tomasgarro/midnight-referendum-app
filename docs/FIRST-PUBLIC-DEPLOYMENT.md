@@ -74,6 +74,7 @@ prebuilt output, and runs Playwright against the deployed URL.
 Do not enable automatic Git-connected Vercel builds yet. Generated Compact assets are deliberately
 not tracked, and an ordinary Vercel builder does not install the pinned Compact toolchain. The
 manual workflow reproduces the clean GitHub runner setup before `vercel build`.
+`vercel.json` enforces this with `git.deploymentEnabled: false`.
 
 ## CSP gate
 
