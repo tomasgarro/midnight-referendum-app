@@ -1,24 +1,24 @@
-import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
-import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
-import { FetchZkConfigProvider } from "@midnight-ntwrk/midnight-js-fetch-zk-config-provider";
-import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
-import { toHex, fromHex } from "@midnight-ntwrk/midnight-js-utils";
+import { CompiledContract } from '@midnight-ntwrk/compact-js';
+import type { ChargedState } from '@midnight-ntwrk/compact-runtime';
+import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
+import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
+import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
+import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
+import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import {
+  type FinalizedTransaction,
+  Transaction,
+} from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import {
   createProofProvider,
-  type WalletProvider,
   type MidnightProvider,
-} from "@midnight-ntwrk/midnight-js-types";
-import { CompiledContract } from "@midnight-ntwrk/compact-js";
-import { deployContract, findDeployedContract } from "@midnight-ntwrk/midnight-js-contracts";
-import {
-  Transaction,
-  type FinalizedTransaction,
-} from "@midnight-ntwrk/midnight-js-protocol/ledger";
-import type { ChargedState } from "@midnight-ntwrk/compact-runtime";
-import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
-import { catchError, combineLatest, map, retry, throwError, Observable } from "rxjs";
-import { browserPrivateStateProvider, inMemoryPrivateStateProvider } from "./private-state.js";
-import * as GeneratedReferendum from "./generated/referendum/index.js";
+  type WalletProvider,
+} from '@midnight-ntwrk/midnight-js-types';
+import { fromHex, toHex } from '@midnight-ntwrk/midnight-js-utils';
+import { catchError, combineLatest, map, Observable, retry, throwError } from 'rxjs';
+import * as GeneratedReferendum from './generated/referendum/index.js';
+import { browserPrivateStateProvider, inMemoryPrivateStateProvider } from './private-state.js';
 import type {
   AppProviders,
   ContractState,
@@ -28,34 +28,34 @@ import type {
   ReferendumExecutor,
   TransactionReceipt,
   VoteReveal,
-} from "./types.js";
-import { PRIVATE_STATE_ID } from "./types.js";
+} from './types.js';
+import { PRIVATE_STATE_ID } from './types.js';
 
+export {
+  createExternalEligibilityProvider,
+  createFixtureEligibilityProvider,
+  eligibilityCommitmentForSecret,
+} from './eligibility.js';
 export {
   browserPrivateStateProvider,
   deserializePrivateStateFromStorage,
   inMemoryPrivateStateProvider,
   serializePrivateStateForStorage,
-} from "./private-state.js";
-export {
-  createExternalEligibilityProvider,
-  createFixtureEligibilityProvider,
-  eligibilityCommitmentForSecret,
-} from "./eligibility.js";
+} from './private-state.js';
 export type {
   AppProviders,
   ContractState,
   DerivedState,
   EligibilityAttestation,
   ImpureCircuitKeys,
-  PrivateState,
   PassportSession,
+  PrivateState,
   ReferendumExecutor,
   TransactionReceipt,
   VoteCommitment,
   VoteReveal,
-} from "./types.js";
-export { PRIVATE_STATE_ID } from "./types.js";
+} from './types.js';
+export { PRIVATE_STATE_ID } from './types.js';
 
 export interface ProviderOptions {
   /** Explicit local fallback; never inferred from the node URI. */
@@ -64,8 +64,8 @@ export interface ProviderOptions {
 }
 
 function previewSafeIndexerProvider(
-  provider: AppProviders["publicDataProvider"],
-): AppProviders["publicDataProvider"] {
+  provider: AppProviders['publicDataProvider'],
+): AppProviders['publicDataProvider'] {
   const original = provider.contractStateObservable.bind(provider);
   return {
     ...provider,
@@ -76,8 +76,8 @@ function previewSafeIndexerProvider(
       return original(address, config).pipe(
         retry({ delay: 250, count: 1 }),
         catchError((error: unknown) => {
-          if (config.type === "latest") {
-            return original(address, { type: "all" });
+          if (config.type === 'latest') {
+            return original(address, { type: 'all' });
           }
           return throwError(() => error);
         }),
@@ -102,17 +102,17 @@ export interface RelayerProviderOptions {
    * Node scripts must pass their own provider: `FetchZkConfigProvider` reads
    * assets over HTTP, and Node's fetch cannot open `file://` URLs.
    */
-  zkConfigProvider?: AppProviders["zkConfigProvider"];
+  zkConfigProvider?: AppProviders['zkConfigProvider'];
 }
 
 async function relayerJson<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
-    method: body === undefined ? "GET" : "POST",
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    method: body === undefined ? 'GET' : 'POST',
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
+    const detail = await response.text().catch(() => '');
     throw new Error(`El relayer respondió ${response.status}. ${detail}`.trim());
   }
   return (await response.json()) as T;
@@ -132,7 +132,7 @@ export async function createRelayerProviders(
 ): Promise<AppProviders> {
   setNetworkId(options.networkId as Parameters<typeof setNetworkId>[0]);
 
-  const base = options.relayerUrl.replace(/\/$/, "");
+  const base = options.relayerUrl.replace(/\/$/, '');
   const keys = await relayerJson<{ coinPublicKey: string; encryptionPublicKey: string }>(
     `${base}/keys`,
   );
@@ -141,10 +141,10 @@ export async function createRelayerProviders(
     indexerPublicDataProvider(options.indexerUri, options.indexerWsUri),
   );
   const privateStateProvider =
-    typeof window === "undefined"
+    typeof window === 'undefined'
       ? inMemoryPrivateStateProvider<typeof PRIVATE_STATE_ID, PrivateState>()
       : browserPrivateStateProvider<typeof PRIVATE_STATE_ID, PrivateState>();
-  const browserOrigin = typeof window === "undefined" ? "" : window.location.origin;
+  const browserOrigin = typeof window === 'undefined' ? '' : window.location.origin;
   const zkConfigProvider =
     options.zkConfigProvider ??
     new FetchZkConfigProvider<ImpureCircuitKeys>(
@@ -164,9 +164,9 @@ export async function createRelayerProviders(
         tx: toHex(tx.serialize()),
       });
       return Transaction.deserialize(
-        "signature",
-        "proof",
-        "binding",
+        'signature',
+        'proof',
+        'binding',
         fromHex(balancedHex),
       ) satisfies FinalizedTransaction;
     },
@@ -201,10 +201,10 @@ export async function createProviders(
     indexerPublicDataProvider(config.indexerUri, config.indexerWsUri),
   );
   const privateStateProvider =
-    typeof window === "undefined"
+    typeof window === 'undefined'
       ? inMemoryPrivateStateProvider<typeof PRIVATE_STATE_ID, PrivateState>()
       : browserPrivateStateProvider<typeof PRIVATE_STATE_ID, PrivateState>();
-  const browserOrigin = typeof window === "undefined" ? "" : window.location.origin;
+  const browserOrigin = typeof window === 'undefined' ? '' : window.location.origin;
   const zkConfigProvider = new FetchZkConfigProvider<ImpureCircuitKeys>(
     options.zkConfigBaseUrl ?? `${browserOrigin}/managed/referendum`,
     fetch.bind(globalThis),
@@ -214,24 +214,18 @@ export async function createProviders(
   // local development fallback and is never derived from substrateNodeUri.
   const proofProvider = options.proofServerUri
     ? httpClientProofProvider<ImpureCircuitKeys>(options.proofServerUri, zkConfigProvider)
-    : createProofProvider(
-        await api.getProvingProvider(zkConfigProvider.asKeyMaterialProvider()),
-      );
+    : createProofProvider(await api.getProvingProvider(zkConfigProvider.asKeyMaterialProvider()));
 
-  const { shieldedCoinPublicKey, shieldedEncryptionPublicKey } =
-    await api.getShieldedAddresses();
+  const { shieldedCoinPublicKey, shieldedEncryptionPublicKey } = await api.getShieldedAddresses();
   const walletProvider: WalletProvider = {
     getCoinPublicKey: () => shieldedCoinPublicKey,
     getEncryptionPublicKey: () => shieldedEncryptionPublicKey,
     balanceTx: async (tx, _ttl) => {
-      const { tx: balancedHex } = await api.balanceUnsealedTransaction(
-        toHex(tx.serialize()),
-        {},
-      );
+      const { tx: balancedHex } = await api.balanceUnsealedTransaction(toHex(tx.serialize()), {});
       return Transaction.deserialize(
-        "signature",
-        "proof",
-        "binding",
+        'signature',
+        'proof',
+        'binding',
         fromHex(balancedHex),
       ) satisfies FinalizedTransaction;
     },
@@ -261,7 +255,7 @@ export interface ReferendumConfig {
 }
 
 export function createReferendumPrivateState(
-  config: Pick<ReferendumConfig, "issuerSecret" | "organizerSecret">,
+  config: Pick<ReferendumConfig, 'issuerSecret' | 'organizerSecret'>,
 ): PrivateState {
   return {
     issuerSecret: config.issuerSecret,
@@ -273,7 +267,7 @@ export function createReferendumPrivateState(
   } as PrivateState;
 }
 
-function createCompiledReferendum(privateState: PrivateState) {
+function createCompiledReferendum(_privateState: PrivateState) {
   const witnesses = {
     issuerSecret: (context: any) => [
       context.privateState,
@@ -289,19 +283,16 @@ function createCompiledReferendum(privateState: PrivateState) {
     // circuit takes the generated Choice enum value.
     voterChoice: (context: any) => [
       context.privateState,
-      typeof context.privateState.voterChoice === "string"
+      typeof context.privateState.voterChoice === 'string'
         ? (GeneratedReferendum.Choice as any)[context.privateState.voterChoice]
         : context.privateState.voterChoice,
     ],
     voteSalt: (context: any) => [context.privateState, context.privateState.voteSalt],
     revealPath: (context: any) => [context.privateState, context.privateState.revealPath],
   };
-  let compiled = CompiledContract.make(
-    "referendum",
-    GeneratedReferendum.Contract as any,
-  ) as any;
+  let compiled = CompiledContract.make('referendum', GeneratedReferendum.Contract as any) as any;
   compiled = (CompiledContract.withWitnesses as any)(compiled, witnesses as any);
-  return (CompiledContract.withCompiledFileAssets as any)(compiled, "managed/referendum");
+  return (CompiledContract.withCompiledFileAssets as any)(compiled, 'managed/referendum');
 }
 
 function receiptFrom(value: any, explorerBaseUrl: string): TransactionReceipt {
@@ -314,7 +305,7 @@ function receiptFrom(value: any, explorerBaseUrl: string): TransactionReceipt {
     blockHash: String(data.blockHash),
     blockTimestamp: Number(data.blockTimestamp),
     status: String(data.status),
-    explorerUrl: `${explorerBaseUrl.replace(/\/$/, "")}/${txHash}`,
+    explorerUrl: `${explorerBaseUrl.replace(/\/$/, '')}/${txHash}`,
   };
 }
 
@@ -323,55 +314,61 @@ export function createReferendumExecutor(
   providers: AppProviders,
   config: ReferendumConfig,
 ): ReferendumExecutor {
-  const explorerBaseUrl = config.explorerBaseUrl ?? "https://explorer.preview.midnight.network/tx";
+  const explorerBaseUrl = config.explorerBaseUrl ?? 'https://explorer.preview.midnight.network/tx';
   let contract: any;
   const call = async (circuit: string, ...args: unknown[]) => {
-    if (!contract) throw new Error("The referendum contract is not joined");
+    if (!contract) throw new Error('The referendum contract is not joined');
     return receiptFrom(await contract.callTx[circuit](...args), explorerBaseUrl);
   };
 
   return {
     async deploy(initialPrivateState) {
-      contract = await deployContract(providers as any, {
-        compiledContract: createCompiledReferendum(initialPrivateState),
-        privateStateId: PRIVATE_STATE_ID,
-        initialPrivateState: initialPrivateState as any,
-        args: [config.issuerSecret, config.organizerSecret, config.eventId],
-      } as any);
+      contract = await deployContract(
+        providers as any,
+        {
+          compiledContract: createCompiledReferendum(initialPrivateState),
+          privateStateId: PRIVATE_STATE_ID,
+          initialPrivateState: initialPrivateState as any,
+          args: [config.issuerSecret, config.organizerSecret, config.eventId],
+        } as any,
+      );
       return contract;
     },
     async join(contractAddress, initialPrivateState) {
-      contract = await findDeployedContract(providers as any, {
-        contractAddress,
-        compiledContract: createCompiledReferendum(initialPrivateState),
-        privateStateId: PRIVATE_STATE_ID,
-        initialPrivateState: initialPrivateState as any,
-      } as any);
+      contract = await findDeployedContract(
+        providers as any,
+        {
+          contractAddress,
+          compiledContract: createCompiledReferendum(initialPrivateState),
+          privateStateId: PRIVATE_STATE_ID,
+          initialPrivateState: initialPrivateState as any,
+        } as any,
+      );
       return contract;
     },
-    issue: (commitment) => call("issue", commitment),
-    castVote: () => call("castVote"),
+    issue: (commitment) => call('issue', commitment),
+    castVote: () => call('castVote'),
     // The UI and the CLI both carry the choice as a string ("YES" | "NO" |
     // "ABSTAIN"), but the circuit argument is the generated Choice enum, and
     // passing the string through reaches the runtime as a type error at call
     // time rather than at compile time. The voterChoice witness already does
     // this conversion; the reveal argument has to do it too.
-    revealVote: (choice: VoteReveal["choice"], salt) =>
+    revealVote: (choice: VoteReveal['choice'], salt) =>
       call(
-        "revealVote",
-        typeof choice === "string" ? (GeneratedReferendum.Choice as any)[choice] : choice,
+        'revealVote',
+        typeof choice === 'string' ? (GeneratedReferendum.Choice as any)[choice] : choice,
         salt,
       ),
-    closeVote: () => call("closeVote"),
-    finalizeVote: () => call("finalizeVote"),
+    closeVote: () => call('closeVote'),
+    finalizeVote: () => call('finalizeVote'),
   };
 }
 
-const PHASES = ["COMMIT", "REVEAL", "FINALIZED"] as const;
+const PHASES = ['COMMIT', 'REVEAL', 'FINALIZED'] as const;
 const CHOICES = [
-  ["YES", 0],
-  ["NO", 1],
-  ["ABSTAIN", 2],
+  ['YES', 0],
+  ['NO', 1],
+  ['ABSTAIN', 2],
 ] as const;
 
 /**
@@ -384,12 +381,12 @@ const CHOICES = [
  */
 export function parseReferendumLedger(data: ChargedState): ContractState {
   const ledger = (GeneratedReferendum as any).ledger(data);
-  const tally = new Map<"YES" | "NO" | "ABSTAIN", bigint>();
+  const tally = new Map<'YES' | 'NO' | 'ABSTAIN', bigint>();
   for (const [label, key] of CHOICES) {
     tally.set(label, ledger.tally.member(key) ? BigInt(ledger.tally.lookup(key)) : 0n);
   }
   return {
-    phase: PHASES[Number(ledger.phase)] ?? "COMMIT",
+    phase: PHASES[Number(ledger.phase)] ?? 'COMMIT',
     closed: Boolean(ledger.closed),
     issuedVoters: BigInt(ledger.issuedVoters),
     tally,
@@ -398,11 +395,11 @@ export function parseReferendumLedger(data: ChargedState): ContractState {
 
 /** Live public state for the results panel. Needs no wallet and no private state. */
 export function watchReferendumState(
-  providers: Pick<AppProviders, "publicDataProvider">,
+  providers: Pick<AppProviders, 'publicDataProvider'>,
   contractAddress: string,
 ): Observable<ContractState> {
   return providers.publicDataProvider
-    .contractStateObservable(contractAddress, { type: "latest" })
+    .contractStateObservable(contractAddress, { type: 'latest' })
     .pipe(
       map((state) => parseReferendumLedger(state.data)),
       retry({ delay: 2_000 }),
@@ -414,23 +411,23 @@ export async function findEligibilityPath(
   providers: AppProviders,
   contractAddress: string,
   commitment: Uint8Array,
-): Promise<PrivateState["voterPath"]> {
+): Promise<PrivateState['voterPath']> {
   const state = await providers.publicDataProvider.queryContractState(contractAddress);
-  if (!state) throw new Error("The referendum contract has no canonical state yet");
+  if (!state) throw new Error('The referendum contract has no canonical state yet');
   const ledger = (GeneratedReferendum as any).ledger(state.data);
   const path = ledger.eligibleVoters.findPathForLeaf(commitment);
-  if (!path) throw new Error("This wallet is not present in the referendum eligibility tree");
+  if (!path) throw new Error('This wallet is not present in the referendum eligibility tree');
   return path;
 }
 
 export function createStateObservable(
-  publicDataProvider: AppProviders["publicDataProvider"],
-  privateStateProvider: AppProviders["privateStateProvider"],
+  publicDataProvider: AppProviders['publicDataProvider'],
+  privateStateProvider: AppProviders['privateStateProvider'],
   contractAddress: string,
   parseLedger: (data: ChargedState) => ContractState,
 ): Observable<DerivedState> {
   const public$ = publicDataProvider
-    .contractStateObservable(contractAddress, { type: "latest" })
+    .contractStateObservable(contractAddress, { type: 'latest' })
     .pipe(map((state) => parseLedger(state.data)));
   const private$ = new Observable<PrivateState | null>((subscriber) => {
     privateStateProvider
@@ -446,3 +443,6 @@ export function createStateObservable(
     retry({ delay: 500 }),
   );
 }
+
+export * from './passport-v2/index.js';
+export type { PassportSession as CivicPassportSession } from './passport-v2/types.js';

@@ -1,6 +1,6 @@
-import * as rx from "rxjs";
-import { loadConfig } from "./config.js";
-import { startRelayerWallet } from "./wallet.js";
+import * as rx from 'rxjs';
+import { loadConfig } from './config.js';
+import { startRelayerWallet } from './wallet.js';
 
 /**
  * Registers the relayer's NIGHT UTXOs for passive DUST generation.
@@ -20,7 +20,7 @@ import { startRelayerWallet } from "./wallet.js";
  */
 const config = loadConfig();
 console.log(`network: ${config.networkId}`);
-console.log("starting relayer wallet and syncing (this can take several minutes)…");
+console.log('starting relayer wallet and syncing (this can take several minutes)…');
 
 const wallet = await startRelayerWallet(config);
 
@@ -35,25 +35,27 @@ try {
   let latest: Awaited<ReturnType<typeof wallet.facade.waitForSyncedState>> | null = null;
   let lastLog = 0;
 
-  const state = await rx.firstValueFrom(
-    wallet.facade.state().pipe(
-      rx.tap((s) => {
-        latest = s;
-        const now = Date.now();
-        if (now - lastLog > 10_000) {
-          lastLog = now;
-          console.log(
-            `  syncing… synced=${s.isSynced} night=${s.unshielded.availableCoins.length} dust=${s.dust.availableCoins.length}`,
-          );
-        }
-      }),
-      rx.filter((s) => s.unshielded.availableCoins.length > 0),
-      rx.timeout({ first: WAIT_FOR_NIGHT_MS, each: WAIT_FOR_NIGHT_MS }),
-    ),
-  ).catch(() => latest);
+  const state = await rx
+    .firstValueFrom(
+      wallet.facade.state().pipe(
+        rx.tap((s) => {
+          latest = s;
+          const now = Date.now();
+          if (now - lastLog > 10_000) {
+            lastLog = now;
+            console.log(
+              `  syncing… synced=${s.isSynced} night=${s.unshielded.availableCoins.length} dust=${s.dust.availableCoins.length}`,
+            );
+          }
+        }),
+        rx.filter((s) => s.unshielded.availableCoins.length > 0),
+        rx.timeout({ first: WAIT_FOR_NIGHT_MS, each: WAIT_FOR_NIGHT_MS }),
+      ),
+    )
+    .catch(() => latest);
 
   if (!state) {
-    console.error("\nThe wallet produced no state at all. Check the indexer URL in relayer/.env.");
+    console.error('\nThe wallet produced no state at all. Check the indexer URL in relayer/.env.');
     process.exit(1);
   }
 
@@ -66,12 +68,12 @@ try {
 
   if (nightCoins.length === 0) {
     console.error(
-      "\nThis wallet holds no NIGHT. Fund the unshielded address printed by\n" +
-        "`npm run relayer:address` first, wait for it to confirm, then rerun.",
+      '\nThis wallet holds no NIGHT. Fund the unshielded address printed by\n' +
+        '`npm run relayer:address` first, wait for it to confirm, then rerun.',
     );
     process.exitCode = 1;
   } else if (unregistered.length === 0) {
-    console.log("\nEvery NIGHT UTXO is already registered. Nothing to do.");
+    console.log('\nEvery NIGHT UTXO is already registered. Nothing to do.');
   } else {
     const estimate = await wallet.facade.estimateRegistration(unregistered);
     console.log(`registration fee estimate: ${estimate.fee.toString()}`);
@@ -86,7 +88,7 @@ try {
     const txId = await wallet.facade.submitTransaction(finalized);
     console.log(`submitted: ${txId}`);
 
-    console.log("waiting for DUST to appear…");
+    console.log('waiting for DUST to appear…');
     const after = await rx.firstValueFrom(
       wallet.facade.state().pipe(
         rx.filter((s) => s.isSynced),
@@ -95,7 +97,7 @@ try {
     );
     console.log(`\nDUST coins: ${after.dust.availableCoins.length}`);
     console.log(`DUST balance: ${after.dust.balance(new Date()).toString()}`);
-    console.log("\nThe relayer can now pay for votes.");
+    console.log('\nThe relayer can now pay for votes.');
   }
 } finally {
   await wallet.stop().catch(() => undefined);

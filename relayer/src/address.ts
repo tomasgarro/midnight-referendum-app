@@ -1,7 +1,7 @@
-import * as rx from "rxjs";
-import { MidnightBech32m } from "@midnight-ntwrk/wallet-sdk-address-format";
-import { loadConfig } from "./config.js";
-import { startRelayerWallet } from "./wallet.js";
+import { MidnightBech32m } from '@midnight-ntwrk/wallet-sdk-address-format';
+import * as rx from 'rxjs';
+import { loadConfig } from './config.js';
+import { startRelayerWallet } from './wallet.js';
 
 /**
  * Prints the relayer's public addresses so it can be funded, then exits.
@@ -22,13 +22,13 @@ try {
   // them. Waiting for a full sync here just to print an address can cost
   // minutes on a fresh wallet — and this is the step that blocks funding.
   const state = await rx.firstValueFrom(wallet.facade.state());
-  console.log("");
+  console.log('');
   const bech32 = (item: unknown) =>
     MidnightBech32m.encode(config.networkId, item as never).asString();
   console.log(`unshielded (fund this with NIGHT): ${bech32(state.unshielded.address)}`);
   console.log(`shielded:                          ${bech32(state.shielded.address)}`);
   console.log(`dust:                              ${bech32(state.dust.address)}`);
-  console.log("");
+  console.log('');
   console.log(`dust balance now: ${state.dust.balance(new Date()).toString()}`);
 } finally {
   await wallet.stop();

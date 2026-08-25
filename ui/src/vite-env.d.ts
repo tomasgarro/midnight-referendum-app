@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
+import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 
 interface ImportMetaEnv {
   readonly VITE_APP_MODE?: string;
@@ -11,6 +11,18 @@ interface ImportMetaEnv {
   readonly VITE_MIDNIGHT_INDEXER_URL?: string;
   readonly VITE_MIDNIGHT_INDEXER_WS_URL?: string;
   readonly VITE_PASSPORT_ORIGIN?: string;
+  /** HTTPS CICO backend exposing browser-safe Passport v2 domain endpoints. */
+  readonly VITE_PASSPORT_V2_API_URL?: string;
+  readonly VITE_CICO_ISSUER_ID?: string;
+  readonly VITE_CICO_CREDENTIAL_EPOCH?: string;
+  readonly VITE_CICO_CREDENTIAL_TTL_MS?: string;
+  readonly VITE_RARIMO_UNIQUENESS_TIMESTAMP_UPPER_BOUND?: string;
+  readonly VITE_CICO_REGISTRY_ADDRESS?: string;
+  readonly VITE_CICO_REGISTRY_ID_HEX?: string;
+  readonly VITE_CICO_ISSUER_ID_HEX?: string;
+  readonly VITE_CICO_FROZEN_ROOT_FIELD?: string;
+  /** Public JSON catalog; contains no organizer or issuer private key. */
+  readonly VITE_CICO_REFERENDA_JSON?: string;
   /** Set to run the wallet-less sponsored-relayer path. */
   readonly VITE_RELAYER_URL?: string;
 }

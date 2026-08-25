@@ -1,0 +1,236 @@
+import type { AddressInfo } from 'node:net';
+import {
+  deriveCredentialLeaf,
+  type RarimoVerificationGateway,
+  type RarimoVerificationRequest,
+} from 'midnight-referendum-api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createCicoHttpService } from './http.js';
+
+const servers: ReturnType<typeof createCicoHttpService>[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    servers
+      .splice(0)
+      .map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
+  );
+});
+
+const verificationRequest: RarimoVerificationRequest = {
+  requestId: 'request-id',
+  eventId: 'event-id',
+  eventData: `0x${'01'.repeat(31)}`,
+  eventDataDecimal: '1',
+  selector: '35361',
+  birthDateLowerBound: '0x303030303030',
+  birthDateUpperBound: '0x3230303830383234',
+  identityCounterLowerBound: '0',
+  identityCounterUpperBound: '0',
+  expirationDateLowerBound: '0x3230323630383234',
+  expirationDateUpperBound: '0x393939393939',
+  timestampLowerBound: '0',
+  timestampUpperBound: '1787594400',
+};
+
+function gateway(): RarimoVerificationGateway {
+  return {
+    createVerificationRequest: vi.fn().mockResolvedValue({
+      requestId: 'request-id',
+      userIdHash: 'user-hash',
+      proofParamsUrl: 'https://rarimo.example/proof-params/request-id',
+      proofRequestUrl: 'https://app.rarime.com/external?id=request-id',
+    }),
+    getVerificationStatus: vi.fn().mockResolvedValue('verified'),
+    getVerifiedEvidence: vi.fn().mockResolvedValue({
+      requestId: 'request-id',
+      userIdHash: 'user-hash',
+      evidenceAuthorization: 'single-use-authorization',
+      evidenceFingerprint: 'ab'.repeat(32),
+      eventId: 'event-id',
+      eventDataDecimal: '1',
+      selector: '35361',
+      timestampUpperBound: '1787594400',
+      identityCounterUpperBound: '0',
+      birthDateUpperBound: '562958543026260',
+      expirationDateLowerBound: '562958626027572',
+      citizenshipAlpha3: 'ARG',
+      adultPredicateSatisfied: true,
+    }),
+    deleteVerification: vi.fn(),
+  };
+}
+
+function issuer() {
+  return {
+    adapterName: 'test-midnight-issuer',
+    async issueCredential(
+      request: Parameters<
+        import('midnight-referendum-api').CivicCredentialIssuerPort['issueCredential']
+      >[0],
+    ) {
+      const credentialBlind = new Uint8Array(32).fill(2);
+      return {
+        issuanceId: 'issuance-id',
+        credentialBlind,
+        credentialLeaf: deriveCredentialLeaf({
+          holderBinding: request.holderBinding,
+          credentialBlind,
+          claims: request.claims,
+        }),
+        receipt: {
+          status: 'confirmed' as const,
+          action: 'credential' as const,
+          network: 'preview' as const,
+          transactionId: 'credential-transaction-id',
+          transactionHash: 'credential-transaction-hash',
+          contractAddress: 'credential-registry-address',
+          circuit: 'addCredential',
+          blockHeight: 42,
+          blockHash: 'credential-block-hash',
+          blockTimestamp: '2026-08-24T12:00:00.000Z',
+        },
+      };
+    },
+  };
+}
+
+async function start(options?: { gateway?: RarimoVerificationGateway }) {
+  const service = createCicoHttpService({
+    gateway: options?.gateway ?? gateway(),
+    issuer: issuer(),
+    allowedOrigins: ['http://localhost:4173'],
+  });
+  servers.push(service);
+  await new Promise<void>((resolve) => service.listen(0, '127.0.0.1', resolve));
+  const address = service.address() as AddressInfo;
+  return `http://127.0.0.1:${address.port}`;
+}
+
+const browserHeaders = {
+  origin: 'http://localhost:4173',
+  'content-type': 'application/json',
+};
+
+describe('CICO HTTP boundary service', () => {
+  it('runs the proof-free Rarimo and canonical issuer route transcript', async () => {
+    const base = await start();
+    const created = await fetch(`${base}/v1/rarimo/verification-requests`, {
+      method: 'POST',
+      headers: browserHeaders,
+      body: JSON.stringify(verificationRequest),
+    });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toMatchObject({ requestId: 'request-id' });
+
+    const status = await fetch(`${base}/v1/rarimo/verification-requests/request-id/status`, {
+      headers: { origin: browserHeaders.origin },
+    });
+    expect(await status.json()).toEqual({ status: 'verified' });
+    const evidence = await fetch(`${base}/v1/rarimo/verification-requests/request-id/evidence`, {
+      headers: { origin: browserHeaders.origin },
+    });
+    expect(await evidence.json()).toMatchObject({ citizenshipAlpha3: 'ARG' });
+
+    const issued = await fetch(`${base}/v1/credentials/issuances`, {
+      method: 'POST',
+      headers: browserHeaders,
+      body: JSON.stringify({
+        enrollmentId: 'enrollment-id',
+        provider: 'rarimo',
+        evidenceAuthorization: 'single-use-authorization',
+        holderBindingHex: '01'.repeat(32),
+        claims: {
+          issuerId: 'cico-rarimo-preview',
+          country: '032',
+          ageClass: '18-plus',
+          assurance: 'document-nfc',
+          credentialEpoch: 7,
+          validFrom: '2026-08-24T12:00:00.000Z',
+          validUntil: '2026-08-25T12:00:00.000Z',
+        },
+      }),
+    });
+    expect(issued.status).toBe(201);
+    const issuedBody = await issued.json();
+    expect(issuedBody).toMatchObject({
+      issuanceId: 'issuance-id',
+      credentialBlindHex: '02'.repeat(32),
+      receipt: { action: 'credential', circuit: 'addCredential' },
+    });
+    expect(JSON.stringify(issuedBody)).not.toMatch(
+      /proof|mrz|birthDate|passportNumber|nfc|choice|voterSecret|holderBlind/i,
+    );
+
+    const deleted = await fetch(`${base}/v1/rarimo/verification-requests/request-id`, {
+      method: 'DELETE',
+      headers: { origin: browserHeaders.origin },
+    });
+    expect(deleted.status).toBe(204);
+  });
+
+  it('rejects missing, malformed, or foreign mutation origins and any raw proof response', async () => {
+    const base = await start();
+    const missingOrigin = await fetch(`${base}/v1/rarimo/verification-requests`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(verificationRequest),
+    });
+    expect(missingOrigin.status).toBe(403);
+    expect(await missingOrigin.json()).toEqual({
+      message: 'A trusted browser Origin is required',
+    });
+
+    const missingEvidenceOrigin = await fetch(
+      `${base}/v1/rarimo/verification-requests/request-id/evidence`,
+    );
+    expect(missingEvidenceOrigin.status).toBe(403);
+
+    const malformedOrigin = await fetch(`${base}/v1/rarimo/verification-requests`, {
+      method: 'POST',
+      headers: { ...browserHeaders, origin: 'not a valid origin' },
+      body: JSON.stringify(verificationRequest),
+    });
+    expect(malformedOrigin.status).toBe(403);
+
+    const foreign = await fetch(`${base}/health`, {
+      headers: { origin: 'https://attacker.example' },
+    });
+    expect(foreign.status).toBe(403);
+
+    const unsafe = gateway();
+    unsafe.getVerifiedEvidence = vi.fn().mockResolvedValue({ proof: { pi_a: ['secret'] } });
+    const unsafeBase = await start({ gateway: unsafe });
+    const response = await fetch(
+      `${unsafeBase}/v1/rarimo/verification-requests/request-id/evidence`,
+      { headers: { origin: browserHeaders.origin } },
+    );
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(await response.json())).not.toContain('secret');
+  });
+
+  it('limits request bodies and exposes no civic vote endpoint', async () => {
+    const service = createCicoHttpService({
+      gateway: gateway(),
+      issuer: issuer(),
+      allowedOrigins: ['http://localhost:4173'],
+      maxBodyBytes: 8,
+    });
+    servers.push(service);
+    await new Promise<void>((resolve) => service.listen(0, '127.0.0.1', resolve));
+    const address = service.address() as AddressInfo;
+    const base = `http://127.0.0.1:${address.port}`;
+    const oversized = await fetch(`${base}/v1/rarimo/verification-requests`, {
+      method: 'POST',
+      headers: browserHeaders,
+      body: JSON.stringify(verificationRequest),
+    });
+    expect(oversized.status).toBe(413);
+    const vote = await fetch(`${base}/v1/civic/votes`, {
+      method: 'POST',
+      headers: browserHeaders,
+      body: '{}',
+    });
+    expect(vote.status).toBe(404);
+  });
+});

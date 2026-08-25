@@ -1,0 +1,1 @@
+npx biome ci --changed --no-errors-on-unmatched

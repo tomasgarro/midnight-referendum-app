@@ -34,29 +34,29 @@ function optional(name: string, fallback: string): string {
 }
 
 export function loadConfig(): RelayerConfig {
-  const seedHex = required("RELAYER_SEED").toLowerCase().replace(/^0x/, "");
+  const seedHex = required('RELAYER_SEED').toLowerCase().replace(/^0x/, '');
   if (!/^[0-9a-f]{64}$/.test(seedHex)) {
     // Fail on shape alone; the value itself must never reach a log line.
-    throw new Error("RELAYER_SEED must be 64 hexadecimal characters (32 bytes).");
+    throw new Error('RELAYER_SEED must be 64 hexadecimal characters (32 bytes).');
   }
 
   return {
     seedHex,
-    networkId: optional("RELAYER_NETWORK_ID", "preview"),
+    networkId: optional('RELAYER_NETWORK_ID', 'preview'),
     indexerHttpUrl: optional(
-      "RELAYER_INDEXER_HTTP_URL",
-      "https://indexer.preview.midnight.network/api/v4/graphql",
+      'RELAYER_INDEXER_HTTP_URL',
+      'https://indexer.preview.midnight.network/api/v4/graphql',
     ),
     indexerWsUrl: optional(
-      "RELAYER_INDEXER_WS_URL",
-      "wss://indexer.preview.midnight.network/api/v4/graphql/ws",
+      'RELAYER_INDEXER_WS_URL',
+      'wss://indexer.preview.midnight.network/api/v4/graphql/ws',
     ),
-    relayUrl: optional("RELAYER_NODE_URL", "wss://rpc.preview.midnight.network"),
-    provingServerUrl: optional("RELAYER_PROOF_SERVER_URL", "http://localhost:6300"),
-    host: optional("RELAYER_HOST", "127.0.0.1"),
-    port: Number.parseInt(optional("RELAYER_PORT", "8790"), 10),
-    allowedOrigins: optional("RELAYER_ALLOWED_ORIGINS", "http://localhost:4173")
-      .split(",")
+    relayUrl: optional('RELAYER_NODE_URL', 'wss://rpc.preview.midnight.network'),
+    provingServerUrl: optional('RELAYER_PROOF_SERVER_URL', 'http://localhost:6300'),
+    host: optional('RELAYER_HOST', '127.0.0.1'),
+    port: Number.parseInt(optional('RELAYER_PORT', '8790'), 10),
+    allowedOrigins: optional('RELAYER_ALLOWED_ORIGINS', 'http://localhost:4173')
+      .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
   };

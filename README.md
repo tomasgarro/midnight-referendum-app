@@ -11,6 +11,24 @@ referendum.
 
 ---
 
+## Passport-v2 status
+
+The repository contains two generations. The original hackathon/DNI contract and its historical Preview transcript remain below as reproducible evidence for the v1 prototype. The active `feat/passport-credential-v2` work replaces country-specific DNI enrollment with a provider-neutral, all-passport architecture:
+
+- Midnight Passport is the session, visible-profile and consent surface.
+- Rarimo is a replaceable NFC/passport-evidence adapter behind the CICO issuer.
+- `CredentialRegistryV1` issues reusable, issuer-bound credentials; each `ReferendumV2` pins an exact frozen registry root and either a global or country policy.
+- The ballot choice, voter secret, holder opening and Compact witness stay in the citizen browser.
+- Only the Midnight indexer can turn a submitted transaction into a confirmed receipt.
+
+The complete wallet-less **local demo** is synthetic and labels itself as such. The real Passport-v2 browser action currently uses wallet-derived Midnight providers; an atomic sponsored action endpoint is still pending. The Rarimo boundary now has a hardened self-hosted-verifier adapter, proof-to-enrollment/holder binding, claim validation, durable replay state, and a runnable Preview-only Midnight issuer process with independent fee-wallet and Compact-authority secrets. A pinned/running verificator, funded/deployed registry, physical NFC transcript and hosted credentials are still external gates.
+
+The V1 registry lifecycle is intentionally staged: participants enroll while an epoch is open, the canonical root is reconciled and frozen, and only then do matching consultations open. A later passport scan enters the next epoch rather than pretending to belong to an older frozen root. See [ADR-006](docs/adr/ADR-006-credential-epoch-lifecycle.md).
+
+The official Midnight Passport SDK currently describes itself as planning/spec work with a reduced beta defined. CICO therefore integrates its available profile bridge through `PassportSessionPort` and keeps nationality, age, private-witness and contract-action capabilities behind replaceable ports rather than claiming Passport exposes them today. See [the product roadmap](docs/ROADMAP.md), [deployment gates](docs/DEPLOYMENT.md), and [ADR-001](docs/adr/ADR-001-passport-first-boundaries.md).
+
+Everything under **Live on Midnight Preview** later in this README is v1 evidence. Those transaction IDs do not prove that Passport-v2 enrollment, `CredentialRegistryV1`, `ReferendumV2`, or the new browser journey have run live.
+
 ## The problem
 
 Digital civic consultation forces a choice that shouldn't have to be made.
@@ -378,9 +396,10 @@ pool of coins rather than one.
    the contract and executor but have no UI. Without it a referendum can be
    voted in but never counted. Start at
    [`api/src/index.ts`](api/src/index.ts) `createReferendumExecutor`.
-2. **Verificá should query the indexer.** It currently only searches
-   `localStorage`, so a receipt from another device cannot be checked — which
-   undercuts the public-verifiability claim. See `VerifyView` in
+2. **Verificá should query the indexer.** Preview receipts are currently
+   session-only and choice-free; persistence remains disabled until encrypted
+   IndexedDB key management is designed. Verification must resolve the network
+   and transaction ID against the canonical indexer. See `VerifyView` in
    [`ui/src/App.tsx`](ui/src/App.tsx).
 3. **Results presentation** — reveal-phase timing and a finalized-result view.
 4. **Issuer service.** `--issue` is operator-run; the uniqueness tag needs a

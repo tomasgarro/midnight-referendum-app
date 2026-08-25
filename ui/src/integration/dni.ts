@@ -18,7 +18,7 @@
  * described. The liveness challenge narrows the second gap; neither closes it.
  */
 
-export type DniSex = "M" | "F" | "X";
+export type DniSex = 'M' | 'F' | 'X';
 
 export interface DniDocument {
   /** Surname exactly as printed. Never leaves the browser. */
@@ -35,12 +35,12 @@ export interface DniDocument {
 }
 
 export type DniParseFailure =
-  | "not-a-dni-payload"
-  | "unknown-layout"
-  | "invalid-document-number"
-  | "invalid-sex"
-  | "invalid-date"
-  | "invalid-copy";
+  | 'not-a-dni-payload'
+  | 'unknown-layout'
+  | 'invalid-document-number'
+  | 'invalid-sex'
+  | 'invalid-date'
+  | 'invalid-copy';
 
 export type DniParseResult =
   | { ok: true; document: DniDocument }
@@ -60,7 +60,7 @@ function isCopy(value: string): boolean {
 
 function normaliseSex(value: string): DniSex | null {
   const upper = value.trim().toUpperCase();
-  return upper === "M" || upper === "F" || upper === "X" ? upper : null;
+  return upper === 'M' || upper === 'F' || upper === 'X' ? upper : null;
 }
 
 /** Rejects impossible calendar dates, not only malformed ones. */
@@ -94,15 +94,15 @@ export function parseDniDate(value: string): Date | null {
  */
 export function parseDniBarcode(payload: string): DniParseResult {
   const raw = payload.trim();
-  if (!raw.includes("@")) return { ok: false, reason: "not-a-dni-payload" };
+  if (!raw.includes('@')) return { ok: false, reason: 'not-a-dni-payload' };
 
-  const fields = raw.split("@").map((field) => field.trim());
-  if (fields.length < 8) return { ok: false, reason: "unknown-layout" };
+  const fields = raw.split('@').map((field) => field.trim());
+  if (fields.length < 8) return { ok: false, reason: 'unknown-layout' };
 
   const birthIndex = fields.findIndex((field) => DATE.test(field));
   // The five identity fields sit before the birth date, the issue date after.
-  if (birthIndex < 5 || !DATE.test(fields[birthIndex + 1] ?? "")) {
-    return { ok: false, reason: "unknown-layout" };
+  if (birthIndex < 5 || !DATE.test(fields[birthIndex + 1] ?? '')) {
+    return { ok: false, reason: 'unknown-layout' };
   }
 
   const surname = fields[birthIndex - 5]!;
@@ -113,13 +113,13 @@ export function parseDniBarcode(payload: string): DniParseResult {
   const birthDate = fields[birthIndex]!;
   const issueDate = fields[birthIndex + 1]!;
 
-  if (!isDocumentNumber(documentNumber)) return { ok: false, reason: "invalid-document-number" };
+  if (!isDocumentNumber(documentNumber)) return { ok: false, reason: 'invalid-document-number' };
   const sex = normaliseSex(sexField);
-  if (!sex) return { ok: false, reason: "invalid-sex" };
-  if (!isCopy(copy)) return { ok: false, reason: "invalid-copy" };
-  if (!surname || !givenNames) return { ok: false, reason: "unknown-layout" };
+  if (!sex) return { ok: false, reason: 'invalid-sex' };
+  if (!isCopy(copy)) return { ok: false, reason: 'invalid-copy' };
+  if (!surname || !givenNames) return { ok: false, reason: 'unknown-layout' };
   if (!parseDniDate(birthDate) || !parseDniDate(issueDate)) {
-    return { ok: false, reason: "invalid-date" };
+    return { ok: false, reason: 'invalid-date' };
   }
 
   return {
@@ -142,8 +142,8 @@ export function ageOn(birthDate: Date, reference: Date): number {
 export const MINIMUM_VOTING_AGE = 16;
 
 export type EligibilityRejection =
-  | { eligible: false; reason: "under-age"; age: number }
-  | { eligible: false; reason: "not-yet-issued" };
+  | { eligible: false; reason: 'under-age'; age: number }
+  | { eligible: false; reason: 'not-yet-issued' };
 
 export type EligibilityDecision = { eligible: true; age: number } | EligibilityRejection;
 
@@ -153,11 +153,11 @@ export function checkDniEligibility(
 ): EligibilityDecision {
   const birthDate = parseDniDate(document.birthDate);
   const issueDate = parseDniDate(document.issueDate);
-  if (!birthDate || !issueDate) return { eligible: false, reason: "not-yet-issued" };
-  if (issueDate.getTime() > now.getTime()) return { eligible: false, reason: "not-yet-issued" };
+  if (!birthDate || !issueDate) return { eligible: false, reason: 'not-yet-issued' };
+  if (issueDate.getTime() > now.getTime()) return { eligible: false, reason: 'not-yet-issued' };
 
   const age = ageOn(birthDate, now);
-  if (age < MINIMUM_VOTING_AGE) return { eligible: false, reason: "under-age", age };
+  if (age < MINIMUM_VOTING_AGE) return { eligible: false, reason: 'under-age', age };
   return { eligible: true, age };
 }
 
@@ -173,15 +173,12 @@ export function checkDniEligibility(
  * derived from data printed on the card, so anyone holding the card can
  * recompute it. It is not the voter secret.
  */
-export async function uniquenessTag(
-  document: DniDocument,
-  eventSalt: string,
-): Promise<string> {
+export async function uniquenessTag(document: DniDocument, eventSalt: string): Promise<string> {
   const material = new TextEncoder().encode(
     `referendum:uniqueness:${eventSalt}:${document.documentNumber}:${document.copy}`,
   );
-  const digest = await crypto.subtle.digest("SHA-256", material);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const digest = await crypto.subtle.digest('SHA-256', material);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -201,7 +198,7 @@ export function summariseDni(document: DniDocument, now: Date = new Date()): Dni
   const initials = [document.givenNames, document.surname]
     .map((part) => part.trim().charAt(0).toUpperCase())
     .filter(Boolean)
-    .join("");
+    .join('');
   return {
     initials,
     maskedNumber: `•••${document.documentNumber.slice(-3)}`,

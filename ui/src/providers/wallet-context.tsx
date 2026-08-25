@@ -1,20 +1,10 @@
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import type { ConnectedAPI, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
+import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
+import { createContext, type ReactNode, useCallback, useEffect, useState } from 'react';
 
-const STORAGE_KEY = "midnight-referendum_wallet_autoconnect";
-const TARGET_NETWORK_ID = import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || "preview";
+const STORAGE_KEY = 'midnight-referendum_wallet_autoconnect';
+const TARGET_NETWORK_ID = import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || 'preview';
 
-export type WalletConnectionStatus =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "error";
+export type WalletConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export interface WalletState {
   status: WalletConnectionStatus;
@@ -37,18 +27,18 @@ export interface WalletContextValue extends WalletState {
 export const WalletContext = createContext<WalletContextValue | null>(null);
 
 function findWallet(): InitialAPI | undefined {
-  if (typeof window === "undefined" || !window.midnight) return undefined;
+  if (typeof window === 'undefined' || !window.midnight) return undefined;
   // Each wallet is injected under its own key (a UUID; Lace also aliases itself
   // at `mnLace`). Enumerate and use the first valid wallet; to target a specific
   // wallet, match on `rdns`/`name` instead.
   return Object.values(window.midnight).find(
-    (w): w is InitialAPI => w != null && typeof w.connect === "function",
+    (w): w is InitialAPI => w != null && typeof w.connect === 'function',
   );
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletState>({
-    status: "disconnected",
+    status: 'disconnected',
     connectedApi: null,
     shieldedAddress: null,
     coinPublicKey: null,
@@ -60,7 +50,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   });
 
   const refreshBalances = useCallback(async () => {
-    if (!state.connectedApi || typeof state.connectedApi.getDustBalance !== "function") return;
+    if (!state.connectedApi || typeof state.connectedApi.getDustBalance !== 'function') return;
     try {
       const dust = await state.connectedApi.getDustBalance();
       setState((prev) => ({ ...prev, dustBalance: dust.balance, dustCap: dust.cap }));
@@ -72,15 +62,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [state.connectedApi]);
 
   const connect = useCallback(async () => {
-    setState((prev) => ({ ...prev, status: "connecting", error: null }));
+    setState((prev) => ({ ...prev, status: 'connecting', error: null }));
 
     const wallet = findWallet();
     if (!wallet) {
       setState((prev) => ({
         ...prev,
-        status: "error",
+        status: 'error',
         error:
-          "No encontramos una wallet de Midnight. Instalá Lace o una wallet compatible para continuar.",
+          'No encontramos una wallet de Midnight. Instalá Lace o una wallet compatible para continuar.',
       }));
       return;
     }
@@ -100,7 +90,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       setState({
-        status: "connected",
+        status: 'connected',
         connectedApi: api,
         shieldedAddress: addresses.shieldedAddress,
         coinPublicKey: addresses.shieldedCoinPublicKey,
@@ -111,15 +101,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         error: null,
       });
 
-      localStorage.setItem(STORAGE_KEY, "true");
+      localStorage.setItem(STORAGE_KEY, 'true');
     } catch (err: unknown) {
       const message =
-        typeof err === "object" && err !== null && "reason" in err
+        typeof err === 'object' && err !== null && 'reason' in err
           ? (err as { reason: string }).reason
-          : "Failed to connect to wallet";
+          : 'Failed to connect to wallet';
       setState((prev) => ({
         ...prev,
-        status: "error",
+        status: 'error',
         error: message,
       }));
     }
@@ -128,7 +118,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const disconnect = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setState({
-      status: "disconnected",
+      status: 'disconnected',
       connectedApi: null,
       shieldedAddress: null,
       coinPublicKey: null,
@@ -141,7 +131,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) === "true") {
+    if (localStorage.getItem(STORAGE_KEY) === 'true') {
       connect();
     }
   }, [connect]);

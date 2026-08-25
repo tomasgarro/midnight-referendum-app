@@ -1,10 +1,10 @@
-import type { PassportSession } from "midnight-referendum-api";
+import type { PassportSession } from 'midnight-referendum-api';
 
-export const PASSPORT_PROFILE_PROTOCOL = "org.midnight.passport.profile/v1" as const;
+export const PASSPORT_PROFILE_PROTOCOL = 'org.midnight.passport.profile/v1' as const;
 export const PASSPORT_PROFILE_FIELDS = [
-  "displayName",
-  "passportContract",
-  "midnightAddresses",
+  'displayName',
+  'passportContract',
+  'midnightAddresses',
 ] as const;
 export type PassportProfileField = (typeof PASSPORT_PROFILE_FIELDS)[number];
 
@@ -13,7 +13,7 @@ export type PassportProfileField = (typeof PASSPORT_PROFILE_FIELDS)[number];
  * name, so a later payment popup navigates the window the user already
  * connected with instead of stacking a second one beside it.
  */
-const PASSPORT_WINDOW_NAME = "midnight-passport";
+const PASSPORT_WINDOW_NAME = 'midnight-passport';
 /**
  * First-time passkey onboarding happens inside the Passport window while we
  * wait. The reference client budgets 180 s; anything shorter abandons a user
@@ -37,24 +37,24 @@ type HandshakePair = { requestId: string; nonce: string };
 
 type ProfileReady = {
   protocol: typeof PASSPORT_PROFILE_PROTOCOL;
-  type: "passport.profile.ready";
+  type: 'passport.profile.ready';
   requestId: string;
   nonce: string;
 };
 
 type ProfileResponse = {
   protocol: typeof PASSPORT_PROFILE_PROTOCOL;
-  type: "passport.profile.response";
+  type: 'passport.profile.response';
   requestId: string;
   nonce: string;
   approved: boolean;
   profile?: PassportProfile;
-  error?: "denied" | "profile_unavailable" | "invalid_request";
+  error?: 'denied' | 'profile_unavailable' | 'invalid_request';
 };
 
 type ProfileRequest = {
   protocol: typeof PASSPORT_PROFILE_PROTOCOL;
-  type: "passport.profile.request";
+  type: 'passport.profile.request';
   requestId: string;
   nonce: string;
   fields: PassportProfileField[];
@@ -62,7 +62,7 @@ type ProfileRequest = {
 
 type ProfileHello = {
   protocol: typeof PASSPORT_PROFILE_PROTOCOL;
-  type: "passport.profile.hello";
+  type: 'passport.profile.hello';
 };
 
 export interface PassportBridgeOptions {
@@ -76,30 +76,30 @@ export class PassportBridgeError extends Error {
   constructor(
     message: string,
     readonly code:
-      | "unavailable"
-      | "timeout"
-      | "denied"
-      | "closed"
-      | "invalid_response"
-      | "invalid_configuration"
-      | "invalid_relying_party_origin",
+      | 'unavailable'
+      | 'timeout'
+      | 'denied'
+      | 'closed'
+      | 'invalid_response'
+      | 'invalid_configuration'
+      | 'invalid_relying_party_origin',
   ) {
     super(message);
-    this.name = "PassportBridgeError";
+    this.name = 'PassportBridgeError';
   }
 }
 
 export function getPassportOriginError(sourceWindow: Window = window): string | null {
   const location = sourceWindow.location;
-  const hostname = location?.hostname ?? "";
-  const isLocalhost = hostname === "localhost";
-  const isHttps = location?.protocol === "https:";
+  const hostname = location?.hostname ?? '';
+  const isLocalhost = hostname === 'localhost';
+  const isHttps = location?.protocol === 'https:';
 
-  if (isHttps || (isLocalhost && location?.protocol === "http:")) return null;
-  if (hostname === "127.0.0.1" || hostname === "::1") {
-    return "Passport requiere localhost o HTTPS. Abrí http://localhost:4173 en lugar de 127.0.0.1.";
+  if (isHttps || (isLocalhost && location?.protocol === 'http:')) return null;
+  if (hostname === '127.0.0.1' || hostname === '::1') {
+    return 'Passport requiere localhost o HTTPS. Abrí http://localhost:4173 en lugar de 127.0.0.1.';
   }
-  return "Passport requiere una conexión HTTPS para crear o usar tu passkey.";
+  return 'Passport requiere una conexión HTTPS para crear o usar tu passkey.';
 }
 
 export function isPassportEmbedded(sourceWindow: Window, passportOrigin: string): boolean {
@@ -107,7 +107,10 @@ export function isPassportEmbedded(sourceWindow: Window, passportOrigin: string)
 
   try {
     const ancestorOrigins = sourceWindow.location?.ancestorOrigins;
-    if (ancestorOrigins && Array.from(ancestorOrigins).some((origin) => origin === passportOrigin)) {
+    if (
+      ancestorOrigins &&
+      Array.from(ancestorOrigins).some((origin) => origin === passportOrigin)
+    ) {
       return true;
     }
   } catch {
@@ -115,36 +118,35 @@ export function isPassportEmbedded(sourceWindow: Window, passportOrigin: string)
   }
 
   try {
-    return new URL(sourceWindow.document?.referrer ?? "").origin === passportOrigin;
+    return new URL(sourceWindow.document?.referrer ?? '').origin === passportOrigin;
   } catch {
     return false;
   }
 }
 
 function boundedString(value: unknown, max = 512): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= max;
+  return typeof value === 'string' && value.length > 0 && value.length <= max;
 }
 
 function isField(value: unknown): value is PassportProfileField {
   return (
-    typeof value === "string" &&
-    (PASSPORT_PROFILE_FIELDS as readonly string[]).includes(value)
+    typeof value === 'string' && (PASSPORT_PROFILE_FIELDS as readonly string[]).includes(value)
   );
 }
 
 function isReady(value: unknown): value is ProfileReady {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const message = value as Record<string, unknown>;
   return (
     message.protocol === PASSPORT_PROFILE_PROTOCOL &&
-    message.type === "passport.profile.ready" &&
+    message.type === 'passport.profile.ready' &&
     boundedString(message.requestId, 256) &&
     boundedString(message.nonce, 256)
   );
 }
 
 function parseProfile(value: unknown): PassportProfile | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const input = value as Record<string, unknown>;
   const profile: PassportProfile = {};
 
@@ -153,7 +155,7 @@ function parseProfile(value: unknown): PassportProfile | null {
     profile.displayName = input.displayName;
   }
   if (input.passportContract !== undefined) {
-    if (!input.passportContract || typeof input.passportContract !== "object") return null;
+    if (!input.passportContract || typeof input.passportContract !== 'object') return null;
     const contract = input.passportContract as Record<string, unknown>;
     if (!boundedString(contract.address) || !boundedString(contract.network, 256)) return null;
     profile.passportContract = {
@@ -162,13 +164,13 @@ function parseProfile(value: unknown): PassportProfile | null {
     };
   }
   if (input.midnightAddresses !== undefined) {
-    if (!input.midnightAddresses || typeof input.midnightAddresses !== "object") return null;
+    if (!input.midnightAddresses || typeof input.midnightAddresses !== 'object') return null;
     const addresses = input.midnightAddresses as Record<string, unknown>;
     if (!boundedString(addresses.unshielded)) return null;
-    const parsed: NonNullable<PassportProfile["midnightAddresses"]> = {
+    const parsed: NonNullable<PassportProfile['midnightAddresses']> = {
       unshielded: addresses.unshielded,
     };
-    for (const field of ["shielded", "dust"] as const) {
+    for (const field of ['shielded', 'dust'] as const) {
       if (addresses[field] !== undefined) {
         if (!boundedString(addresses[field])) return null;
         parsed[field] = addresses[field] as string;
@@ -180,22 +182,22 @@ function parseProfile(value: unknown): PassportProfile | null {
 }
 
 function parseResponse(value: unknown): ProfileResponse | null {
-  if (!value || typeof value !== "object") return null;
+  if (!value || typeof value !== 'object') return null;
   const message = value as Record<string, unknown>;
   if (
     message.protocol !== PASSPORT_PROFILE_PROTOCOL ||
-    message.type !== "passport.profile.response" ||
+    message.type !== 'passport.profile.response' ||
     !boundedString(message.requestId, 256) ||
     !boundedString(message.nonce, 256) ||
-    typeof message.approved !== "boolean"
+    typeof message.approved !== 'boolean'
   ) {
     return null;
   }
   if (message.approved) {
     const profile = parseProfile(message.profile);
-    return profile ? { ...message, profile } as ProfileResponse : null;
+    return profile ? ({ ...message, profile } as ProfileResponse) : null;
   }
-  if (!["denied", "profile_unavailable", "invalid_request"].includes(String(message.error))) {
+  if (!['denied', 'profile_unavailable', 'invalid_request'].includes(String(message.error))) {
     return null;
   }
   return { ...message } as ProfileResponse;
@@ -203,16 +205,13 @@ function parseResponse(value: unknown): ProfileResponse | null {
 
 function randomHex(bytes = 24): string {
   const value = crypto.getRandomValues(new Uint8Array(bytes));
-  return [...value].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function profileRequest(
-  pair: HandshakePair,
-  fields: PassportProfileField[],
-): ProfileRequest {
+function profileRequest(pair: HandshakePair, fields: PassportProfileField[]): ProfileRequest {
   return {
     protocol: PASSPORT_PROFILE_PROTOCOL,
-    type: "passport.profile.request",
+    type: 'passport.profile.request',
     requestId: pair.requestId,
     nonce: pair.nonce,
     fields,
@@ -221,19 +220,19 @@ function profileRequest(
 
 const HELLO: ProfileHello = {
   protocol: PASSPORT_PROFILE_PROTOCOL,
-  type: "passport.profile.hello",
+  type: 'passport.profile.hello',
 };
 
-export function passportDenialMessage(error: ProfileResponse["error"]): string {
+export function passportDenialMessage(error: ProfileResponse['error']): string {
   switch (error) {
-    case "denied":
-      return "No aprobaste el pedido de perfil en Passport.";
-    case "profile_unavailable":
-      return "Passport todavía no tiene un perfil para compartir. Completá el onboarding y probá otra vez.";
-    case "invalid_request":
-      return "Passport ya tiene un pedido abierto para esta app. Resolvelo en Passport antes de reintentar.";
+    case 'denied':
+      return 'No aprobaste el pedido de perfil en Passport.';
+    case 'profile_unavailable':
+      return 'Passport todavía no tiene un perfil para compartir. Completá el onboarding y probá otra vez.';
+    case 'invalid_request':
+      return 'Passport ya tiene un pedido abierto para esta app. Resolvelo en Passport antes de reintentar.';
     default:
-      return "Passport no aprobó el pedido de perfil.";
+      return 'Passport no aprobó el pedido de perfil.';
   }
 }
 
@@ -254,7 +253,7 @@ class EmbeddedHandshakeWatcher {
     private readonly origin: string,
     private readonly sourceWindow: Window,
   ) {
-    this.sourceWindow.addEventListener("message", this.onMessage);
+    this.sourceWindow.addEventListener('message', this.onMessage);
   }
 
   private readonly onMessage = (event: MessageEvent) => {
@@ -287,7 +286,7 @@ class EmbeddedHandshakeWatcher {
   }
 
   dispose() {
-    this.sourceWindow.removeEventListener("message", this.onMessage);
+    this.sourceWindow.removeEventListener('message', this.onMessage);
   }
 }
 
@@ -339,17 +338,17 @@ export class PassportIdentityBridge {
 
   constructor(options: PassportBridgeOptions = {}) {
     const fallbackWindow = options.sourceWindow ?? window;
-    const configuredOrigin = options.passportOrigin ?? "https://midnightpassport.com";
+    const configuredOrigin = options.passportOrigin ?? 'https://midnightpassport.com';
     try {
       this.origin = new URL(configuredOrigin).origin;
     } catch {
-      throw new PassportBridgeError("Passport origin is not a valid URL", "invalid_configuration");
+      throw new PassportBridgeError('Passport origin is not a valid URL', 'invalid_configuration');
     }
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.sourceWindow = fallbackWindow;
     this.openPassport =
       options.openPassport ??
-      ((url, windowName) => fallbackWindow.open(url, windowName, "popup,width=620,height=780"));
+      ((url, windowName) => fallbackWindow.open(url, windowName, 'popup,width=620,height=780'));
   }
 
   get embedded(): boolean {
@@ -357,15 +356,18 @@ export class PassportIdentityBridge {
   }
 
   async connect(
-    fields: PassportProfileField[] = ["displayName", "passportContract", "midnightAddresses"],
+    fields: PassportProfileField[] = ['displayName', 'passportContract', 'midnightAddresses'],
   ): Promise<PassportSession> {
     const relyingPartyError = getPassportOriginError(this.sourceWindow);
     if (relyingPartyError) {
-      throw new PassportBridgeError(relyingPartyError, "invalid_relying_party_origin");
+      throw new PassportBridgeError(relyingPartyError, 'invalid_relying_party_origin');
     }
     const requestedFields = [...new Set(fields)].filter(isField);
     if (requestedFields.length === 0) {
-      throw new PassportBridgeError("Passport profile requires at least one field", "invalid_configuration");
+      throw new PassportBridgeError(
+        'Passport profile requires at least one field',
+        'invalid_configuration',
+      );
     }
 
     return this.embedded
@@ -395,7 +397,7 @@ export class PassportIdentityBridge {
       const finish = (error?: Error, session?: PassportSession) => {
         if (settled) return;
         settled = true;
-        this.sourceWindow.removeEventListener("message", onMessage);
+        this.sourceWindow.removeEventListener('message', onMessage);
         window.clearTimeout(timeout);
         for (const abort of aborts) abort();
         if (error) reject(error);
@@ -408,7 +410,7 @@ export class PassportIdentityBridge {
         if (!response || !pair) return;
         if (response.requestId !== pair.requestId || response.nonce !== pair.nonce) return;
         if (!response.approved) {
-          finish(new PassportBridgeError(passportDenialMessage(response.error), "denied"));
+          finish(new PassportBridgeError(passportDenialMessage(response.error), 'denied'));
           return;
         }
         finish(undefined, this.session(pair, response));
@@ -417,19 +419,21 @@ export class PassportIdentityBridge {
       const timeout = window.setTimeout(() => {
         finish(
           new PassportBridgeError(
-            "Passport no respondió a tiempo. Volvé a intentarlo desde la app de Passport.",
-            "timeout",
+            'Passport no respondió a tiempo. Volvé a intentarlo desde la app de Passport.',
+            'timeout',
           ),
         );
       }, this.timeoutMs);
 
-      this.sourceWindow.addEventListener("message", onMessage);
+      this.sourceWindow.addEventListener('message', onMessage);
 
-      void watcher.settled((cancel) => aborts.push(cancel)).then((established) => {
-        if (settled) return;
-        pair = established;
-        parent.postMessage(profileRequest(established, fields), this.origin);
-      });
+      void watcher
+        .settled((cancel) => aborts.push(cancel))
+        .then((established) => {
+          if (settled) return;
+          pair = established;
+          parent.postMessage(profileRequest(established, fields), this.origin);
+        });
     });
   }
 
@@ -443,8 +447,8 @@ export class PassportIdentityBridge {
     if (!popup) {
       return Promise.reject(
         new PassportBridgeError(
-          "El navegador bloqueó la ventana de Passport. Permití las ventanas emergentes y probá otra vez.",
-          "unavailable",
+          'El navegador bloqueó la ventana de Passport. Permití las ventanas emergentes y probá otra vez.',
+          'unavailable',
         ),
       );
     }
@@ -454,7 +458,7 @@ export class PassportIdentityBridge {
       const finish = (error?: Error, session?: PassportSession) => {
         if (settled) return;
         settled = true;
-        this.sourceWindow.removeEventListener("message", onMessage);
+        this.sourceWindow.removeEventListener('message', onMessage);
         window.clearTimeout(timeout);
         window.clearInterval(closedPoll);
         if (error) reject(error);
@@ -471,9 +475,10 @@ export class PassportIdentityBridge {
         }
 
         const response = parseResponse(event.data);
-        if (!response || response.requestId !== pair.requestId || response.nonce !== pair.nonce) return;
+        if (!response || response.requestId !== pair.requestId || response.nonce !== pair.nonce)
+          return;
         if (!response.approved) {
-          finish(new PassportBridgeError(passportDenialMessage(response.error), "denied"));
+          finish(new PassportBridgeError(passportDenialMessage(response.error), 'denied'));
           return;
         }
         finish(undefined, this.session(pair, response));
@@ -485,8 +490,8 @@ export class PassportIdentityBridge {
         if (popup.closed) {
           finish(
             new PassportBridgeError(
-              "La ventana de Passport se cerró antes de aprobar el perfil.",
-              "closed",
+              'La ventana de Passport se cerró antes de aprobar el perfil.',
+              'closed',
             ),
           );
         }
@@ -495,13 +500,13 @@ export class PassportIdentityBridge {
       const timeout = window.setTimeout(() => {
         finish(
           new PassportBridgeError(
-            "Passport no respondió a tiempo. Volvé a abrir Passport e intentá de nuevo.",
-            "timeout",
+            'Passport no respondió a tiempo. Volvé a abrir Passport e intentá de nuevo.',
+            'timeout',
           ),
         );
       }, this.timeoutMs);
 
-      this.sourceWindow.addEventListener("message", onMessage);
+      this.sourceWindow.addEventListener('message', onMessage);
     });
   }
 }

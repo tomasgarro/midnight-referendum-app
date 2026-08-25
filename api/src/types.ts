@@ -1,4 +1,4 @@
-import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
+import type { MidnightProviders } from '@midnight-ntwrk/midnight-js-types';
 
 /**
  * Replace these placeholder types with your contract's actual types.
@@ -13,22 +13,17 @@ import type { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
  *   computed from ContractState + PrivateState.
  */
 
-export type ImpureCircuitKeys =
-  | "issue"
-  | "castVote"
-  | "closeVote"
-  | "revealVote"
-  | "finalizeVote";
+export type ImpureCircuitKeys = 'issue' | 'castVote' | 'closeVote' | 'revealVote' | 'finalizeVote';
 
 // TODO: Replace with your contract's private state identifier
-export const PRIVATE_STATE_ID = "referendumPrivateState" as const;
+export const PRIVATE_STATE_ID = 'referendumPrivateState' as const;
 
 // TODO: Replace with your contract's public ledger state shape
 export interface ContractState {
-  phase: "COMMIT" | "REVEAL" | "FINALIZED";
+  phase: 'COMMIT' | 'REVEAL' | 'FINALIZED';
   closed: boolean;
   issuedVoters: bigint;
-  tally: ReadonlyMap<"YES" | "NO" | "ABSTAIN", bigint>;
+  tally: ReadonlyMap<'YES' | 'NO' | 'ABSTAIN', bigint>;
 }
 
 // TODO: Replace with your contract's private state shape
@@ -36,7 +31,7 @@ export interface PrivateState {
   issuerSecret?: Uint8Array;
   organizerSecret?: Uint8Array;
   voterSecret?: Uint8Array;
-  voterChoice?: "YES" | "NO" | "ABSTAIN";
+  voterChoice?: 'YES' | 'NO' | 'ABSTAIN';
   voteSalt?: Uint8Array;
   voterPath?: {
     leaf: Uint8Array;
@@ -62,7 +57,7 @@ export interface PassportSession {
 }
 
 export interface EligibilityAttestation {
-  provider: "fixture" | "rarimo" | "blockenfy" | "external";
+  provider: 'fixture' | 'rarimo' | 'blockenfy' | 'external';
   eventId: string;
   subjectCommitment: Uint8Array;
   issuedAt: string;
@@ -78,7 +73,7 @@ export interface VoteCommitment {
 
 export interface VoteReveal {
   eventId: string;
-  choice: "YES" | "NO" | "ABSTAIN";
+  choice: 'YES' | 'NO' | 'ABSTAIN';
   salt: Uint8Array;
   commitment: Uint8Array;
 }
@@ -98,7 +93,7 @@ export interface ReferendumExecutor {
   join(contractAddress: string, initialPrivateState: PrivateState): Promise<unknown>;
   issue(commitment: Uint8Array): Promise<TransactionReceipt>;
   castVote(): Promise<TransactionReceipt>;
-  revealVote(choice: VoteReveal["choice"], salt: Uint8Array): Promise<TransactionReceipt>;
+  revealVote(choice: VoteReveal['choice'], salt: Uint8Array): Promise<TransactionReceipt>;
   closeVote(): Promise<TransactionReceipt>;
   finalizeVote(): Promise<TransactionReceipt>;
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import type { ContractState } from "midnight-referendum-api";
-import { useMidnightProviders } from "@/providers/midnight-providers";
+import type { ContractState } from 'midnight-referendum-api';
+import { useEffect, useState } from 'react';
+import { useMidnightProviders } from '@/providers/midnight-providers';
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_MIDNIGHT_CONTRACT_ADDRESS?.trim() || null;
 
@@ -33,7 +33,7 @@ export function useReferendumState(): ReferendumStateView {
     let cancelled = false;
     setLoading(true);
 
-    const subscription = import("midnight-referendum-api").then(({ watchReferendumState }) =>
+    const subscription = import('midnight-referendum-api').then(({ watchReferendumState }) =>
       watchReferendumState(providers, CONTRACT_ADDRESS).subscribe({
         next: (next) => {
           if (cancelled) return;
@@ -43,7 +43,7 @@ export function useReferendumState(): ReferendumStateView {
         },
         error: (err: unknown) => {
           if (cancelled) return;
-          setError(err instanceof Error ? err.message : "No se pudo leer el estado del contrato");
+          setError(err instanceof Error ? err.message : 'No se pudo leer el estado del contrato');
           setLoading(false);
         },
       }),
