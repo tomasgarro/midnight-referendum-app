@@ -84,6 +84,7 @@ function makeGateway(fetcher: typeof fetch): RarimoHttpVerificationGateway {
     baseUrl: 'https://verificator.example',
     fetcher,
     proofRequestBaseUrl: 'https://app.rarime.com/external',
+    now: () => new Date('2026-08-24T12:00:00.000Z'),
   });
 }
 
