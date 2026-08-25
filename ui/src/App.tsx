@@ -36,6 +36,7 @@ import { DniVerification, type DniVerificationResult } from '@/components/dni-ve
 import { PassportJourney } from '@/components/passport-v2/PassportJourney';
 import { useReferendumState } from '@/hooks/use-contract-state';
 import { useWallet } from '@/hooks/use-wallet';
+import { parseAppMode } from '@/integration/app-mode';
 import { PassportIdentityBridge } from '@/integration/passport';
 import { MidnightPassportSessionAdapter } from '@/integration/passport-session-port';
 import {
@@ -91,8 +92,7 @@ interface VoteReceipt {
   explorerUrl?: string;
 }
 
-const APP_MODE: 'demo' | 'preview' =
-  import.meta.env.VITE_APP_MODE === 'preview' ? 'preview' : 'demo';
+const APP_MODE = parseAppMode(import.meta.env.VITE_APP_MODE);
 const CONTRACT_ADDRESS = import.meta.env.VITE_MIDNIGHT_CONTRACT_ADDRESS?.trim() || null;
 const PASSPORT_ORIGIN =
   import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com';
@@ -560,9 +560,12 @@ function ResultsPanel() {
                     {count.toString()} · {pct.toFixed(1)}%
                   </span>
                 </div>
-                <div className={`tally-bar ${key.toLowerCase()}`}>
-                  <span style={{ width: `${pct}%` }} />
-                </div>
+                <progress
+                  aria-label={`${label}: ${pct}%`}
+                  className={`tally-bar ${key.toLowerCase()}`}
+                  max={100}
+                  value={pct}
+                />
               </div>
             );
           })}
@@ -1489,7 +1492,7 @@ function VoteFlow({
           >
             Validar elegibilidad <ArrowRight size={20} />
           </button>
-          {APP_MODE === 'demo' ? (
+          {APP_MODE !== 'preview' ? (
             <p className="flow-hint">
               Modo local: podés recorrer la interfaz, pero no se crea ningún comprobante.
             </p>
@@ -1498,7 +1501,7 @@ function VoteFlow({
       ) : null}
       {stage === 'document' ? (
         <DniVerification
-          demoOnly={APP_MODE === 'demo'}
+          demoOnly={APP_MODE !== 'preview'}
           eventSalt={pollId}
           onVerified={onDniVerified}
           onCancel={() => onStage('verify')}
@@ -1627,7 +1630,7 @@ function VoteFlow({
               </div>
             </div>
           ) : null}
-          {APP_MODE === 'demo' ? (
+          {APP_MODE !== 'preview' ? (
             <p className="flow-hint">
               Solo Preview puede crear un comprobante. Conectá Lace y configurá un contrato
               desplegado.
@@ -1722,7 +1725,7 @@ function CivicApp() {
     [],
   );
   const passportV2Runtime = useMemo(() => {
-    if (APP_MODE === 'demo') return { config: null, error: null };
+    if (APP_MODE !== 'preview') return { config: null, error: null };
 
     try {
       return {
@@ -1792,7 +1795,7 @@ function CivicApp() {
   }, [passportSessionPort, passportV2Runtime, referendumV2Providers]);
   const profileId = useMemo(() => deriveProfileId(passportSession), [passportSession]);
   const previewReadiness = getPreviewReadiness({
-    appMode: APP_MODE,
+    appMode: APP_MODE === 'preview' ? 'preview' : 'demo',
     contractAddress: CONTRACT_ADDRESS,
     walletConnected: walletStatus === 'connected',
     providersReady: isReady,
@@ -1810,6 +1813,17 @@ function CivicApp() {
   }, [receipt]);
   const connectPassport = async () => {
     setPassportError(null);
+    if (APP_MODE === 'demo') {
+      setPassportSession({
+        sessionId: 'local-demo-session',
+        origin: window.location.origin,
+        network: 'devnet',
+        status: 'connected',
+        profile: { displayName: 'Ciudadano demo' },
+        capabilities: ['session', 'profile'],
+      });
+      return;
+    }
     try {
       const session = await passportSessionPort.connect({
         origin: window.location.origin,
@@ -1962,7 +1976,9 @@ function CivicApp() {
               ? 'Passport conectado · wallet separado'
               : APP_MODE === 'preview'
                 ? 'Wallet DApp Connector para votar'
-                : 'Solo lectura, sin transacciones'}
+                : APP_MODE === 'showcase'
+                  ? 'Passport en vivo · credencial y voto simulados'
+                  : 'Solo lectura, sin transacciones'}
           </span>
         </div>
         <details className="mode-details">
@@ -1977,6 +1993,7 @@ function CivicApp() {
         <PassportJourney
           mode={APP_MODE}
           onClose={() => setPassportJourneyOpen(false)}
+          passportPort={passportSessionPort}
           previewPorts={passportJourneyPorts}
         />
       ) : flowStage ? (
@@ -2050,7 +2067,7 @@ function CivicApp() {
 
 export function App() {
   return (
-    <WalletProvider>
+    <WalletProvider runtimeEnabled={APP_MODE === 'preview'}>
       <MidnightProvidersProvider>
         <CivicApp />
       </MidnightProvidersProvider>

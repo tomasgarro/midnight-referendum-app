@@ -27,6 +27,24 @@ describe('WalletContext', () => {
     delete (window as unknown as Record<string, unknown>).midnight;
   });
 
+  it('never contacts an injected wallet when the runtime is explicitly disabled', async () => {
+    const connect = vi.fn();
+    (window as unknown as Record<string, unknown>).midnight = { blocked: { connect } };
+    localStorage.setItem('midnight-referendum_wallet_autoconnect', 'true');
+    const user = userEvent.setup();
+
+    render(
+      <WalletProvider runtimeEnabled={false}>
+        <TestConsumer />
+      </WalletProvider>,
+    );
+
+    expect(connect).not.toHaveBeenCalled();
+    await user.click(screen.getByText('connect'));
+    expect(connect).not.toHaveBeenCalled();
+    expect(screen.getByTestId('error').textContent).toContain('deshabilitada');
+  });
+
   it('starts disconnected', () => {
     render(
       <WalletProvider>

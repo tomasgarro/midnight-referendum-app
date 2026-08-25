@@ -1,10 +1,10 @@
-name: Deploy synthetic Vercel preview
+name: Deploy Passport-first Vercel showcase
 
 on:
   workflow_dispatch:
 
 concurrency:
-  group: public-synthetic-preview
+  group: public-passport-showcase
   cancel-in-progress: false
 
 jobs:
@@ -65,14 +65,16 @@ jobs:
       - name: Pull Vercel Preview configuration
         run: vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
 
-      - name: Build synthetic prebuilt artifact
+      - name: Build Passport-first prebuilt artifact
         run: vercel build --token "$VERCEL_TOKEN"
         env:
-          VITE_APP_MODE: demo
+          VITE_APP_MODE: showcase
           VITE_MIDNIGHT_NETWORK: preview
           VITE_MIDNIGHT_CONTRACT_ADDRESS: ''
           VITE_RELAYER_URL: ''
           VITE_MIDNIGHT_PROOF_SERVER_URL: ''
+          VITE_MIDNIGHT_INDEXER_URL: ''
+          VITE_MIDNIGHT_INDEXER_WS_URL: ''
           VITE_PASSPORT_V2_API_URL: ''
           VITE_CICO_REFERENDA_JSON: '[]'
           VITE_PASSPORT_ORIGIN: ${{ vars.VITE_PASSPORT_ORIGIN || 'https://midnightpassport.com' }}
@@ -99,11 +101,12 @@ jobs:
         run: npm run test:e2e
         env:
           BASE_URL: ${{ steps.deploy.outputs.url }}
+          CICO_E2E_MODE: showcase
           CI: 'true'
 
       - name: Publish deployment summary
         run: |
-          echo "## Synthetic Vercel preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Passport-first Vercel showcase" >> "$GITHUB_STEP_SUMMARY"
           echo "- URL: ${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Scope: synthetic Passport journey only; no real credential or vote" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Scope: live Passport profile consent; synthetic credential and simulated vote" >> "$GITHUB_STEP_SUMMARY"

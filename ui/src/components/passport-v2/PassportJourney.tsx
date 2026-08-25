@@ -13,6 +13,7 @@ import {
   UserCircle,
   WifiHigh,
 } from '@phosphor-icons/react';
+import type { PassportSessionPort } from 'midnight-referendum-api';
 import { useState } from 'react';
 import {
   advanceDemoSubmission,
@@ -30,12 +31,14 @@ import {
   startDemoSubmission,
 } from '@/integration/cico-passport-journey';
 import { PreviewPassportJourney, type PreviewPassportJourneyPorts } from './PreviewPassportJourney';
+import { ShowcasePassportJourney } from './ShowcasePassportJourney';
 
-type JourneyMode = 'demo' | 'preview';
+type JourneyMode = 'demo' | 'showcase' | 'preview';
 
 interface PassportJourneyProps {
   mode: JourneyMode;
   onClose: () => void;
+  passportPort?: PassportSessionPort;
   previewPorts?: PreviewPassportJourneyPorts;
 }
 
@@ -504,16 +507,12 @@ function SubmissionStage({
       <p className="eyebrow">{copy.eyebrow}</p>
       <h2 id="passport-submission-title">{copy.title}</h2>
       <p>{copy.body}</p>
-      <div
+      <progress
         className="passport-processing-track"
-        role="progressbar"
         aria-label="Progreso de envío"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={progress}
-      >
-        <span style={{ width: `${progress}%` }} />
-      </div>
+        max={100}
+        value={progress}
+      />
       <ol className="passport-processing-list">
         <li className={state.stage === 'proving' ? 'active' : 'done'}>
           <span>{state.stage === 'proving' ? '1' : <Check size={14} />}</span>
@@ -612,8 +611,18 @@ function EyeSlashIcon() {
   return <span aria-hidden="true">◌</span>;
 }
 
-export function PassportJourney({ mode, onClose, previewPorts }: PassportJourneyProps) {
+export function PassportJourney({
+  mode,
+  onClose,
+  passportPort,
+  previewPorts,
+}: PassportJourneyProps) {
   const [state, setState] = useState<PassportJourneyState>(INITIAL_PASSPORT_JOURNEY_STATE);
+
+  if (mode === 'showcase') {
+    if (!passportPort) throw new Error('Showcase mode requires a Passport session port');
+    return <ShowcasePassportJourney passport={passportPort} onClose={onClose} />;
+  }
 
   if (mode === 'preview') {
     if (previewPorts) {

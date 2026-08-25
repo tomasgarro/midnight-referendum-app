@@ -27,6 +27,8 @@ The V1 registry lifecycle is intentionally staged: participants enroll while an 
 
 The official Midnight Passport SDK currently describes itself as planning/spec work with a reduced beta defined. CICO therefore integrates its available profile bridge through `PassportSessionPort` and keeps nationality, age, private-witness and contract-action capabilities behind replaceable ports rather than claiming Passport exposes them today. See [the product roadmap](docs/ROADMAP.md), [deployment gates](docs/DEPLOYMENT.md), and [ADR-001](docs/adr/ADR-001-passport-first-boundaries.md).
 
+The August–November 2026 execution cadence, weekly Buildathon outcomes, product-design research, and submission evidence are tracked in the [Buildathon roadmap](docs/BUILDATHON-ROADMAP.md).
+
 Everything under **Live on Midnight Preview** later in this README is v1 evidence. Those transaction IDs do not prove that Passport-v2 enrollment, `CredentialRegistryV1`, `ReferendumV2`, or the new browser journey have run live.
 
 ## The problem
