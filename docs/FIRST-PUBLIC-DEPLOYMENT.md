@@ -1,19 +1,20 @@
 # First public deployment: Passport-first Midnight Preview MVP
 
-Status: release runbook. The first public artifact is a synthetic UI preview.
-Real Passport/Rarimo enrollment and real Midnight voting are separate releases.
+Status: release runbook. The first public artifact is a Passport-first showcase:
+profile consent is live, while credential issuance and voting are synthetic.
 
 ## Release boundary
 
 The first release exposes only the static Vite UI on Vercel:
 
-- synthetic Passport credential and choice-free receipt, visibly labelled as demo data;
+- live Midnight Passport profile consent requesting `displayName` only;
+- synthetic civic credential and choice-free receipt, visibly labelled as simulated data;
 - browser camera access remains disabled; the public path uses only the synthetic document fixture;
 - no real credential, contract action, or chain-confirmed receipt;
 - no browser request to Rarimo, a verificator, CICO, a relayer, a database, or a raw proof route;
 - no issuer, organizer, relayer, verifier, wallet, holder, witness, or ballot secret in Vercel,
   GitHub Actions, `VITE_*`, the bundle, or logs;
-- demo mode hard-disables wallet, indexer, relayer, proof-server, and CICO runtime initialization,
+- showcase mode hard-disables wallet, indexer, relayer, proof-server, and CICO runtime initialization,
   even if stale deployment variables are present.
 
 The current legacy relayer (`/balance`, `/submit`, `/keys`, and detailed health data) is not a
@@ -25,7 +26,7 @@ Do not publish raw Rarimo/verificator proof or callback routes.
 | Surface | First public preview | Later private/invited stage |
 | --- | --- | --- |
 | UI | Vercel static deployment at `<PREVIEW_UI_ORIGIN>` | Same UI may enable approved Preview ports. |
-| Passport | Optional Midnight Passport profile/consent UI | Approved provider origin and real capability gate. |
+| Passport | Live profile/consent bridge at the pinned Passport origin | Future Passport-native credential capability. |
 | CICO/Rarimo | Not configured | Private CICO facade and verificator on dedicated infrastructure. |
 | Citizen proving | Not required | Participant-local loopback proof server only. |
 | Relayer | Not configured | Future authenticated, atomic citizen-action relay only. |
@@ -58,9 +59,9 @@ transcript.
 
 ## Environment ownership
 
-Every `VITE_*` value is public build output. For the synthetic preview:
+Every `VITE_*` value is public build output. For the public showcase:
 
-- set demo/synthetic mode;
+- set `VITE_APP_MODE=showcase` and `VITE_PASSPORT_ORIGIN=https://midnightpassport.com`;
 - leave contract address, CICO URL, relayer URL, and remote proof-server URL empty;
 - never place a secret, seed, private callback header, service-role key, or database credential in
   a `VITE_*` variable;
@@ -84,19 +85,14 @@ replace this with `--ignore-scripts`, because dependency lifecycle scripts may b
 
 ## CSP gate
 
-`vercel.json` has baseline security headers but no Content Security Policy. CSP is a pre-deploy
-gate because actual Passport, font, indexer, WebSocket, and framing origins are not frozen yet.
-Do not invent or wildcard those hosts.
+`vercel.json` enforces a reviewed allowlist: scripts, styles, fonts, images and connections are
+self-only; Passport is allowed only as the exact frame/ancestor origin; objects are disabled; and
+base, form, worker and manifest behavior are constrained. Encode Sans is self-hosted, and the UI
+has no inline React styles, so `unsafe-inline` is not required.
 
-Before public release:
-
-1. Freeze exact HTTPS/WSS origins from the approved demo build.
-2. Add a reviewed CSP covering at least `default-src`, `script-src`, `style-src`, `font-src`,
-   `img-src`, `connect-src`, `frame-src`, `frame-ancestors`, `base-uri`, `form-action`,
-   `object-src`, `worker-src`, and `manifest-src`.
-3. Run Chromium with CSP enforcement and capture the browser network log.
-4. Fail release if the browser reaches CICO, verificator, legacy relay, raw proof routes, a
-   non-loopback proof host, a real contract, or an unexpected third-party origin.
+Chromium must run with CSP enforcement during the deployed smoke test. Fail release if the browser
+reports a CSP violation or reaches CICO, verificator, legacy relay, raw proof routes, a non-loopback
+proof host, a real contract, or an unexpected third-party origin.
 
 ## Release gates
 
@@ -131,8 +127,8 @@ Required browser smoke:
    builds disabled.
 3. Create the protected GitHub environment `public-preview`; add the three scoped Vercel secrets
    and an approval owner. Configure only the approved public Passport origin.
-4. Freeze the exact origin set and add the enforced CSP. The workflow intentionally refuses to
-   deploy while `vercel.json` lacks `Content-Security-Policy`.
+4. Review the checked-in origin allowlist. The workflow refuses to deploy while `vercel.json`
+   lacks `Content-Security-Policy`.
 5. Manually dispatch `.github/workflows/deploy-vercel-preview.yml`. It installs Compact, verifies
    the source, runs `vercel build`, deploys with `--prebuilt`, checks a deep route and headers, and
    runs the Passport journeys against the resulting URL.
@@ -158,5 +154,5 @@ NFC enrollment and restart/reconciliation testing before inviting users.
   issuer/relay owners.
 
 Rollback is mandatory if the browser reaches a private host, non-loopback proof endpoint, raw
-proof/verificator route, legacy relayer route, real contract, or unreviewed origin, or if demo copy
+proof/verificator route, legacy relayer route, real contract, or unreviewed origin, or if showcase copy
 could be mistaken for a confirmed credential or vote.

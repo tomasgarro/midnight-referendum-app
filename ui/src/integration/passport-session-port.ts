@@ -15,7 +15,7 @@ type PassportProfileBridgeSession = {
   readonly midnightAddresses?: { readonly unshielded: string };
 };
 
-type PassportProfileBridgeField = 'displayName' | 'passportContract' | 'midnightAddresses';
+export type PassportProfileBridgeField = 'displayName' | 'passportContract' | 'midnightAddresses';
 
 export interface PassportProfileBridge {
   connect(fields?: PassportProfileBridgeField[]): Promise<PassportProfileBridgeSession>;
@@ -23,6 +23,8 @@ export interface PassportProfileBridge {
 
 export interface MidnightPassportSessionAdapterOptions {
   readonly bridge: PassportProfileBridge;
+  /** Minimum profile fields CICO is allowed to request after explicit consent. */
+  readonly profileFields?: readonly PassportProfileBridgeField[];
   readonly now?: () => Date;
 }
 
@@ -40,11 +42,13 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
   readonly supportedCapabilities = SUPPORTED_CAPABILITIES;
 
   private readonly bridge: PassportProfileBridge;
+  private readonly profileFields: PassportProfileBridgeField[];
   private readonly now: () => Date;
   private session: CivicPassportSession | null = null;
 
   constructor(options: MidnightPassportSessionAdapterOptions) {
     this.bridge = options.bridge;
+    this.profileFields = [...(options.profileFields ?? ['displayName'])];
     this.now = options.now ?? (() => new Date());
   }
 
@@ -61,7 +65,7 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
     }
 
     const raw = request.requestedCapabilities.includes('profile')
-      ? await this.bridge.connect(['displayName', 'passportContract', 'midnightAddresses'])
+      ? await this.bridge.connect([...this.profileFields])
       : await this.bridge.connect();
     this.session = {
       sessionId: raw.requestId,
@@ -69,9 +73,9 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
       network: request.network,
       status: 'connected',
       ...(raw.displayName ? { profile: { displayName: raw.displayName } } : {}),
-      ...(raw.midnightAddresses?.unshielded
+      ...(this.profileFields.includes('midnightAddresses') && raw.midnightAddresses?.unshielded
         ? { accountAddress: raw.midnightAddresses.unshielded }
-        : raw.passportContract?.address
+        : this.profileFields.includes('passportContract') && raw.passportContract?.address
           ? { accountAddress: raw.passportContract.address }
           : {}),
       capabilities: [...request.requestedCapabilities],

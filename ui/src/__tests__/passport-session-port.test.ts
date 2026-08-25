@@ -31,20 +31,32 @@ describe('MidnightPassportSessionAdapter', () => {
     });
 
     expect(adapter.supportedCapabilities).toEqual(['session', 'profile']);
-    expect(bridge.requestedFields).toEqual([
-      'displayName',
-      'passportContract',
-      'midnightAddresses',
-    ]);
+    expect(bridge.requestedFields).toEqual(['displayName']);
     expect(session).toMatchObject({
       sessionId: 'passport-request-id',
       origin: 'http://localhost:4173',
       network: 'preview',
       status: 'connected',
       profile: { displayName: 'Alice' },
-      accountAddress: 'midnight-display-address',
       capabilities: ['session', 'profile'],
     });
+    expect(session.accountAddress).toBeUndefined();
+  });
+
+  it('requests an address only when the caller explicitly opts into that profile field', async () => {
+    const bridge = new FakeProfileBridge();
+    const adapter = new MidnightPassportSessionAdapter({
+      bridge,
+      profileFields: ['displayName', 'passportContract'],
+    });
+    const session = await adapter.connect({
+      origin: 'https://cico.example',
+      network: 'preview',
+      requestedCapabilities: ['session', 'profile'],
+    });
+
+    expect(bridge.requestedFields).toEqual(['displayName', 'passportContract']);
+    expect(session.accountAddress).toBe('passport-display-address');
   });
 
   it('fails closed for unsupported Passport and mainnet capabilities', async () => {

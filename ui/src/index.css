@@ -1,5 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
+
+@font-face {
+  font-family: "Encode Sans";
+  src: url("/fonts/encode-sans-latin-ext.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
 
 :root {
   font-family: "Encode Sans", system-ui, sans-serif;
@@ -1842,24 +1849,31 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 .tally-bar {
+  display: block;
+  width: 100%;
   height: 9px;
+  border: 0;
   border-radius: 99px;
   background: #e7eef7;
   overflow: hidden;
 }
-.tally-bar span {
-  display: block;
-  height: 100%;
-  border-radius: 99px;
-  transition: width 0.5s ease;
+.tally-bar::-webkit-progress-bar {
+  background: #e7eef7;
 }
-.tally-bar.yes span {
+.tally-bar::-webkit-progress-value,
+.tally-bar::-moz-progress-bar {
+  border-radius: 99px;
+}
+.tally-bar.yes::-webkit-progress-value,
+.tally-bar.yes::-moz-progress-bar {
   background: #2f7d4f;
 }
-.tally-bar.no span {
+.tally-bar.no::-webkit-progress-value,
+.tally-bar.no::-moz-progress-bar {
   background: #c2563f;
 }
-.tally-bar.abstain span {
+.tally-bar.abstain::-webkit-progress-value,
+.tally-bar.abstain::-moz-progress-bar {
   background: #8a93a6;
 }
 .tally-total {
@@ -2697,19 +2711,161 @@ h2 {
   margin-right: auto;
 }
 .passport-processing-track {
+  display: block;
+  width: 100%;
   height: 7px;
+  border: 0;
   margin-top: 24px;
   overflow: hidden;
   border-radius: 99px;
   background: #eaf4fc;
   text-align: left;
 }
-.passport-processing-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
+.passport-processing-track::-webkit-progress-bar {
+  background: #eaf4fc;
+}
+.passport-processing-track::-webkit-progress-value,
+.passport-processing-track::-moz-progress-bar {
+  border-radius: 99px;
   background: var(--sky-strong);
-  transition: width 0.3s ease;
+}
+
+.showcase-toolbar,
+.showcase-truth-labels,
+.showcase-profile,
+.showcase-identity-stack span {
+  display: flex;
+  align-items: center;
+}
+.showcase-toolbar {
+  justify-content: space-between;
+  gap: 16px;
+}
+.showcase-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.showcase-toolbar select {
+  border: 1px solid #b8c9d8;
+  border-radius: 9px;
+  padding: 7px 10px;
+  background: white;
+}
+.showcase-truth-labels {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 22px;
+}
+.showcase-truth-labels span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #d3dde7;
+  border-radius: 99px;
+  padding: 6px 10px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.showcase-truth-labels .live {
+  border-color: #4e96df;
+  background: #eef7ff;
+  color: #145998;
+}
+.showcase-identity-stack {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+}
+.showcase-identity-stack span {
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f4f8fb;
+  font-weight: 650;
+}
+.showcase-consent-fields {
+  display: grid;
+  gap: 10px;
+}
+.showcase-consent-fields div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid #e1e8ef;
+}
+.showcase-consent-fields dt {
+  color: var(--muted);
+}
+.showcase-consent-fields dd {
+  margin: 0;
+  font-weight: 750;
+  text-align: right;
+}
+.showcase-profile {
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #b8d5ee;
+  border-radius: 14px;
+  background: #f2f9ff;
+}
+.showcase-profile small {
+  margin-left: auto;
+  color: #145998;
+  font-weight: 800;
+}
+.showcase-poll-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.showcase-poll-grid article {
+  padding: 16px;
+  border: 1px solid #d4e0ea;
+  border-radius: 14px;
+  background: #f8fbfd;
+}
+.showcase-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+}
+.showcase-choice-grid button {
+  padding: 14px;
+  border: 1px solid #bac9d5;
+  border-radius: 12px;
+  background: white;
+  font-weight: 750;
+}
+.showcase-choice-grid button.selected {
+  border-color: #4e96df;
+  background: #eaf4fc;
+  box-shadow: 0 0 0 2px #c3e0fa;
+}
+.showcase-receipt-facts {
+  display: grid;
+  gap: 9px;
+  margin: 18px 0;
+  padding-left: 22px;
+}
+@media (max-width: 640px) {
+  .showcase-toolbar {
+    align-items: flex-start;
+  }
+  .showcase-toolbar .back-button {
+    margin: 0;
+  }
+  .showcase-poll-grid,
+  .showcase-choice-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .passport-processing-list {
   grid-template-columns: repeat(3, 1fr);

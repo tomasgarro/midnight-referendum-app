@@ -36,7 +36,14 @@ function findWallet(): InitialAPI | undefined {
   );
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
+export function WalletProvider({
+  children,
+  runtimeEnabled = true,
+}: {
+  children: ReactNode;
+  /** Public demo/showcase builds pass false so injected wallets cannot be contacted. */
+  runtimeEnabled?: boolean;
+}) {
   const [state, setState] = useState<WalletState>({
     status: 'disconnected',
     connectedApi: null,
@@ -62,6 +69,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [state.connectedApi]);
 
   const connect = useCallback(async () => {
+    if (!runtimeEnabled) {
+      setState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: 'La wallet está deshabilitada en este showcase público.',
+      }));
+      return;
+    }
     setState((prev) => ({ ...prev, status: 'connecting', error: null }));
 
     const wallet = findWallet();
@@ -113,7 +128,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         error: message,
       }));
     }
-  }, []);
+  }, [runtimeEnabled]);
 
   const disconnect = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
@@ -131,10 +146,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+    if (runtimeEnabled && localStorage.getItem(STORAGE_KEY) === 'true') {
       connect();
     }
-  }, [connect]);
+  }, [connect, runtimeEnabled]);
 
   return (
     <WalletContext.Provider value={{ ...state, connect, disconnect, refreshBalances }}>

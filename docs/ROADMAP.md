@@ -4,6 +4,10 @@ Status: working roadmap for a non-binding civic-consultation product on
 Midnight Preview. This is an outcome-driven plan, not a promise of dates or a
 claim that the product is suitable for governmental elections.
 
+The weekly product and submission cadence for the August–November 2026 program
+lives in [`BUILDATHON-ROADMAP.md`](BUILDATHON-ROADMAP.md). This document remains
+the source of truth for cryptographic release gates.
+
 ## Strategy context
 
 CICO should let a person use one passport-backed civic credential across
