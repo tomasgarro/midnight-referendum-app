@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --build --force && node ../scripts/sync-contract-assets.mjs",
+    "build": "node ../scripts/sync-contract-assets.mjs && tsc --build --force",
     "test": "vitest run"
   },
   "dependencies": {

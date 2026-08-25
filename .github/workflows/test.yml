@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - feat/passport-credential-v2
 
 jobs:
   test:
@@ -40,8 +39,23 @@ jobs:
       - name: Verify compile, build, and unit tests
         run: npm run verify:linux -- demo
 
+      - name: Build production workspaces
+        run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+
+      - name: Upload API build for browser tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-dist
+          path: api/dist/
+          if-no-files-found: error
+          retention-days: 1
+
   e2e:
     name: Headless browser journey
+    needs: test
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -59,6 +73,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Download verified API build
+        uses: actions/download-artifact@v4
+        with:
+          name: api-dist
+          path: api/dist
 
       - name: Install Chromium
         run: npx playwright install chromium --with-deps
