@@ -8,10 +8,13 @@ Real Passport/Rarimo enrollment and real Midnight voting are separate releases.
 The first release exposes only the static Vite UI on Vercel:
 
 - synthetic Passport credential and choice-free receipt, visibly labelled as demo data;
+- browser camera access remains disabled; the public path uses only the synthetic document fixture;
 - no real credential, contract action, or chain-confirmed receipt;
 - no browser request to Rarimo, a verificator, CICO, a relayer, a database, or a raw proof route;
 - no issuer, organizer, relayer, verifier, wallet, holder, witness, or ballot secret in Vercel,
-  GitHub Actions, `VITE_*`, the bundle, or logs.
+  GitHub Actions, `VITE_*`, the bundle, or logs;
+- demo mode hard-disables wallet, indexer, relayer, proof-server, and CICO runtime initialization,
+  even if stale deployment variables are present.
 
 The current legacy relayer (`/balance`, `/submit`, `/keys`, and detailed health data) is not a
 public API. Do not publish it through Nginx, Vercel rewrites, wildcard DNS, or permissive CORS.
@@ -63,9 +66,14 @@ Every `VITE_*` value is public build output. For the synthetic preview:
   a `VITE_*` variable;
 - keep CICO and relayer environment files only in their future private operator secret stores.
 
-Vercel CLI automation, if used, needs scoped `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
-`VERCEL_PROJECT_ID` GitHub secrets. Pin the CLI version. Build one Preview artifact, test it, then
-promote that same artifact rather than rebuilding for production.
+The manual GitHub workflow uses the protected `public-preview` environment and needs scoped
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets. It checks out reviewed `main`
+only, pins Compact 0.31.1 and Vercel CLI 59.5.0, builds one Preview artifact, deploys that exact
+prebuilt output, and runs Playwright against the deployed URL.
+
+Do not enable automatic Git-connected Vercel builds yet. Generated Compact assets are deliberately
+not tracked, and an ordinary Vercel builder does not install the pinned Compact toolchain. The
+manual workflow reproduces the clean GitHub runner setup before `vercel build`.
 
 ## CSP gate
 
@@ -91,8 +99,8 @@ Run at the exact release SHA from WSL:
 nvm use
 npm ci
 npm run quality
+npm run verify:linux -- demo
 npm run build
-npm test
 CI=true npm run test:e2e
 npm audit --omit=dev
 git diff --check
@@ -110,16 +118,20 @@ Required browser smoke:
 
 ## Vercel execution
 
-1. Link/create the Vercel project with repository root `/`, Node 22, `npm ci`, `npm run build`,
-   and output `ui/dist`.
-2. Configure only approved synthetic Preview environment values.
-3. Use the PR branch to create a unique Vercel Preview URL.
-4. Run the network/CSP smoke and Playwright against that URL.
-5. Add the custom domain using only the DNS record Vercel provides; verify HTTPS and redirect.
-6. Publish the URL with the SHA, test evidence, incident contact, and an explicit “no real vote”
-   statement.
-7. Promote the tested artifact only after review. Do not run the referendum deploy, relayer, or
-   CICO commands for this release.
+1. Merge the reviewed PR to protected `main`; do not deploy an arbitrary ref with Vercel secrets.
+2. Link/create the Vercel project with repository root `/`, Node 22, `npm ci`, `npm run build`, and
+   output `ui/dist`, but leave automatic Git builds disabled.
+3. Create the protected GitHub environment `public-preview`; add the three scoped Vercel secrets
+   and an approval owner. Configure only the approved public Passport origin.
+4. Freeze the exact origin set and add the enforced CSP. The workflow intentionally refuses to
+   deploy while `vercel.json` lacks `Content-Security-Policy`.
+5. Manually dispatch `.github/workflows/deploy-vercel-preview.yml`. It installs Compact, verifies
+   the source, runs `vercel build`, deploys with `--prebuilt`, checks a deep route and headers, and
+   runs the Passport journeys against the resulting URL.
+6. Review the workflow summary and browser/network evidence before assigning a custom domain.
+7. Add the custom domain using only the DNS record Vercel provides; verify HTTPS and redirect.
+8. Publish the URL with the SHA, test evidence, incident contact, and an explicit “no real vote”
+   statement. Do not run referendum deploy, relayer, or CICO commands for this release.
 
 ## Hostinger execution for a later private enrollment stage
 

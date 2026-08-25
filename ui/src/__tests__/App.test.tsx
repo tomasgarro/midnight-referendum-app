@@ -43,11 +43,11 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Votá ahora' }));
     await user.click(screen.getByRole('button', { name: 'Validar elegibilidad' }));
 
-    // Eligibility now requires a real document step; it no longer jumps
-    // straight to "you may vote".
-    expect(screen.getByRole('heading', { name: 'Escaneá el dorso de tu DNI' })).toBeTruthy();
+    // Public demo mode must remain synthetic and must not offer the camera path.
+    expect(screen.getByRole('heading', { name: 'Usá el documento de demostración' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Continuar al voto' })).toBeNull();
-    expect(screen.getByText(/El documento no sale de tu teléfono/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Activar la cámara' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Usar documento de demostración' })).toBeTruthy();
   });
 
   it('does not create a fake receipt in local mode', async () => {
