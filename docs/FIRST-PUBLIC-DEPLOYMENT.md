@@ -76,6 +76,12 @@ not tracked, and an ordinary Vercel builder does not install the pinned Compact 
 manual workflow reproduces the clean GitHub runner setup before `vercel build`.
 `vercel.json` enforces this with `git.deploymentEnabled: false`.
 
+Vercel must install development dependencies because Vite, TypeScript, Husky, and the Midnight
+build tooling are declared there. The checked-in install contract is
+`HUSKY=0 npm ci --include=dev`: `--include=dev` overrides a project-level production omit, while
+`HUSKY=0` intentionally skips Git-hook installation in the immutable deployment checkout. Do not
+replace this with `--ignore-scripts`, because dependency lifecycle scripts may be required.
+
 ## CSP gate
 
 `vercel.json` has baseline security headers but no Content Security Policy. CSP is a pre-deploy
@@ -120,8 +126,9 @@ Required browser smoke:
 ## Vercel execution
 
 1. Merge the reviewed PR to protected `main`; do not deploy an arbitrary ref with Vercel secrets.
-2. Link/create the Vercel project with repository root `/`, Node 22, `npm ci`, `npm run build`, and
-   output `ui/dist`, but leave automatic Git builds disabled.
+2. Link/create the Vercel project with repository root `/`, Node 22, the checked-in install command
+   `HUSKY=0 npm ci --include=dev`, `npm run build`, and output `ui/dist`, but leave automatic Git
+   builds disabled.
 3. Create the protected GitHub environment `public-preview`; add the three scoped Vercel secrets
    and an approval owner. Configure only the approved public Passport origin.
 4. Freeze the exact origin set and add the enforced CSP. The workflow intentionally refuses to
