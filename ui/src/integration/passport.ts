@@ -1,5 +1,6 @@
-import type { PassportSession } from 'midnight-referendum-api';
+import type { PassportNetwork } from 'midnight-referendum-api';
 
+export const PASSPORT_ORIGIN = 'https://midnightpassport.com' as const;
 export const PASSPORT_PROFILE_PROTOCOL = 'org.midnight.passport.profile/v1' as const;
 export const PASSPORT_PROFILE_FIELDS = [
   'displayName',
@@ -33,13 +34,30 @@ type PassportProfile = {
   };
 };
 
-type HandshakePair = { requestId: string; nonce: string };
+/** Narrow wire result used only between the official Passport bridge and its adapter. */
+export interface PassportBridgeSession {
+  readonly requestId: string;
+  readonly nonce: string;
+  readonly origin: string;
+  readonly network: 'preview' | 'devnet';
+  readonly displayName?: string;
+  readonly passportContract?: { readonly address: string; readonly network: string };
+  readonly midnightAddresses?: {
+    readonly unshielded: string;
+    readonly shielded?: string;
+    readonly dust?: string;
+  };
+}
+
+type BridgeNetwork = Extract<PassportNetwork, 'preview' | 'devnet'>;
+type HandshakePair = { requestId: string; nonce: string; network?: BridgeNetwork };
 
 type ProfileReady = {
   protocol: typeof PASSPORT_PROFILE_PROTOCOL;
   type: 'passport.profile.ready';
   requestId: string;
   nonce: string;
+  network?: BridgeNetwork;
 };
 
 type ProfileResponse = {
@@ -48,6 +66,7 @@ type ProfileResponse = {
   requestId: string;
   nonce: string;
   approved: boolean;
+  network?: BridgeNetwork;
   profile?: PassportProfile;
   error?: 'denied' | 'profile_unavailable' | 'invalid_request';
 };
@@ -57,6 +76,7 @@ type ProfileRequest = {
   type: 'passport.profile.request';
   requestId: string;
   nonce: string;
+  network: BridgeNetwork;
   fields: PassportProfileField[];
 };
 
@@ -67,6 +87,8 @@ type ProfileHello = {
 
 export interface PassportBridgeOptions {
   passportOrigin?: string;
+  /** Network requested by this bridge instance; defaults to Preview. */
+  network?: PassportNetwork;
   timeoutMs?: number;
   openPassport?: (url: string, windowName: string) => Window | null;
   sourceWindow?: Window;
@@ -82,7 +104,8 @@ export class PassportBridgeError extends Error {
       | 'closed'
       | 'invalid_response'
       | 'invalid_configuration'
-      | 'invalid_relying_party_origin',
+      | 'invalid_relying_party_origin'
+      | 'wrong_network',
   ) {
     super(message);
     this.name = 'PassportBridgeError';
@@ -125,7 +148,52 @@ export function isPassportEmbedded(sourceWindow: Window, passportOrigin: string)
 }
 
 function boundedString(value: unknown, max = 512): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= max;
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= max &&
+    !Array.from(value).some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 0x20 || code === 0x7f;
+    })
+  );
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const allowed = new Set(keys);
+  return Object.keys(value).every((key) => allowed.has(key));
+}
+
+function isBridgeNetwork(value: unknown): value is BridgeNetwork {
+  return value === 'preview' || value === 'devnet';
+}
+
+function assertBridgeNetworkValue(value: PassportNetwork): asserts value is BridgeNetwork {
+  if (!isBridgeNetwork(value)) {
+    throw new PassportBridgeError(
+      'Passport profile consent is restricted to Preview or local devnet',
+      'wrong_network',
+    );
+  }
+}
+
+function assertResponseNetwork(actual: BridgeNetwork | undefined, expected: BridgeNetwork): void {
+  if (actual !== undefined && actual !== expected) {
+    throw new PassportBridgeError(
+      `Passport responded for ${actual}, not ${expected}.`,
+      'wrong_network',
+    );
+  }
+}
+
+function protocolMessage(value: unknown, type: string): value is Record<string, unknown> {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>).protocol === PASSPORT_PROFILE_PROTOCOL &&
+    (value as Record<string, unknown>).type === type
+  );
 }
 
 function isField(value: unknown): value is PassportProfileField {
@@ -135,19 +203,22 @@ function isField(value: unknown): value is PassportProfileField {
 }
 
 function isReady(value: unknown): value is ProfileReady {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const message = value as Record<string, unknown>;
   return (
+    hasOnlyKeys(message, ['protocol', 'type', 'requestId', 'nonce', 'network']) &&
     message.protocol === PASSPORT_PROFILE_PROTOCOL &&
     message.type === 'passport.profile.ready' &&
     boundedString(message.requestId, 256) &&
-    boundedString(message.nonce, 256)
+    boundedString(message.nonce, 256) &&
+    (message.network === undefined || isBridgeNetwork(message.network))
   );
 }
 
 function parseProfile(value: unknown): PassportProfile | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const input = value as Record<string, unknown>;
+  if (!hasOnlyKeys(input, ['displayName', 'passportContract', 'midnightAddresses'])) return null;
   const profile: PassportProfile = {};
 
   if (input.displayName !== undefined) {
@@ -155,8 +226,14 @@ function parseProfile(value: unknown): PassportProfile | null {
     profile.displayName = input.displayName;
   }
   if (input.passportContract !== undefined) {
-    if (!input.passportContract || typeof input.passportContract !== 'object') return null;
+    if (
+      !input.passportContract ||
+      typeof input.passportContract !== 'object' ||
+      Array.isArray(input.passportContract)
+    )
+      return null;
     const contract = input.passportContract as Record<string, unknown>;
+    if (!hasOnlyKeys(contract, ['address', 'network'])) return null;
     if (!boundedString(contract.address) || !boundedString(contract.network, 256)) return null;
     profile.passportContract = {
       address: contract.address,
@@ -164,8 +241,14 @@ function parseProfile(value: unknown): PassportProfile | null {
     };
   }
   if (input.midnightAddresses !== undefined) {
-    if (!input.midnightAddresses || typeof input.midnightAddresses !== 'object') return null;
+    if (
+      !input.midnightAddresses ||
+      typeof input.midnightAddresses !== 'object' ||
+      Array.isArray(input.midnightAddresses)
+    )
+      return null;
     const addresses = input.midnightAddresses as Record<string, unknown>;
+    if (!hasOnlyKeys(addresses, ['unshielded', 'shielded', 'dust'])) return null;
     if (!boundedString(addresses.unshielded)) return null;
     const parsed: NonNullable<PassportProfile['midnightAddresses']> = {
       unshielded: addresses.unshielded,
@@ -182,24 +265,37 @@ function parseProfile(value: unknown): PassportProfile | null {
 }
 
 function parseResponse(value: unknown): ProfileResponse | null {
-  if (!value || typeof value !== 'object') return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const message = value as Record<string, unknown>;
   if (
+    !hasOnlyKeys(message, [
+      'protocol',
+      'type',
+      'requestId',
+      'nonce',
+      'approved',
+      'network',
+      'profile',
+      'error',
+    ]) ||
     message.protocol !== PASSPORT_PROFILE_PROTOCOL ||
     message.type !== 'passport.profile.response' ||
     !boundedString(message.requestId, 256) ||
     !boundedString(message.nonce, 256) ||
-    typeof message.approved !== 'boolean'
+    typeof message.approved !== 'boolean' ||
+    (message.network !== undefined && !isBridgeNetwork(message.network))
   ) {
     return null;
   }
   if (message.approved) {
+    if (message.error !== undefined) return null;
     const profile = parseProfile(message.profile);
     return profile ? ({ ...message, profile } as ProfileResponse) : null;
   }
   if (!['denied', 'profile_unavailable', 'invalid_request'].includes(String(message.error))) {
     return null;
   }
+  if (message.profile !== undefined) return null;
   return { ...message } as ProfileResponse;
 }
 
@@ -208,12 +304,17 @@ function randomHex(bytes = 24): string {
   return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function profileRequest(pair: HandshakePair, fields: PassportProfileField[]): ProfileRequest {
+function profileRequest(
+  pair: HandshakePair,
+  fields: PassportProfileField[],
+  network: BridgeNetwork,
+): ProfileRequest {
   return {
     protocol: PASSPORT_PROFILE_PROTOCOL,
     type: 'passport.profile.request',
     requestId: pair.requestId,
     nonce: pair.nonce,
+    network,
     fields,
   };
 }
@@ -264,7 +365,11 @@ class EmbeddedHandshakeWatcher {
     // reset a handshake that is already established.
     if (this.pair) return;
 
-    this.pair = { requestId: event.data.requestId, nonce: event.data.nonce };
+    this.pair = {
+      requestId: event.data.requestId,
+      nonce: event.data.nonce,
+      ...(event.data.network ? { network: event.data.network } : {}),
+    };
     this.sourceWindow.parent.postMessage(HELLO, this.origin);
     const waiting = this.waiting;
     this.waiting = [];
@@ -342,17 +447,22 @@ export function resetPassportHandshakeWatch(): void {
  */
 export class PassportIdentityBridge {
   private readonly origin: string;
+  private readonly configuredNetwork: PassportNetwork | undefined;
   private readonly timeoutMs: number;
   private readonly sourceWindow: Window;
   private readonly openPassport: (url: string, windowName: string) => Window | null;
 
   constructor(options: PassportBridgeOptions = {}) {
     const fallbackWindow = options.sourceWindow ?? window;
-    const configuredOrigin = options.passportOrigin ?? 'https://midnightpassport.com';
+    const configuredOrigin = options.passportOrigin ?? PASSPORT_ORIGIN;
     try {
       this.origin = new URL(configuredOrigin).origin;
     } catch {
       throw new PassportBridgeError('Passport origin is not a valid URL', 'invalid_configuration');
+    }
+    this.configuredNetwork = options.network;
+    if (this.configuredNetwork !== undefined) {
+      assertBridgeNetworkValue(this.configuredNetwork);
     }
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.sourceWindow = fallbackWindow;
@@ -365,7 +475,10 @@ export class PassportIdentityBridge {
     return isPassportEmbedded(this.sourceWindow, this.origin);
   }
 
-  async connect(fields?: PassportProfileField[]): Promise<PassportSession> {
+  async connect(
+    fields?: PassportProfileField[],
+    network?: PassportNetwork,
+  ): Promise<PassportBridgeSession> {
     const relyingPartyError = getPassportOriginError(this.sourceWindow);
     if (relyingPartyError) {
       throw new PassportBridgeError(relyingPartyError, 'invalid_relying_party_origin');
@@ -384,50 +497,122 @@ export class PassportIdentityBridge {
       );
     }
 
+    const expectedNetwork = network ?? this.configuredNetwork ?? 'preview';
+    assertBridgeNetworkValue(expectedNetwork);
+    if (this.configuredNetwork !== undefined && this.configuredNetwork !== expectedNetwork) {
+      throw new PassportBridgeError(
+        `Passport is configured for ${this.configuredNetwork}, not ${expectedNetwork}`,
+        'wrong_network',
+      );
+    }
+
     return this.embedded
-      ? this.connectEmbedded(requestedFields)
-      : this.connectStandalone(requestedFields);
+      ? this.connectEmbedded(requestedFields, expectedNetwork)
+      : this.connectStandalone(requestedFields, expectedNetwork);
   }
 
-  private session(pair: HandshakePair, response: ProfileResponse): PassportSession {
+  private session(
+    pair: HandshakePair,
+    response: ProfileResponse,
+    expectedNetwork: BridgeNetwork,
+  ): PassportBridgeSession {
+    assertResponseNetwork(response.network, expectedNetwork);
+    const contractNetwork = response.profile?.passportContract?.network;
+    if (contractNetwork !== undefined && contractNetwork !== expectedNetwork) {
+      throw new PassportBridgeError(
+        `Passport profile belongs to ${contractNetwork}, not ${expectedNetwork}`,
+        'wrong_network',
+      );
+    }
     return {
       requestId: pair.requestId,
       nonce: pair.nonce,
       origin: this.origin,
+      network: expectedNetwork,
       displayName: response.profile?.displayName,
       passportContract: response.profile?.passportContract,
       midnightAddresses: response.profile?.midnightAddresses,
     };
   }
 
-  private connectEmbedded(fields: PassportProfileField[]): Promise<PassportSession> {
+  private connectEmbedded(
+    fields: PassportProfileField[],
+    expectedNetwork: BridgeNetwork,
+  ): Promise<PassportBridgeSession> {
     const parent = this.sourceWindow.parent;
     const watcher = embeddedWatcher(this.origin, this.sourceWindow);
 
-    return new Promise<PassportSession>((resolve, reject) => {
+    return new Promise<PassportBridgeSession>((resolve, reject) => {
       let settled = false;
       let pair = watcher.current();
       const aborts: (() => void)[] = [];
-      const finish = (error?: Error, session?: PassportSession) => {
+      const finish = (error?: Error, session?: PassportBridgeSession) => {
         if (settled) return;
         settled = true;
         this.sourceWindow.removeEventListener('message', onMessage);
         window.clearTimeout(timeout);
         for (const abort of aborts) abort();
         if (error) reject(error);
-        else resolve(session!);
+        else if (session) resolve(session);
+        else reject(new PassportBridgeError('Passport session was empty.', 'invalid_response'));
       };
 
       const onMessage = (event: MessageEvent) => {
         if (event.origin !== this.origin || event.source !== parent) return;
+        if (protocolMessage(event.data, 'passport.profile.ready')) {
+          if (!isReady(event.data)) {
+            finish(
+              new PassportBridgeError(
+                'Passport returned a malformed ready message.',
+                'invalid_response',
+              ),
+            );
+            return;
+          }
+          const ready = event.data;
+          if (ready.network !== undefined && ready.network !== expectedNetwork) {
+            finish(
+              new PassportBridgeError(
+                `Passport responded for ${ready.network}, not ${expectedNetwork}.`,
+                'wrong_network',
+              ),
+            );
+          }
+          return;
+        }
+        if (
+          protocolMessage(event.data, 'passport.profile.response') &&
+          !parseResponse(event.data)
+        ) {
+          finish(
+            new PassportBridgeError(
+              'Passport returned a malformed profile response.',
+              'invalid_response',
+            ),
+          );
+          return;
+        }
         const response = parseResponse(event.data);
         if (!response || !pair) return;
         if (response.requestId !== pair.requestId || response.nonce !== pair.nonce) return;
+        if (response.network !== undefined && response.network !== expectedNetwork) {
+          finish(
+            new PassportBridgeError(
+              `Passport responded for ${response.network}, not ${expectedNetwork}.`,
+              'wrong_network',
+            ),
+          );
+          return;
+        }
         if (!response.approved) {
           finish(new PassportBridgeError(passportDenialMessage(response.error), 'denied'));
           return;
         }
-        finish(undefined, this.session(pair, response));
+        try {
+          finish(undefined, this.session(pair, response, expectedNetwork));
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error(String(error)));
+        }
       };
 
       const timeout = window.setTimeout(() => {
@@ -445,32 +630,50 @@ export class PassportIdentityBridge {
         .settled((cancel) => aborts.push(cancel))
         .then((established) => {
           if (settled) return;
+          if (established.network !== undefined && established.network !== expectedNetwork) {
+            finish(
+              new PassportBridgeError(
+                `Passport responded for ${established.network}, not ${expectedNetwork}.`,
+                'wrong_network',
+              ),
+            );
+            return;
+          }
           pair = established;
-          parent.postMessage(profileRequest(established, fields), this.origin);
+          parent.postMessage(profileRequest(established, fields, expectedNetwork), this.origin);
         });
     });
   }
 
-  private connectStandalone(fields: PassportProfileField[]): Promise<PassportSession> {
-    const pair: HandshakePair = { requestId: crypto.randomUUID(), nonce: randomHex() };
+  private connectStandalone(
+    fields: PassportProfileField[],
+    expectedNetwork: BridgeNetwork,
+  ): Promise<PassportBridgeSession> {
+    const pair: HandshakePair = {
+      requestId: crypto.randomUUID(),
+      nonce: randomHex(),
+      network: expectedNetwork,
+    };
     const query = new URLSearchParams({
       passportRequestId: pair.requestId,
       passportNonce: pair.nonce,
+      passportNetwork: expectedNetwork,
     });
-    return new Promise<PassportSession>((resolve, reject) => {
+    return new Promise<PassportBridgeSession>((resolve, reject) => {
       let settled = false;
       let popup: Window | null = null;
       let timeout: number | undefined;
       let closedPoll: number | undefined;
       let earlyReady: { source: MessageEvent['source']; data: ProfileReady } | null = null;
-      const finish = (error?: Error, session?: PassportSession) => {
+      const finish = (error?: Error, session?: PassportBridgeSession) => {
         if (settled) return;
         settled = true;
         this.sourceWindow.removeEventListener('message', onMessage);
         if (timeout !== undefined) window.clearTimeout(timeout);
         if (closedPoll !== undefined) window.clearInterval(closedPoll);
         if (error) reject(error);
-        else resolve(session!);
+        else if (session) resolve(session);
+        else reject(new PassportBridgeError('Passport session was empty.', 'invalid_response'));
       };
 
       const onMessage = (event: MessageEvent) => {
@@ -486,20 +689,64 @@ export class PassportIdentityBridge {
         }
         if (event.source !== popup) return;
 
-        if (isReady(event.data)) {
-          if (event.data.requestId !== pair.requestId || event.data.nonce !== pair.nonce) return;
-          popup.postMessage(profileRequest(pair, fields), this.origin);
+        if (protocolMessage(event.data, 'passport.profile.ready')) {
+          if (!isReady(event.data)) {
+            finish(
+              new PassportBridgeError(
+                'Passport returned a malformed ready message.',
+                'invalid_response',
+              ),
+            );
+            return;
+          }
+          const ready = event.data;
+          if (ready.requestId !== pair.requestId || ready.nonce !== pair.nonce) return;
+          if (ready.network !== undefined && ready.network !== expectedNetwork) {
+            finish(
+              new PassportBridgeError(
+                `Passport responded for ${ready.network}, not ${expectedNetwork}.`,
+                'wrong_network',
+              ),
+            );
+            return;
+          }
+          popup.postMessage(profileRequest(pair, fields, expectedNetwork), this.origin);
           return;
         }
 
+        if (
+          protocolMessage(event.data, 'passport.profile.response') &&
+          !parseResponse(event.data)
+        ) {
+          finish(
+            new PassportBridgeError(
+              'Passport returned a malformed profile response.',
+              'invalid_response',
+            ),
+          );
+          return;
+        }
         const response = parseResponse(event.data);
         if (!response || response.requestId !== pair.requestId || response.nonce !== pair.nonce)
           return;
+        if (response.network !== undefined && response.network !== expectedNetwork) {
+          finish(
+            new PassportBridgeError(
+              `Passport responded for ${response.network}, not ${expectedNetwork}.`,
+              'wrong_network',
+            ),
+          );
+          return;
+        }
         if (!response.approved) {
           finish(new PassportBridgeError(passportDenialMessage(response.error), 'denied'));
           return;
         }
-        finish(undefined, this.session(pair, response));
+        try {
+          finish(undefined, this.session(pair, response, expectedNetwork));
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error(String(error)));
+        }
       };
 
       // Install the listener before opening Passport. The popup can post its
@@ -556,7 +803,16 @@ export class PassportIdentityBridge {
       if (pendingReady?.source === popup) {
         const ready = pendingReady.data;
         if (ready.requestId === pair.requestId && ready.nonce === pair.nonce) {
-          popup.postMessage(profileRequest(pair, fields), this.origin);
+          if (ready.network !== undefined && ready.network !== expectedNetwork) {
+            finish(
+              new PassportBridgeError(
+                `Passport responded for ${ready.network}, not ${expectedNetwork}.`,
+                'wrong_network',
+              ),
+            );
+          } else {
+            popup.postMessage(profileRequest(pair, fields, expectedNetwork), this.origin);
+          }
         }
         earlyReady = null;
       }

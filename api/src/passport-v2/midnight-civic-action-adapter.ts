@@ -14,6 +14,7 @@ import {
   type ReferendumV2ExecutorConfig,
   type ReferendumV2Providers,
 } from './midnight-v2-executors.js';
+import type { WalletlessActionExecutionContext } from './midnight-v2-relayer-providers.js';
 import type {
   CivicActionPort,
   CivicCredentialPort,
@@ -51,6 +52,8 @@ export interface MidnightCivicActionAdapterOptions {
   ) => ReferendumV2Executor;
   /** Optional durable/indexer-backed lookup used after reload or an uncertain response. */
   readonly receiptResolver?: (transactionId: string) => Promise<CanonicalReceipt | null>;
+  /** Present only for the atomic walletless provider; Lace does not need it. */
+  readonly actionExecutionContext?: WalletlessActionExecutionContext;
 }
 
 /**
@@ -69,6 +72,7 @@ export class MidnightCivicActionAdapter implements CivicActionPort {
     MidnightCivicActionAdapterOptions['executorFactory']
   >;
   private readonly receiptResolver?: MidnightCivicActionAdapterOptions['receiptResolver'];
+  private readonly actionExecutionContext?: WalletlessActionExecutionContext;
   private readonly receipts = new Map<string, CanonicalReceipt>();
   private readonly pendingVotes = new Map<
     string,
@@ -97,6 +101,7 @@ export class MidnightCivicActionAdapter implements CivicActionPort {
     this.stateResolver = options.stateResolver ?? createCanonicalStateResolver(options.providers);
     this.executorFactory = options.executorFactory ?? createReferendumV2Executor;
     this.receiptResolver = options.receiptResolver;
+    this.actionExecutionContext = options.actionExecutionContext;
   }
 
   async castVote(request: CastVoteRequest): Promise<CanonicalReceipt> {
@@ -163,7 +168,17 @@ export class MidnightCivicActionAdapter implements CivicActionPort {
     );
     const executor = this.executorFactory(this.providers, entry.config);
     await executor.join(entry.contractAddress, privateState);
-    const receipt = await executor.castVote();
+    const receipt = this.actionExecutionContext
+      ? await this.actionExecutionContext.run(
+          {
+            credentialAuthorization: request.authorization.handle,
+            contractAddress: entry.contractAddress,
+            circuit: 'castVote',
+            action: 'vote',
+          },
+          () => executor.castVote(),
+        )
+      : await executor.castVote();
     assertVoteReceipt(receipt, entry.contractAddress);
     this.receipts.set(receipt.transactionId, receipt);
     return receipt;
@@ -226,6 +241,7 @@ function createCanonicalStateResolver(
         parseCredentialRegistryV1(registryState.data),
       );
       assertReferendumRegistryBinding(reference, {
+        registryContractBinding: entry.config.registry.registryContractBinding,
         registryId: entry.config.registry.registryId,
         issuerId: entry.config.registry.issuerId,
         credentialEpoch: entry.config.registry.credentialEpoch,

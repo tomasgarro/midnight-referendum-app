@@ -1,0 +1,170 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+  createReferendumV2WalletlessProviders,
+  InMemoryWalletlessPendingActionStore,
+  type WalletlessActionCapabilityIssuer,
+  walletlessActionRequestHash,
+} from './midnight-v2-relayer-providers.js';
+
+const scope = {
+  credentialAuthorization: 'credential:issued-1',
+  contractAddress: 'contract-1',
+  circuit: 'castVote' as const,
+  action: 'vote' as const,
+};
+
+function response(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+describe('v2 walletless providers', () => {
+  it('uses the relay request digest shared by the capability and atomic action', async () => {
+    const issued: Parameters<WalletlessActionCapabilityIssuer['issue']>[0][] = [];
+    let posted: Record<string, unknown> | null = null;
+    const capabilityIssuer: WalletlessActionCapabilityIssuer = {
+      issue: vi.fn(async (request) => {
+        issued.push(request);
+        return 'signed.one-time.capability';
+      }),
+    };
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/keys')) {
+        return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
+      }
+      if (url.endsWith('/v2/actions') && init?.method === 'POST') {
+        posted = JSON.parse(String(init.body));
+        return response(202, {
+          actionId: posted?.actionId,
+          status: 'pending',
+          requestHash: posted?.requestHash,
+          network: 'undeployed',
+          contractAddress: 'contract-1',
+          circuit: 'castVote',
+        });
+      }
+      if (url.includes('/v2/actions/')) {
+        return response(200, {
+          actionId: issued[0]?.actionId,
+          status: 'pending',
+          requestHash: issued[0]?.requestHash,
+          network: 'undeployed',
+          contractAddress: 'contract-1',
+          circuit: 'castVote',
+          transactionId: 'tx-1',
+        });
+      }
+      throw new Error(`unexpected URL ${url}`);
+    }) as typeof fetch;
+    const runtime = await createReferendumV2WalletlessProviders({
+      relayUrl: 'http://localhost:8790',
+      proofServerUri: 'http://localhost:6300',
+      networkId: 'undeployed',
+      indexerUri: 'http://localhost:8088/api/v4/graphql',
+      indexerWsUri: 'ws://localhost:8088/api/v4/graphql/ws',
+      capabilityIssuer,
+      fetchImpl,
+      zkConfigBaseUrl: 'http://localhost:4173/managed/referendum-v2',
+      pollIntervalMs: 10,
+      submissionTimeoutMs: 100,
+    });
+    const proven = { serialize: () => Uint8Array.from([0xab, 0xcd]) };
+
+    const transactionId = await runtime.actionContext.run(scope, async () => {
+      const forwarded = await runtime.providers.walletProvider.balanceTx(proven as never);
+      return runtime.providers.midnightProvider.submitTx(forwarded);
+    });
+
+    const expectedHash = await walletlessActionRequestHash({
+      action: 'vote',
+      contractAddress: 'contract-1',
+      circuit: 'castVote',
+      network: 'undeployed',
+      tx: 'abcd',
+    });
+    expect(transactionId).toBe('tx-1');
+    expect(issued).toHaveLength(1);
+    expect(issued[0]).toMatchObject({
+      requestHash: expectedHash,
+      credentialAuthorization: scope.credentialAuthorization,
+    });
+    expect(posted).toMatchObject({ requestHash: expectedHash, tx: 'abcd' });
+    expect(JSON.stringify(posted)).not.toContain(scope.credentialAuthorization);
+  });
+
+  it('recovers a previously accepted action after a provider restart without resubmitting', async () => {
+    const pendingStore = new InMemoryWalletlessPendingActionStore();
+    const capabilityIssuer = { issue: vi.fn(async () => 'capability') };
+    let postCount = 0;
+    let actionId = '';
+    let requestHash = '';
+    const firstFetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith('/keys')) {
+        return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
+      }
+      if (init?.method === 'POST') {
+        postCount += 1;
+        const body = JSON.parse(String(init.body));
+        actionId = body.actionId;
+        requestHash = body.requestHash;
+        throw new Error('connection dropped after relay acceptance');
+      }
+      throw new Error('unexpected first request');
+    }) as typeof fetch;
+    const common = {
+      relayUrl: 'http://localhost:8790',
+      proofServerUri: 'http://localhost:6300',
+      networkId: 'undeployed' as const,
+      indexerUri: 'http://localhost:8088/api/v4/graphql',
+      indexerWsUri: 'ws://localhost:8088/api/v4/graphql/ws',
+      capabilityIssuer,
+      pendingStore,
+      zkConfigBaseUrl: 'http://localhost:4173/managed/referendum-v2',
+      pollIntervalMs: 10,
+      submissionTimeoutMs: 100,
+    };
+    const first = await createReferendumV2WalletlessProviders({ ...common, fetchImpl: firstFetch });
+    const proven = { serialize: () => Uint8Array.from([1, 2]) };
+    await expect(
+      first.actionContext.run(scope, async () =>
+        first.providers.midnightProvider.submitTx(
+          await first.providers.walletProvider.balanceTx(proven as never),
+        ),
+      ),
+    ).rejects.toThrow('connection dropped');
+
+    const secondFetch = vi.fn(async (input: string | URL | Request) => {
+      if (String(input).endsWith('/keys')) {
+        return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
+      }
+      if (String(input).includes('/v2/actions/')) {
+        return response(200, {
+          actionId,
+          status: 'pending',
+          requestHash,
+          network: 'undeployed',
+          contractAddress: 'contract-1',
+          circuit: 'castVote',
+          transactionId: 'tx-recovered',
+        });
+      }
+      throw new Error('restart attempted to submit again');
+    }) as typeof fetch;
+    const second = await createReferendumV2WalletlessProviders({
+      ...common,
+      fetchImpl: secondFetch,
+    });
+    const recovered = await second.actionContext.run(scope, async () =>
+      second.providers.midnightProvider.submitTx(
+        await second.providers.walletProvider.balanceTx(proven as never),
+      ),
+    );
+
+    expect(recovered).toBe('tx-recovered');
+    expect(postCount).toBe(1);
+    expect(capabilityIssuer.issue).toHaveBeenCalledTimes(1);
+  });
+});

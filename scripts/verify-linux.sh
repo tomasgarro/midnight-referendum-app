@@ -5,8 +5,8 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 mode="${1:-demo}"
-if [[ "$mode" != "demo" && "$mode" != "preview" ]]; then
-  printf 'Usage: bash scripts/verify-linux.sh [demo|preview]\n' >&2
+if [[ "$mode" != "demo" && "$mode" != "undeployed" && "$mode" != "preview" ]]; then
+  printf 'Usage: bash scripts/verify-linux.sh [demo|undeployed|preview]\n' >&2
   exit 2
 fi
 
@@ -46,7 +46,7 @@ npm run validate:contract
 npm run build --workspace midnight-referendum-api
 npm test
 
-if [[ "$mode" == "preview" ]]; then
+if [[ "$mode" == "undeployed" || "$mode" == "preview" ]]; then
   npm run build
 fi
 

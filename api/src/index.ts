@@ -37,6 +37,7 @@ export {
   eligibilityCommitmentForSecret,
 } from './eligibility.js';
 export {
+  browserCivicCredentialVault,
   browserPrivateStateProvider,
   deserializePrivateStateFromStorage,
   inMemoryPrivateStateProvider,
@@ -446,3 +447,4 @@ export function createStateObservable(
 
 export * from './passport-v2/index.js';
 export type { PassportSession as CivicPassportSession } from './passport-v2/types.js';
+export * from './receipts/index.js';

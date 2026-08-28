@@ -1,6 +1,10 @@
 import type { MerkleTreePath } from '@midnight-ntwrk/compact-runtime';
 import { describe, expect, it, vi } from 'vitest';
-import { deriveCredentialLeaf, deriveHolderBinding } from './crypto.js';
+import {
+  deriveCredentialLeaf,
+  deriveHolderBinding,
+  deriveRegistryContractBinding,
+} from './crypto.js';
 import {
   buildReferendumV2VoterPrivateState,
   MidnightCivicActionAdapter,
@@ -39,10 +43,11 @@ const material: CivicCredentialPrivateMaterial = {
 
 const entry: ReferendumV2CatalogEntry = {
   referendumId: 'global:land-policy',
-  contractAddress: 'referendum-v2-address',
+  contractAddress: '11'.repeat(32),
   config: {
     registry: {
-      registryContractAddress: 'credential-registry-address',
+      registryContractAddress: '22'.repeat(32),
+      registryContractBinding: deriveRegistryContractBinding('22'.repeat(32)),
       registryId: new Uint8Array(32).fill(4),
       issuerId: new Uint8Array(32).fill(5),
       credentialEpoch: 7n,

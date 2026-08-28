@@ -15,6 +15,8 @@ export type PassportCapability =
 
 export type PassportSessionStatus = 'connected' | 'expired' | 'disconnected';
 export type PassportNetwork = 'preview' | 'devnet' | 'mainnet';
+/** Chain runtime labels; local Undeployed is not a Passport account network. */
+export type MidnightRuntimeNetwork = PassportNetwork | 'undeployed';
 
 /** Display/session data only; never a credential or nullifier input. */
 export interface PassportProfile {
@@ -229,7 +231,7 @@ export type CanonicalReceiptStatus = 'confirmed';
 export interface CanonicalReceipt {
   readonly status: CanonicalReceiptStatus;
   readonly action: CivicActionKind;
-  readonly network: PassportNetwork;
+  readonly network: MidnightRuntimeNetwork;
   readonly transactionId: string;
   readonly transactionHash: string;
   readonly contractAddress: string;

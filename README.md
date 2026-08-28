@@ -13,7 +13,7 @@ referendum.
 
 ## Passport-v2 status
 
-The repository contains two generations. The original hackathon/DNI contract and its historical Preview transcript remain below as reproducible evidence for the v1 prototype. The active `feat/passport-credential-v2` work replaces country-specific DNI enrollment with a provider-neutral, all-passport architecture:
+The repository contains two generations. The original hackathon/DNI contract and its historical Preview transcript remain below as reproducible evidence for the v1 prototype. The active product replaces country-specific DNI enrollment with a provider-neutral, all-passport architecture:
 
 - Midnight Passport is the session, visible-profile and consent surface.
 - Rarimo is a replaceable NFC/passport-evidence adapter behind the CICO issuer.
@@ -21,11 +21,11 @@ The repository contains two generations. The original hackathon/DNI contract and
 - The ballot choice, voter secret, holder opening and Compact witness stay in the citizen browser.
 - Only the Midnight indexer can turn a submitted transaction into a confirmed receipt.
 
-The complete wallet-less **local demo** is synthetic and labels itself as such. The real Passport-v2 browser action currently uses wallet-derived Midnight providers; an atomic sponsored action endpoint is still pending. The Rarimo boundary now has a hardened self-hosted-verifier adapter, proof-to-enrollment/holder binding, claim validation, durable replay state, and a runnable Preview-only Midnight issuer process with independent fee-wallet and Compact-authority secrets. A pinned/running verificator, funded/deployed registry, physical NFC transcript and hosted credentials are still external gates.
+The complete wallet-less **local demo** is synthetic and labels itself as such. `undeployed` and `preview` are separate real-runtime gates and fail closed when their versioned v2 manifest or services are absent. The Rarimo boundary has a hardened verifier adapter, proof-to-enrollment/holder binding, claim validation, durable replay state, and an issuer process with independent fee-wallet and Compact-authority secrets. A pinned/running verificator, physical NFC transcript, and hosted Preview credentials remain external follow-on gates.
 
 The V1 registry lifecycle is intentionally staged: participants enroll while an epoch is open, the canonical root is reconciled and frozen, and only then do matching consultations open. A later passport scan enters the next epoch rather than pretending to belong to an older frozen root. See [ADR-006](docs/adr/ADR-006-credential-epoch-lifecycle.md).
 
-The official Midnight Passport SDK currently describes itself as planning/spec work with a reduced beta defined. CICO therefore integrates its available profile bridge through `PassportSessionPort` and keeps nationality, age, private-witness and contract-action capabilities behind replaceable ports rather than claiming Passport exposes them today. See [the product roadmap](docs/ROADMAP.md), [deployment gates](docs/DEPLOYMENT.md), and [ADR-001](docs/adr/ADR-001-passport-first-boundaries.md).
+The official Midnight Passport SDK currently describes itself as planning/spec work with a reduced beta defined. CICO therefore integrates the official PWA protocol through `PassportSessionPort` and keeps holder binding, nationality, age, private-witness, and contract-action capabilities behind separate replaceable ports. Unsupported capabilities remain unsupported; profile data is never promoted into cryptographic authority. See the [architecture map](docs/ARCHITECTURE.md), [environment acceptance matrix](docs/ENVIRONMENT-ACCEPTANCE.md), [product roadmap](docs/ROADMAP.md), [deployment gates](docs/DEPLOYMENT.md), and [ADR-001](docs/adr/ADR-001-passport-first-boundaries.md).
 
 The August–November 2026 execution cadence, weekly Buildathon outcomes, product-design research, and submission evidence are tracked in the [Buildathon roadmap](docs/BUILDATHON-ROADMAP.md). The active Wave 1 checklist is in the [Wave 1 execution plan](docs/WAVE-1-EXECUTION-PLAN.md), and the operator-facing Vercel credential guide is in [VERCEL-SETUP.md](docs/VERCEL-SETUP.md).
 
@@ -148,7 +148,7 @@ power over it.
 
 | Area | Stack |
 | --- | --- |
-| Smart contract | Compact 0.31.1, Compact CLI 0.5.1 |
+| Smart contract | Compact compiler 0.31.1, language 0.23 |
 | Chain runtime | Midnight.js 4.1, Compact Runtime 0.16, Ledger v8.1 |
 | Relayer wallet | `@midnight-ntwrk/wallet-sdk-*` (facade 4.0.1) |
 | Frontend | React 19, TypeScript, Vite 7 |
@@ -166,7 +166,7 @@ Everything runs on Linux or WSL2. The browser may be on Windows; the toolchain
 must not be.
 
 - Ubuntu on WSL2, Node 22.22.0 (via `nvm` and the repo `.nvmrc`), npm 10
-- Compact CLI 0.5.1 / compiler 0.31.1
+- Compact compiler 0.31.1 / language 0.23
 - Docker, for the proof server
 - For real Preview transactions: a Preview-funded seed for the relayer
 - For local Undeployed transactions: a local relayer seed and local NIGHT/DUST
@@ -207,8 +207,10 @@ npm run dev:undeployed
 The relayer address must be funded with local NIGHT and have DUST registered
 before deployment. See [the compatibility matrix](docs/COMPATIBILITY-MATRIX.md)
 and the official [midnight-local-dev funding tool](https://github.com/midnightntwrk/midnight-local-dev).
-This path is for local development only; Passport remains a synthetic fixture
-until a real credential verifier is connected.
+This path is for local development only. It uses the real official Passport
+session/profile flow when that service accepts the localhost origin; the civic
+credential is a separately labelled local fixture issued into the real local
+Registry V1. Passport profile data is never promoted into eligibility.
 
 ### Real votes on Preview
 
@@ -373,8 +375,11 @@ chain rather than in the simulator. Counting is driven by
 ### Working and verified
 
 - [x] Contract deployed to Preview and readable through the indexer.
-- [x] Relayer funded, DUST-registered, and serving `/health`, `/keys`,
-      `/balance`, `/submit` — CORS-restricted, input-validated.
+- [x] Legacy Preview relayer transcript for `/health`, `/keys`, `/balance`, and
+      `/submit`; these routes are compatibility evidence, not the active v2 API.
+- [x] Active v2 relay boundary: capability-gated `/v2/actions`, durable
+      idempotency and DUST reservation, restart recovery, and indexer-confirmed
+      `/v2/receipts/{actionId}`.
 - [x] Compact commit/reveal contract; simulator covers double-vote, replay
       reveal, and organizer-only finalize.
 - [x] Interim Passport profile bridge — origin/source/request/nonce checks,
@@ -384,8 +389,9 @@ chain rather than in the simulator. Counting is driven by
 - [x] Live tally read from the contract; no hardcoded figures.
 - [x] Local demo stores only an explicitly simulated, Passport-scoped receipt;
       it cannot fabricate a canonical chain receipt.
-- [x] Current active verification: 173 automated tests across the referendum,
-      Passport v2, API, CICO, and UI suites; all relevant workspaces typecheck.
+- [x] Current active verification: 251 automated tests across the referendum,
+      Passport v2, API, CICO, relay, and UI suites; the production build and
+      complete `undeployed` verification pass on Node 22 in Linux/WSL.
 - [x] **A real `castVote` on Preview**, with double-vote and ineligible-voter
       rejection both observed on chain (see above).
 - [x] **A referendum carried all the way to a result on Preview** — deploy,
@@ -400,13 +406,12 @@ chain rather than in the simulator. Counting is driven by
       against synthetic payloads; live PDF417 decoding has not been run, and
       ZXing thresholds will likely need tuning. Needs a phone on
       `http://localhost:4173`.
-- [x] **The browser-side relayer path on local Undeployed.** An opt-in
-      Playwright lane now proves browser-side `/keys`, `/balance`, and `/submit`
-      plus a confirmed UI receipt. It requires an ephemeral eligibility
-      commitment issued to the same local contract and is not enabled by the
-      default demo/showcase test runs.
+- [x] **The legacy browser-side relayer path on local Undeployed.** Its opt-in
+      transcript remains compatibility evidence. The active v2 path sends one
+      already-proved transaction to `/v2/actions`; a new service transcript is
+      required before claiming the current branch is deployed.
 
-### The relayer is a single-coin bottleneck
+### Why v2 replaced the two-step relay
 
 Worth knowing before a demo, because it looks like a contract bug and is not.
 The relayer holds one DUST coin. Balancing spends it and produces change, but
@@ -418,10 +423,10 @@ with `Insufficient Funds: could not balance dust`, and DUST does not come back
 on its own: the wallet has locally marked the coin spent for a transaction
 that never landed, so it takes a relayer restart to re-derive state from chain.
 
-Space submissions out by a block, or restart the relayer if it reports
-`dustBalance: 0` while still holding NIGHT. A production relayer would
-serialize submissions behind confirmation of the previous change, and hold a
-pool of coins rather than one.
+The v2 store prevents a second job from reserving DUST while the first is in
+`dust_reserved`, `finalized`, `submitted`, or `indexer_pending`. PostgreSQL is
+mandatory when the service is exposed beyond loopback. A relay acknowledgement
+remains pending; only the indexer can create the canonical receipt.
 
 ### To build next
 

@@ -20,6 +20,11 @@ export sealed ledger registryId: Bytes<32>;
 export sealed ledger issuerId: Bytes<32>;
 export sealed ledger credentialEpoch: Uint<64>;
 export sealed ledger frozenCredentialRoot: MerkleTreeDigest;
+// Domain-separated hash of the exact registry contract address selected by
+// the operator. The address itself is not needed by the voting circuit, but
+// retaining its binding prevents an address/root mismatch in public runtime
+// configuration from being silently treated as the same registry.
+export sealed ledger registryContractBinding: Bytes<32>;
 export sealed ledger eventId: Bytes<32>;
 export sealed ledger organizerKey: Bytes<32>;
 
@@ -93,6 +98,7 @@ constructor(
   initialIssuerId: Bytes<32>,
   initialCredentialEpoch: Uint<64>,
   initialFrozenCredentialRoot: MerkleTreeDigest,
+  initialRegistryContractBinding: Bytes<32>,
   initialEventId: Bytes<32>,
   initialOrganizerKey: Bytes<32>,
   initialCountryPolicy: Bytes<32>,
@@ -105,6 +111,7 @@ constructor(
   issuerId = disclose(initialIssuerId);
   credentialEpoch = disclose(initialCredentialEpoch);
   frozenCredentialRoot = disclose(initialFrozenCredentialRoot);
+  registryContractBinding = disclose(initialRegistryContractBinding);
   eventId = disclose(initialEventId);
   // Constructor arguments are public transaction data. The organizer derives
   // this authorization key locally; its secret remains a private witness.
@@ -126,6 +133,7 @@ constructor(
 // supplied at deployment; the referendum does not copy registry leaves.
 export circuit castVote(): [] {
   assert(phase == Phase.COMMIT, "Voting is not in the commit phase");
+  assert(!closed, "Voting is closed");
 
   assert(
     disclose(holderBindingFromVoter() == holderBinding()),
@@ -176,11 +184,13 @@ export circuit castVote(): [] {
     !spentVoteNullifiers.member(disclose(voteNullifier)),
     "This voter has already voted in this referendum"
   );
+  assert(!ballotCommitments.isFull(), "Ballot commitment registry is full");
   spentVoteNullifiers.insert(disclose(voteNullifier));
 
   ballotCommitments.insert(
     ballotCommitment(voterChoice(), voteSalt())
   );
+  issuedVotes.increment(1);
 }
 
 export circuit closeVote(): [] {
@@ -192,12 +202,14 @@ export circuit closeVote(): [] {
     "Organizer authorization failed"
   );
   assert(phase == Phase.COMMIT, "The referendum is not in the commit phase");
+  assert(!closed, "The referendum is already closed");
   phase = Phase.REVEAL;
   closed = true;
 }
 
 export circuit revealVote(choice: Choice, salt: Bytes<32>): [] {
   assert(phase == Phase.REVEAL, "Voting is not in the reveal phase");
+  assert(closed, "The referendum is not closed");
 
   const commitment = ballotCommitment(choice, salt);
   const path = revealPath();
@@ -225,5 +237,6 @@ export circuit finalizeVote(): [] {
     "Organizer authorization failed"
   );
   assert(phase == Phase.REVEAL, "The referendum is not in the reveal phase");
+  assert(closed, "The referendum is not closed");
   phase = Phase.FINALIZED;
 }

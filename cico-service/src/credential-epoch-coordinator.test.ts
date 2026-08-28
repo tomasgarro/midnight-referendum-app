@@ -5,7 +5,7 @@ import {
   type CredentialEpochSnapshot,
 } from './credential-epoch-coordinator.js';
 
-const address = 'registry-preview-address';
+const address = 'ab'.repeat(32);
 const registryId = new Uint8Array(32).fill(1);
 const issuerId = new Uint8Array(32).fill(2);
 const issuerSecret = new Uint8Array(32).fill(3);

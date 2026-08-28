@@ -6,6 +6,7 @@ import type {
 } from '@midnight-ntwrk/compact-runtime';
 import * as GeneratedRegistry from '../generated/credential-registry-v1/index.js';
 import * as GeneratedReferendumV2 from '../generated/referendum-v2/index.js';
+import { deriveRegistryContractBinding } from './crypto.js';
 import type { VoteChoice } from './types.js';
 
 export const CREDENTIAL_REGISTRY_V1_PRIVATE_STATE_ID = 'credentialRegistryV1PrivateState' as const;
@@ -56,15 +57,25 @@ export interface ReferendumV2State {
   readonly issuerId: Uint8Array;
   readonly credentialEpoch: bigint;
   readonly frozenCredentialRoot: MerkleTreeDigest;
+  readonly registryContractBinding: Uint8Array;
   readonly eventId: Uint8Array;
+  readonly organizerKey: Uint8Array;
   readonly phase: 'COMMIT' | 'REVEAL' | 'FINALIZED';
   readonly closed: boolean;
+  /** Number of accepted commitments; this is separate from revealed tally. */
+  readonly issuedVotes: bigint;
+  readonly countryPolicy: Uint8Array;
+  readonly countryPolicyEnabled: boolean;
+  readonly minimumAssurance: bigint;
+  readonly requireAdult: boolean;
+  readonly validityReference: bigint;
   readonly tally: ReadonlyMap<VoteChoice, bigint>;
 }
 
 /** Canonical, public registry data that a referendum deployment must pin. */
 export interface FrozenCredentialRegistryReference {
   readonly registryContractAddress: string;
+  readonly registryContractBinding: Uint8Array;
   readonly registryId: Uint8Array;
   readonly issuerId: Uint8Array;
   readonly credentialEpoch: bigint;
@@ -76,6 +87,7 @@ export interface ReferendumV2RegistryBinding {
   readonly issuerId: Uint8Array;
   readonly credentialEpoch: bigint;
   readonly frozenCredentialRoot: MerkleTreeDigest;
+  readonly registryContractBinding: Uint8Array;
 }
 
 const registryWitnesses: GeneratedRegistry.Witnesses<CredentialRegistryV1PrivateState> = {
@@ -186,6 +198,17 @@ export function findCredentialPath(
   return path;
 }
 
+/** Resolves a public ballot opening path for the operator lifecycle probe. */
+export function findBallotPath(
+  data: ChargedState,
+  ballotCommitment: Uint8Array,
+): MerkleTreePath<Uint8Array> {
+  const path =
+    GeneratedReferendumV2.ledger(data).ballotCommitments.findPathForLeaf(ballotCommitment);
+  if (!path) throw new Error('Ballot commitment is not present in the canonical referendum');
+  return path;
+}
+
 export function parseReferendumV2(data: ChargedState): ReferendumV2State {
   const ledger = GeneratedReferendumV2.ledger(data);
   const phase = ['COMMIT', 'REVEAL', 'FINALIZED'][Number(ledger.phase)] as
@@ -197,9 +220,17 @@ export function parseReferendumV2(data: ChargedState): ReferendumV2State {
     issuerId: ledger.issuerId,
     credentialEpoch: ledger.credentialEpoch,
     frozenCredentialRoot: ledger.frozenCredentialRoot,
+    registryContractBinding: ledger.registryContractBinding,
     eventId: ledger.eventId,
+    organizerKey: ledger.organizerKey,
     phase,
     closed: ledger.closed,
+    issuedVotes: ledger.issuedVotes,
+    countryPolicy: ledger.countryPolicy,
+    countryPolicyEnabled: ledger.countryPolicyEnabled,
+    minimumAssurance: ledger.minimumAssurance,
+    requireAdult: ledger.requireAdult,
+    validityReference: ledger.validityReference,
     tally: new Map<VoteChoice, bigint>([
       ['YES', ledger.tally.lookup(GeneratedReferendumV2.Choice.YES)],
       ['NO', ledger.tally.lookup(GeneratedReferendumV2.Choice.NO)],
@@ -212,13 +243,14 @@ export function createFrozenCredentialRegistryReference(
   registryContractAddress: string,
   state: CredentialRegistryV1State,
 ): FrozenCredentialRegistryReference {
-  if (!registryContractAddress.trim()) throw new Error('Registry contract address is required');
+  const registryContractBinding = deriveRegistryContractBinding(registryContractAddress);
   if (!state.frozen) throw new Error('Credential registry must be canonically frozen');
   if (state.frozenRoot.field !== state.currentRoot.field) {
     throw new Error('Credential registry must freeze its current canonical root');
   }
   return {
     registryContractAddress,
+    registryContractBinding,
     registryId: new Uint8Array(state.registryId),
     issuerId: new Uint8Array(state.issuerId),
     credentialEpoch: state.credentialEpoch,
@@ -242,6 +274,12 @@ export function assertReferendumRegistryBinding(
   }
   if (reference.frozenRoot.field !== binding.frozenCredentialRoot.field) {
     throw new Error('Referendum root does not match the canonical frozen registry root');
+  }
+  const expectedRegistryContractBinding = deriveRegistryContractBinding(
+    reference.registryContractAddress,
+  );
+  if (!equalBytes(expectedRegistryContractBinding, binding.registryContractBinding)) {
+    throw new Error('Referendum registry contract binding does not match the frozen registry');
   }
 }
 

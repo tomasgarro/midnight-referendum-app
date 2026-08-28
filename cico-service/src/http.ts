@@ -7,6 +7,11 @@ import {
   type RarimoVerificationGateway,
   type RarimoVerificationRequest,
 } from 'midnight-referendum-api';
+import {
+  ActionCapabilityError,
+  type ActionCapabilityIssuanceRequest,
+  type ActionCapabilityIssuer,
+} from './action-capability-issuer.js';
 
 const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
 
@@ -15,6 +20,7 @@ export interface CicoHttpServiceOptions {
   readonly issuer: CivicCredentialIssuerPort;
   readonly allowedOrigins: readonly string[];
   readonly maxBodyBytes?: number;
+  readonly actionCapabilityIssuer?: ActionCapabilityIssuer;
 }
 
 /** Local/hosted HTTP façade. Real Rarimo and Midnight implementations are injected. */
@@ -58,7 +64,12 @@ export function createCicoHttpService(options: CicoHttpServiceOptions): Server {
       }
       await routeRequest(request, response, options, maxBodyBytes);
     } catch (error) {
-      const status = error instanceof HttpProblem ? error.status : 500;
+      const status =
+        error instanceof HttpProblem
+          ? error.status
+          : error instanceof ActionCapabilityError
+            ? error.status
+            : 500;
       const message =
         error instanceof HttpProblem
           ? error.message
@@ -117,6 +128,15 @@ async function routeRequest(
       credentialBlindHex: bytesToHex(result.credentialBlind),
       credentialLeafHex: bytesToHex(result.credentialLeaf),
       receipt: result.receipt,
+    });
+    return;
+  }
+  if (request.method === 'POST' && url.pathname === '/v1/action-capabilities') {
+    if (!options.actionCapabilityIssuer)
+      throw new HttpProblem(503, 'Action capability issuer unavailable');
+    const body = parseActionCapabilityRequest(await readJson(request, maxBodyBytes));
+    sendSafeJson(response, 201, {
+      actionCapability: await options.actionCapabilityIssuer.issue(body),
     });
     return;
   }
@@ -216,6 +236,23 @@ function parseClaims(value: Record<string, unknown>): CivicCredentialClaims {
     validFrom: value.validFrom,
     validUntil: value.validUntil,
   };
+}
+
+function parseActionCapabilityRequest(value: unknown): ActionCapabilityIssuanceRequest {
+  if (
+    !isRecord(value) ||
+    typeof value.actionId !== 'string' ||
+    typeof value.idempotencyKey !== 'string' ||
+    typeof value.requestHash !== 'string' ||
+    typeof value.network !== 'string' ||
+    typeof value.contractAddress !== 'string' ||
+    typeof value.circuit !== 'string' ||
+    (value.action !== 'credential' && value.action !== 'vote' && value.action !== 'cohort') ||
+    typeof value.credentialAuthorization !== 'string'
+  ) {
+    throw new HttpProblem(400, 'Invalid action capability request');
+  }
+  return value as unknown as ActionCapabilityIssuanceRequest;
 }
 
 function parseBytes32(value: unknown, label: string): Uint8Array {

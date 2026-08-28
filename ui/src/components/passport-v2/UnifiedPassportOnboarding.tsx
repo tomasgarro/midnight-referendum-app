@@ -10,7 +10,11 @@ import {
   QrCode,
   ShieldCheck,
 } from '@phosphor-icons/react';
-import type { CivicPassportSession, PassportSessionPort } from 'midnight-referendum-api';
+import type {
+  CivicPassportSession,
+  PassportHolderBindingResult,
+  PassportSessionPort,
+} from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import type { OnboardingStage } from '@/integration/civic-state';
@@ -25,6 +29,7 @@ import {
   detectPlatformPasskeyReadiness,
   type PasskeyReadiness,
 } from '@/integration/passkey-readiness';
+import { passportHolderBindingPort } from '@/integration/passport-session-port';
 
 type OnboardingMode = 'demo' | 'showcase' | 'undeployed';
 
@@ -160,6 +165,10 @@ const copy = {
     passkeyUnknown: 'Este navegador no expuso una señal de autenticador de plataforma.',
     passkeyDisclaimer:
       'Es solo una señal técnica: no crea una passkey, no conecta una wallet y no prueba una integración con Passport o Gero.',
+    holderBindingVerified:
+      'Holder binding verificado para esta sesión. No mostramos sus bytes ni lo tratamos como un claim de elegibilidad.',
+    holderBindingUnsupported:
+      'Esta versión de Passport no expone un holder binding verificado. La sesión sigue separada de la credencial.',
   },
   en: {
     back: 'Back to the app',
@@ -256,6 +265,10 @@ const copy = {
     passkeyUnknown: 'This browser did not expose a platform-authenticator signal.',
     passkeyDisclaimer:
       'This is only a technical signal: it creates no passkey, connects no wallet, and does not prove a Passport or Gero integration.',
+    holderBindingVerified:
+      'Holder binding verified for this session. We do not display its bytes or treat it as an eligibility claim.',
+    holderBindingUnsupported:
+      'This Passport build does not expose a verified holder binding. The session remains separate from any credential.',
   },
 } as const;
 
@@ -270,6 +283,7 @@ export function UnifiedPassportOnboarding({
   const [locale, setLocale] = useState<CicoLocale>(() => detectLocale());
   const [stage, setStage] = useState<OnboardingStage>('welcome');
   const [session, setSession] = useState<CivicPassportSession | null>(null);
+  const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [demoCountry, setDemoCountry] = useState(DEFAULT_DEMO_COUNTRY);
@@ -311,21 +325,34 @@ export function UnifiedPassportOnboarding({
     setConnecting(true);
     setError(null);
     try {
-      const next: CivicPassportSession =
-        mode === 'showcase' && passportPort
-          ? await passportPort.connect({
-              origin: window.location.origin,
-              network: 'preview',
-              requestedCapabilities: ['session', 'profile'],
-            })
-          : {
-              sessionId: `local-demo-${mode}`,
-              origin: window.location.origin,
-              network: 'devnet',
-              status: 'connected',
-              profile: { displayName: 'Ciudadano demo' },
-              capabilities: ['session', 'profile'],
-            };
+      let next: CivicPassportSession;
+      if (mode !== 'demo') {
+        if (!passportPort) throw new Error(t.error);
+        next = await passportPort.connect({
+          origin: window.location.origin,
+          network: 'preview',
+          requestedCapabilities: ['session', 'profile'],
+        });
+      } else {
+        next = {
+          sessionId: `local-demo-${mode}`,
+          origin: window.location.origin,
+          network: 'devnet',
+          status: 'connected',
+          profile: { displayName: 'Ciudadano demo' },
+          capabilities: ['session', 'profile'],
+        };
+      }
+      if (mode !== 'demo' && passportPort) {
+        const holderBindingPort = passportHolderBindingPort(passportPort);
+        if (holderBindingPort) {
+          const result = await holderBindingPort.getHolderBinding({
+            session: next,
+            network: 'preview',
+          });
+          setHolderBinding(result);
+        }
+      }
       setSession(next);
       onPassportConnected?.(next);
       setStage('consent-return');
@@ -597,6 +624,19 @@ export function UnifiedPassportOnboarding({
               {t.walletBody}
             </p>
           </div>
+          {holderBinding ? (
+            <div
+              className={`passport-notice ${holderBinding.status === 'verified' ? 'success' : 'info'}`}
+              role="status"
+            >
+              {holderBinding.status === 'verified' ? <CheckCircle size={18} /> : <Info size={18} />}
+              <p>
+                {holderBinding.status === 'verified'
+                  ? t.holderBindingVerified
+                  : t.holderBindingUnsupported}
+              </p>
+            </div>
+          ) : null}
           <button
             className="passport-action-button primary"
             onClick={() => setStage('eligibility')}

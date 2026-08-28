@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { deriveCredentialLeaf, deriveHolderBinding } from './crypto.js';
-import type { CivicCredentialIssuanceRequest, CivicCredentialIssuerPort } from './ports.js';
+import type {
+  CivicCredentialIssuanceRequest,
+  CivicCredentialIssuerPort,
+  CivicCredentialVaultPort,
+  StoredCivicCredential,
+} from './ports.js';
 import { RarimoCivicCredentialAdapter } from './rarimo-credential-adapter.js';
 import type {
   RarimoVerificationGateway,
@@ -141,10 +146,27 @@ class FakeCicoIssuer implements CivicCredentialIssuerPort {
   }
 }
 
+class MemoryCredentialVault implements CivicCredentialVaultPort {
+  stored: StoredCivicCredential | null = null;
+
+  async load() {
+    return this.stored;
+  }
+
+  async save(credential: StoredCivicCredential) {
+    this.stored = structuredClone(credential);
+  }
+
+  async clear() {
+    this.stored = null;
+  }
+}
+
 function makeAdapter(
   gateway: FakeRarimoGateway,
   randomBytes = deterministicRandomBytes(),
   issuer: CivicCredentialIssuerPort = new FakeCicoIssuer(),
+  vault?: CivicCredentialVaultPort,
 ) {
   return new RarimoCivicCredentialAdapter({
     gateway,
@@ -155,6 +177,7 @@ function makeAdapter(
     uniquenessTimestampUpperBoundUnixSeconds: 1_800_000_000,
     now: () => new Date(now),
     randomBytes,
+    vault,
   });
 }
 
@@ -243,6 +266,42 @@ describe('Rarimo civic credential boundary', () => {
     const secondRead = await adapter.getPrivateCredentialMaterial();
     expect(secondRead?.voterSecret).not.toEqual(privateMaterial?.voterSecret);
     expect(secondRead?.credentialBlind).toEqual(new Uint8Array(32).fill(91));
+  });
+
+  it('restores issued credential material from the encrypted-vault boundary after restart', async () => {
+    const gateway = new FakeRarimoGateway();
+    const issuer = new FakeCicoIssuer();
+    const vault = new MemoryCredentialVault();
+    const first = makeAdapter(gateway, deterministicRandomBytes(), issuer, vault);
+    const enrollment = await first.beginEnrollment(request({ requireAdult: true }));
+    gateway.statuses.set([...gateway.requests.keys()][0], 'verified');
+
+    await expect(first.getEnrollmentStatus(enrollment.enrollmentId)).resolves.toMatchObject({
+      status: 'issued',
+    });
+
+    const restarted = makeAdapter(
+      new FakeRarimoGateway(),
+      deterministicRandomBytes(),
+      new FakeCicoIssuer(),
+      vault,
+    );
+    await expect(restarted.getCredentialSummary()).resolves.toMatchObject({
+      provider: 'rarimo',
+      status: 'issued',
+      country: '032',
+    });
+    await expect(restarted.getActionAuthorization()).resolves.toEqual({
+      kind: 'civic-credential',
+      handle: `issuance-${enrollment.enrollmentId}`,
+    });
+    await expect(restarted.getPrivateCredentialMaterial()).resolves.toMatchObject({
+      credentialBlind: new Uint8Array(32).fill(91),
+    });
+
+    await restarted.clearCredential();
+    await expect(restarted.getCredentialSummary()).resolves.toBeNull();
+    expect(vault.stored).toBeNull();
   });
 
   it('does not mark verified evidence issued until the Midnight issuer confirms it', async () => {

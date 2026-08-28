@@ -59,13 +59,17 @@ export function PassportJourney({
   onCredentialReady,
   onPassportConnected,
 }: PassportJourneyProps) {
-  if (mode === 'preview') {
+  // Undeployed owns a local chain, but its account/identity surface is still
+  // the official Preview Passport. Never fall back to the synthetic Unified
+  // journey here: that would make a local fixture look like a real account.
+  if (mode === 'preview' || mode === 'undeployed') {
     if (previewPorts) {
       return (
         <PreviewPassportJourney
           onClose={onClose}
           onCredentialReady={onCredentialReady}
           onPassportConnected={onPassportConnected}
+          mode={mode}
           ports={previewPorts}
         />
       );

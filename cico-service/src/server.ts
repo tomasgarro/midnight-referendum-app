@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { iso31661 } from 'iso-3166';
 import { isoNumericCountry, type RarimoCountryMapper } from 'midnight-referendum-api';
+import { HmacActionCapabilityIssuer } from './action-capability-issuer.js';
 import { loadCicoServiceConfig } from './config.js';
 import {
   CredentialEpochCoordinator,
@@ -38,6 +39,9 @@ export async function startCicoService(): Promise<() => Promise<void>> {
     createWallet: createMidnightIssuerWalletAdapter,
   });
   const issuerSecret = hexBytes(config.issuerRuntime.issuerRoleSecretHex);
+  const issuanceStore = new FileCredentialIssuanceStore(
+    join(config.stateDirectory, 'credential-issuances.json'),
+  );
   const epochCoordinator = new CredentialEpochCoordinator({
     executor: runtime.executor,
     reader: new MidnightCredentialEpochReader(runtime.providers.publicDataProvider),
@@ -55,9 +59,7 @@ export async function startCicoService(): Promise<() => Promise<void>> {
     evidenceAuthorizations: new FileEvidenceAuthorizationStore(
       join(config.stateDirectory, 'evidence-authorizations.json'),
     ),
-    issuanceStore: new FileCredentialIssuanceStore(
-      join(config.stateDirectory, 'credential-issuances.json'),
-    ),
+    issuanceStore,
     validateEvidenceAuthorization: (request) =>
       gateway.validateCredentialIssuance(request, {
         issuerId: config.issuerIdText,
@@ -71,6 +73,14 @@ export async function startCicoService(): Promise<() => Promise<void>> {
     gateway,
     issuer,
     allowedOrigins: config.allowedOrigins,
+    ...(config.actionCapabilities
+      ? {
+          actionCapabilityIssuer: new HmacActionCapabilityIssuer({
+            ...config.actionCapabilities,
+            credentialAuthorizationExists: (handle) => issuanceStore.hasIssuanceId(handle),
+          }),
+        }
+      : {}),
   });
   try {
     await new Promise<void>((resolve, reject) => {

@@ -14,6 +14,13 @@ export interface CicoServiceConfig {
   readonly credentialEpoch: number;
   readonly credentialTtlMs: number;
   readonly maximumIssuanceDelayMs: number;
+  readonly actionCapabilities?: {
+    readonly secret: string;
+    readonly ttlSeconds: number;
+    readonly allowedNetworks: readonly string[];
+    readonly allowedContracts: readonly string[];
+    readonly allowedCircuits: readonly string[];
+  };
   readonly issuerRuntime: {
     readonly issuerSeedHex: string;
     readonly issuerRoleSecretHex: string;
@@ -51,6 +58,18 @@ export function loadCicoServiceConfig(
   const rarimoBaseUrl = required(env, 'CICO_RARIMO_BASE_URL');
   const verifierOrigin = absoluteHttpUrl(rarimoBaseUrl, 'CICO_RARIMO_BASE_URL').origin;
   const explorerBaseUrl = env.CICO_EXPLORER_BASE_URL?.trim();
+  const actionCapabilitySecret = env.CICO_ACTION_CAPABILITY_SECRET?.trim();
+  if (actionCapabilitySecret && actionCapabilitySecret.length < 32) {
+    throw new Error('CICO_ACTION_CAPABILITY_SECRET must contain at least 32 characters');
+  }
+  if (
+    actionCapabilitySecret &&
+    [issuerSeedHex, issuerRoleSecretHex].includes(actionCapabilitySecret)
+  ) {
+    throw new Error(
+      'Action capability, issuer wallet, and issuer role secrets must be independent',
+    );
+  }
   return {
     host: optional(env, 'CICO_HOST', '127.0.0.1'),
     port: integer(env, 'CICO_PORT', 1, 65_535, 8791),
@@ -82,6 +101,17 @@ export function loadCicoServiceConfig(
       60 * 60 * 1_000,
       10 * 60 * 1_000,
     ),
+    ...(actionCapabilitySecret
+      ? {
+          actionCapabilities: {
+            secret: actionCapabilitySecret,
+            ttlSeconds: integer(env, 'CICO_ACTION_CAPABILITY_TTL_SECONDS', 15, 600, 120),
+            allowedNetworks: list(required(env, 'CICO_ACTION_ALLOWED_NETWORKS')),
+            allowedContracts: list(required(env, 'CICO_ACTION_ALLOWED_CONTRACTS')),
+            allowedCircuits: list(required(env, 'CICO_ACTION_ALLOWED_CIRCUITS')),
+          },
+        }
+      : {}),
     issuerRuntime: {
       issuerSeedHex,
       issuerRoleSecretHex,

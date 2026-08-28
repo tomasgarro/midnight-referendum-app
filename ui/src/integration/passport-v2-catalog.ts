@@ -9,6 +9,12 @@ export interface PassportV2CatalogItem {
   readonly title: string;
   readonly question: string;
   readonly description?: string;
+  readonly opened?: string;
+  readonly deadline?: string;
+  readonly opensAt?: string;
+  readonly closesAt?: string;
+  readonly eligible?: string;
+  readonly participation?: string;
   readonly scope: PassportReferendumScope;
   readonly source?: ReferendumV2CatalogEntry;
 }
@@ -21,6 +27,12 @@ export function toPassportV2Catalog(
     title: entry.title,
     question: entry.question,
     ...(entry.description ? { description: entry.description } : {}),
+    ...(entry.opened ? { opened: entry.opened } : {}),
+    ...(entry.deadline ? { deadline: entry.deadline } : {}),
+    ...(entry.opensAt ? { opensAt: entry.opensAt } : {}),
+    ...(entry.closesAt ? { closesAt: entry.closesAt } : {}),
+    ...(entry.eligible ? { eligible: entry.eligible } : {}),
+    ...(entry.participation ? { participation: entry.participation } : {}),
     scope: entry.config.countryPolicyEnabled ? 'country' : 'global',
     source: entry,
   }));

@@ -118,7 +118,7 @@ export function getPreviewReadiness(input: PreviewReadinessInput): PreviewReadin
     return {
       state: 'blocked',
       label: `${networkLabel} requiere contrato`,
-      message: `${networkLabel} no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS con un contrato desplegado en esta red.`,
+      message: `${networkLabel} no está configurado: cargá un catálogo v2 firmado con un contrato desplegado en esta red.`,
     };
   }
 
@@ -186,7 +186,7 @@ export function getPublicReadiness(input: PublicReadinessInput): PublicReadiness
     return {
       state: 'blocked',
       label: `${networkLabel} requiere contrato`,
-      message: `${networkLabel} no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS para leer el estado público.`,
+      message: `${networkLabel} no está configurado: cargá el catálogo v2 para leer el estado público.`,
     };
   }
   if (input.publicProviderError) {

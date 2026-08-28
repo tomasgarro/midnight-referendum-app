@@ -24,16 +24,12 @@ import {
   Wallet,
   X,
 } from '@phosphor-icons/react';
-import type {
-  CivicPassportSession,
-  EligibilityAttestation,
-  PrivateState,
-  VoteReveal,
-} from 'midnight-referendum-api';
+import type { CivicPassportSession, CredentialSummary, VoteReveal } from 'midnight-referendum-api';
 import {
+  browserCivicCredentialVault,
   MidnightCivicActionAdapter,
   RarimoCivicCredentialAdapter,
-  watchReferendumState,
+  watchReferendumV2State,
 } from 'midnight-referendum-api';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { DniVerification, type DniVerificationResult } from '@/components/dni-verification';
@@ -47,11 +43,15 @@ import type { ActionMode, ConsultationArea } from '@/integration/civic-state';
 import { ASSIGNED_COUNTRIES, countryName as getCountryName } from '@/integration/country-catalog';
 import { PassportIdentityBridge } from '@/integration/passport';
 import { MidnightPassportSessionAdapter } from '@/integration/passport-session-port';
+import { countryPolicyCode, toPassportV2Catalog } from '@/integration/passport-v2-catalog';
 import {
   HttpCivicCredentialIssuerPort,
   HttpRarimoVerificationGateway,
 } from '@/integration/passport-v2-http-ports';
-import { parsePassportV2RuntimeConfig } from '@/integration/passport-v2-runtime-config';
+import {
+  type PassportV2RuntimeReferendum,
+  parsePassportV2RuntimeConfig,
+} from '@/integration/passport-v2-runtime-config';
 import { countOpenPolls, getPollAvailability } from '@/integration/poll-lifecycle';
 import {
   findRuntimeReferendum,
@@ -103,26 +103,43 @@ interface Poll {
   argumentsAgainst: string[];
   uncertainty: string;
   sources: Array<{ label: string; href: string; detail: string }>;
+  /** Runtime catalog scope; omitted for synthetic/demo fixture polls. */
+  runtimeScope?: 'global' | 'country';
+  /** ISO alpha-2 country derived from the private catalog policy, when present. */
+  runtimeCountryCode?: string;
+  /** Runtime v2 contract address used by the public indexer reader. */
+  runtimeContractAddress?: string;
 }
 
 type VoteReceipt = PassportReceiptRecord;
 
+function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary {
+  const country =
+    ASSIGNED_COUNTRIES.find((entry) => entry.numeric === String(summary.country))?.alpha2 ??
+    String(summary.country);
+  return {
+    kind: 'verified-credential',
+    issuer: summary.issuerId,
+    country,
+    ageClass: summary.ageClass === '18-plus' ? '18+' : summary.ageClass,
+    assurance: summary.assurance,
+    epoch: String(summary.credentialEpoch),
+    validUntil: summary.validUntil,
+  };
+}
+
 const APP_MODE = resolveAppMode(import.meta.env.MODE, import.meta.env.VITE_APP_MODE);
-// Undeployed is an educational/synthetic lane until a valid v2 catalog is
-// supplied. It must never silently send the legacy referendum transaction.
-const CHAIN_RUNTIME_ENABLED = APP_MODE === 'preview';
+// Demo/showcase are presentation boundaries. Undeployed and Preview both use
+// the real v2 catalog and fail closed when it is missing or invalid.
+const CHAIN_RUNTIME_ENABLED = APP_MODE === 'preview' || APP_MODE === 'undeployed';
 const APP_NETWORK_LABEL =
   APP_MODE === 'undeployed'
     ? 'Undeployed local'
     : APP_MODE === 'preview'
       ? 'Preview'
       : 'Demo local';
-const CONTRACT_ADDRESS = import.meta.env.VITE_MIDNIGHT_CONTRACT_ADDRESS?.trim() || null;
 const PASSPORT_ORIGIN =
   import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com';
-const EXPLORER_BASE_URL =
-  import.meta.env.VITE_MIDNIGHT_EXPLORER_BASE_URL?.trim() ||
-  'https://explorer.preview.midnight.network/tx';
 const ONBOARDING_SESSION_KEY = 'cico-wave1-onboarding-complete';
 
 function shouldShowFirstRunOnboarding(): boolean {
@@ -387,11 +404,53 @@ const DASHBOARD_COUNTRIES = ASSIGNED_COUNTRIES.map((country) => ({
 }));
 
 function isCountryPoll(poll: Poll): boolean {
-  return COUNTRY_POLL_IDS.has(poll.id);
+  return poll.runtimeScope ? poll.runtimeScope === 'country' : COUNTRY_POLL_IDS.has(poll.id);
 }
 
 function isCountryPollForCountry(poll: Poll, countryCode: string): boolean {
-  return COUNTRY_POLL_COUNTRIES.get(poll.id) === countryCode;
+  return poll.runtimeCountryCode
+    ? poll.runtimeCountryCode === countryCode
+    : COUNTRY_POLL_COUNTRIES.get(poll.id) === countryCode;
+}
+
+/**
+ * Convert only the public, parsed runtime catalog into the existing presentation model.
+ * Runtime modes never merge static fixture polls into this list: fixture copy is used only
+ * where the catalog does not carry editorial prose, and all routing identity comes from the
+ * catalog referendumId.
+ */
+export function toRuntimePolls(referenda: ReadonlyArray<PassportV2RuntimeReferendum>): Poll[] {
+  return toPassportV2Catalog(referenda).map((item) => {
+    const countryNumeric = countryPolicyCode(item);
+    const countryCode = countryNumeric
+      ? ASSIGNED_COUNTRIES.find((entry) => entry.numeric === countryNumeric)?.alpha2
+      : undefined;
+    return {
+      id: item.referendumId,
+      title: item.title,
+      question: item.question,
+      description: item.description ?? 'Consulta ciudadana publicada en el catálogo v2.',
+      opened: item.opened ?? 'Según el catálogo v2',
+      deadline: item.deadline ?? 'Según el estado del contrato',
+      // The catalog currently carries contract identity/policy, not calendar dates. Keep the
+      // action available and let the canonical contract phase decide final acceptance.
+      opensAt: item.opensAt ?? '1970-01-01T00:00:00.000Z',
+      closesAt: item.closesAt ?? '9999-12-31T23:59:59.000Z',
+      eligible: item.eligible ?? '—',
+      participation: item.participation ?? 'Estado público consultado en Midnight',
+      whyNow: 'Esta consulta se publica desde el manifiesto de despliegue v2.',
+      legalFrame: 'Consulta independiente; revisá las fuentes publicadas por su organizador.',
+      evidence: 'La identidad del contrato y sus reglas provienen del catálogo v2 validado.',
+      evidenceLabel: 'CATÁLOGO V2 · configuración publicada',
+      argumentsFor: ['Evaluá la propuesta con la información publicada por su organizador.'],
+      argumentsAgainst: ['Considerá sus límites, costos e incertidumbres antes de participar.'],
+      uncertainty: 'El catálogo no sustituye el debate público ni constituye una decisión oficial.',
+      sources: [],
+      runtimeScope: item.scope,
+      runtimeContractAddress: item.source?.contractAddress,
+      ...(countryCode ? { runtimeCountryCode: countryCode } : {}),
+    };
+  });
 }
 
 async function copyReceiptId(value: string): Promise<void> {
@@ -546,20 +605,22 @@ const PHASE_COPY = {
 } as const;
 
 interface PublicReferendumState {
-  state: import('midnight-referendum-api').ContractState | null;
+  state: import('midnight-referendum-api').ReferendumV2State | null;
   error: string | null;
   loading: boolean;
 }
 
 /** Live aggregates read from the contract. Never a hardcoded number. */
-function usePublicReferendumState(): PublicReferendumState {
+function usePublicReferendumState(contractAddress: string | null): PublicReferendumState {
   const { publicDataProvider, publicReadError } = useMidnightProviders();
-  const [state, setState] = useState<import('midnight-referendum-api').ContractState | null>(null);
+  const [state, setState] = useState<import('midnight-referendum-api').ReferendumV2State | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(publicReadError);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!publicDataProvider || !CONTRACT_ADDRESS) {
+    if (!publicDataProvider || !contractAddress) {
       setState(null);
       setLoading(false);
       setError(publicReadError);
@@ -568,7 +629,7 @@ function usePublicReferendumState(): PublicReferendumState {
     let cancelled = false;
     setLoading(true);
     setError(publicReadError);
-    const subscription = watchReferendumState({ publicDataProvider }, CONTRACT_ADDRESS).subscribe({
+    const subscription = watchReferendumV2State(publicDataProvider, contractAddress).subscribe({
       next: (next) => {
         if (cancelled) return;
         setState(next);
@@ -585,13 +646,19 @@ function usePublicReferendumState(): PublicReferendumState {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [publicDataProvider, publicReadError]);
+  }, [contractAddress, publicDataProvider, publicReadError]);
 
   return { state, error, loading };
 }
 
-function ResultsPanel() {
-  const { state, error, loading } = usePublicReferendumState();
+function ResultsPanel({
+  contractAddress,
+  title,
+}: {
+  contractAddress: string | null;
+  title?: string;
+}) {
+  const { state, error, loading } = usePublicReferendumState(contractAddress);
 
   if (error) {
     return (
@@ -603,10 +670,14 @@ function ResultsPanel() {
       </section>
     );
   }
-  if (loading && !state) return <CommitPhasePanel />;
-  if (!state) return <CommitPhasePanel />;
+  if (loading && !state)
+    return <CommitPhasePanel title={title} contractAddress={contractAddress} />;
+  if (!state) return <CommitPhasePanel title={title} contractAddress={contractAddress} />;
 
   const phase = PHASE_COPY[state.phase];
+  const resultsTitleId = title
+    ? `results-title-${contractAddress?.replace(/[^a-z0-9_-]/giu, '-') ?? 'runtime'}`
+    : 'results-title';
   const votes = (['YES', 'NO', 'ABSTAIN'] as const).map((key) => ({
     key,
     label: key === 'YES' ? 'Sí' : key === 'NO' ? 'No' : 'Abstención',
@@ -615,20 +686,20 @@ function ResultsPanel() {
   const total = votes.reduce((sum, vote) => sum + vote.count, 0n);
 
   return (
-    <section className="results-panel" aria-labelledby="results-title">
+    <section className="results-panel" aria-labelledby={resultsTitleId}>
       <div className="results-heading">
         <ChartBar size={22} />
         <div>
-          <h2 id="results-title">{phase.label}</h2>
-          <p>{phase.note}</p>
+          <h2 id={resultsTitleId}>{phase.label}</h2>
+          <p>{title ? `${title} · ${phase.note}` : phase.note}</p>
         </div>
       </div>
       {state.phase === 'COMMIT' ? (
         <div className="results-note">
           <ShieldCheck size={20} />
           <p>
-            {state.issuedVoters.toString()}{' '}
-            {state.issuedVoters === 1n ? 'persona habilitada' : 'personas habilitadas'}. Los totales
+            {state.issuedVotes.toString()}{' '}
+            {state.issuedVotes === 1n ? 'persona habilitada' : 'personas habilitadas'}. Los totales
             aparecen recién cuando se abre el recuento.
           </p>
         </div>
@@ -654,7 +725,7 @@ function ResultsPanel() {
             );
           })}
           <p className="tally-total">
-            {total.toString()} de {state.issuedVoters.toString()} habilitadas · leído del contrato
+            {total.toString()} de {state.issuedVotes.toString()} habilitadas · leído del contrato
           </p>
         </div>
       )}
@@ -662,13 +733,26 @@ function ResultsPanel() {
   );
 }
 
-function CommitPhasePanel() {
+function CommitPhasePanel({
+  title,
+  contractAddress,
+}: {
+  title?: string;
+  contractAddress?: string | null;
+}) {
+  const resultsTitleId = title
+    ? `results-title-${contractAddress?.replace(/[^a-z0-9_-]/giu, '-') ?? 'runtime'}`
+    : 'results-title';
   return (
-    <section className="results-panel" aria-labelledby="results-title">
+    <section className="results-panel" aria-labelledby={resultsTitleId}>
       <div className="results-heading">
         <ChartBar size={22} />
         <div>
-          <h2 id="results-title">Compromiso privado durante la votación</h2>
+          <h2 id={resultsTitleId}>
+            {title
+              ? `${title} · Compromiso privado durante la votación`
+              : 'Compromiso privado durante la votación'}
+          </h2>
           <p>Las respuestas se revelan y agregan después del cierre.</p>
         </div>
       </div>
@@ -684,12 +768,16 @@ function CommitPhasePanel() {
 }
 
 function VotesView({
+  polls,
   credential,
+  publicContractAddress,
   onStartVote,
   onOpenPolicy,
   onOpenPassportJourney,
 }: {
+  polls: readonly Poll[];
   credential: DemoCredentialSummary | null;
+  publicContractAddress: string | null;
   onStartVote: (pollId: string) => void;
   onOpenPolicy: (pollId: string) => void;
   onOpenPassportJourney: () => void;
@@ -717,9 +805,9 @@ function VotesView({
   }, []);
   const visiblePolls =
     area === 'world'
-      ? POLLS.filter((poll) => !isCountryPoll(poll))
+      ? polls.filter((poll) => !isCountryPoll(poll))
       : selectedCountry === credential?.country
-        ? POLLS.filter((poll) => isCountryPollForCountry(poll, selectedCountry))
+        ? polls.filter((poll) => isCountryPollForCountry(poll, selectedCountry))
         : [];
   const openPollCount = countOpenPolls(visiblePolls, now);
   return (
@@ -896,7 +984,10 @@ function VotesView({
                   </button>
                 </div>
                 <p className="demo-stat">
-                  <Info size={14} /> {poll.participation}. Cifra simulada para este prototipo.
+                  <Info size={14} />{' '}
+                  {poll.runtimeContractAddress
+                    ? 'Catálogo v2 · estado público consultado en Midnight.'
+                    : `${poll.participation}. Cifra simulada para este prototipo.`}
                 </p>
               </article>
             ))}
@@ -912,7 +1003,17 @@ function VotesView({
         </section>
       )}
 
-      {area === 'world' ? <ResultsPanel /> : null}
+      {polls.some((poll) => poll.runtimeContractAddress) ? (
+        visiblePolls.map((poll) => (
+          <ResultsPanel
+            key={`results-${poll.id}`}
+            contractAddress={poll.runtimeContractAddress ?? null}
+            title={poll.title}
+          />
+        ))
+      ) : area === 'world' ? (
+        <ResultsPanel contractAddress={publicContractAddress} />
+      ) : null}
     </main>
   );
 }
@@ -930,7 +1031,8 @@ function PolicyDetailView({
   credential: DemoCredentialSummary | null;
   onOpenPassportJourney: () => void;
 }) {
-  const consultationCountry = COUNTRY_POLL_COUNTRIES.get(poll.id);
+  const consultationCountry = poll.runtimeCountryCode ?? COUNTRY_POLL_COUNTRIES.get(poll.id);
+  const runtimePoll = Boolean(poll.runtimeContractAddress);
   const pollAvailability = getPollAvailability(poll);
   const consultationCountryName = consultationCountry
     ? getCountryName(consultationCountry, 'es')
@@ -942,7 +1044,9 @@ function PolicyDetailView({
       </button>
       <div className="policy-status">
         <StatusPill>{pollAvailability.isOpen ? 'Votación abierta' : 'Votación cerrada'}</StatusPill>
-        <span>Actualizado: 8 de agosto de 2026</span>
+        <span>
+          {runtimePoll ? 'Identidad y reglas del catálogo v2' : 'Actualizado: 8 de agosto de 2026'}
+        </span>
       </div>
       <section className="policy-hero">
         <p className="eyebrow">Resumen para decidir</p>
@@ -953,7 +1057,10 @@ function PolicyDetailView({
             <Calendar size={17} /> Cierra: <strong>{poll.deadline}</strong>
           </span>
           <span>
-            <Users size={17} /> <strong>{poll.eligible}</strong> habilitadas*
+            <Users size={17} />{' '}
+            <strong>
+              {runtimePoll ? 'Estado en el contrato' : `${poll.eligible} habilitadas*`}
+            </strong>
           </span>
         </div>
       </section>
@@ -1043,11 +1150,11 @@ function PolicyDetailView({
       </section>
 
       <section className="policy-section eligibility-card">
-        <p className="eyebrow">Reglas de esta demo</p>
+        <p className="eyebrow">{runtimePoll ? 'Reglas publicadas' : 'Reglas de esta demo'}</p>
         <p>
-          La credencial Passport prueba una regla de elegibilidad sin exponer tu documento. En esta
-          experiencia la credencial de fixture representa la nacionalidad elegida y clase de edad
-          18+.
+          {runtimePoll
+            ? 'La credencial cívica se comprueba en privado contra la política publicada en este catálogo. El perfil Passport, el documento y la elección permanecen separados.'
+            : 'La credencial Passport prueba una regla de elegibilidad sin exponer tu documento. En esta experiencia la credencial de fixture representa la nacionalidad elegida y clase de edad 18+.'}
           {consultationCountryName
             ? ` Esta consulta está configurada para ${consultationCountryName}.`
             : ''}{' '}
@@ -1077,8 +1184,10 @@ function PolicyDetailView({
       </section>
 
       <p className="independent-note">
-        <Info size={16} /> * Las personas habilitadas y la participación son cifras simuladas. Esta
-        consulta no es un referéndum oficial ni tiene efecto legal.
+        <Info size={16} />{' '}
+        {runtimePoll
+          ? 'La identidad del contrato y sus resultados públicos se leen desde Midnight; esta consulta no es un referéndum oficial ni tiene efecto legal.'
+          : '* Las personas habilitadas y la participación son cifras simuladas. Esta consulta no es un referéndum oficial ni tiene efecto legal.'}
       </p>
       <button
         type="button"
@@ -1191,7 +1300,13 @@ const GLOSSARY = [
   },
 ];
 
-function UnderstandView({ onOpenPolicy }: { onOpenPolicy: (pollId: string) => void }) {
+function UnderstandView({
+  polls,
+  onOpenPolicy,
+}: {
+  polls: readonly Poll[];
+  onOpenPolicy: (pollId: string) => void;
+}) {
   return (
     <main className="page-content">
       <section className="welcome-panel">
@@ -1223,7 +1338,7 @@ function UnderstandView({ onOpenPolicy }: { onOpenPolicy: (pollId: string) => vo
           oficiales fechadas.
         </p>
         <div className="library-list">
-          {POLLS.map((poll) => (
+          {polls.map((poll) => (
             <button type="button" key={poll.id} onClick={() => onOpenPolicy(poll.id)}>
               <span>
                 <strong>{poll.title}</strong>
@@ -1491,6 +1606,7 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
 }
 
 function ProfileView({
+  polls,
   passportSession,
   profileId,
   receipts,
@@ -1498,6 +1614,7 @@ function ProfileView({
   onConnectPassport,
   onReplayOnboarding,
 }: {
+  polls: readonly Poll[];
   passportSession: CivicPassportSession | null;
   profileId: string;
   receipts: VoteReceipt[];
@@ -1579,7 +1696,7 @@ function ProfileView({
                 <div>
                   <strong>
                     {receipt.pollId
-                      ? (POLLS.find((poll) => poll.id === receipt.pollId)?.title ??
+                      ? (polls.find((poll) => poll.id === receipt.pollId)?.title ??
                         'Consulta ciudadana')
                       : 'Consulta ciudadana'}
                   </strong>
@@ -1660,6 +1777,7 @@ function FlowStepper({ active }: { active: number }) {
 }
 
 function VoteFlow({
+  poll,
   stage,
   choice,
   onChoice,
@@ -1675,10 +1793,10 @@ function VoteFlow({
   receipt,
   previewReady,
   dustBalance = null,
-  pollId,
   dniResult,
   onDniVerified,
 }: {
+  poll: Poll;
   stage: FlowStage;
   choice: Choice | null;
   onChoice: (choice: Choice) => void;
@@ -1694,11 +1812,9 @@ function VoteFlow({
   receipt: VoteReceipt | null;
   previewReady: boolean;
   dustBalance?: bigint | null;
-  pollId: string;
   dniResult: DniVerificationResult | null;
   onDniVerified: (result: DniVerificationResult) => void;
 }) {
-  const poll = POLLS.find((item) => item.id === pollId) ?? DEFAULT_POLL;
   const actionMode: ActionMode = CHAIN_RUNTIME_ENABLED ? 'live' : 'simulated';
   const activeStep = stage === 'verify' || stage === 'document' || stage === 'eligible' ? 2 : 3;
   return (
@@ -1762,7 +1878,7 @@ function VoteFlow({
       {stage === 'document' ? (
         <DniVerification
           demoOnly={APP_MODE !== 'preview'}
-          eventSalt={pollId}
+          eventSalt={poll.id}
           onVerified={onDniVerified}
           onCancel={() => onStage('verify')}
         />
@@ -1873,16 +1989,19 @@ function VoteFlow({
           <div className="review-notice">
             <Info size={20} />
             <p>
-              Passport gestiona la identidad y la credencial; no firma el voto. La wallet solo se
-              solicita para una acción real. Estado de aprobación:{' '}
-              {walletStatus === 'connected' ? 'wallet conectada' : 'wallet pendiente'}. DUST:{' '}
-              {dustBalance === null
-                ? 'saldo no disponible'
-                : `${dustBalance.toString()} disponible`}
-              .
+              Passport gestiona la identidad y la credencial; no firma el voto.{' '}
+              {RELAYER_MODE
+                ? 'El navegador prueba localmente y el relay atómico aporta DUST y envía sin recibir tu elección ni tu credencial.'
+                : `La wallet aprueba la acción real. Estado: ${
+                    walletStatus === 'connected' ? 'conectada' : 'pendiente'
+                  }. DUST: ${
+                    dustBalance === null
+                      ? 'saldo no disponible'
+                      : `${dustBalance.toString()} disponible`
+                  }.`}
             </p>
           </div>
-          {CHAIN_RUNTIME_ENABLED ? <WalletWidget /> : null}
+          {CHAIN_RUNTIME_ENABLED && !RELAYER_MODE ? <WalletWidget /> : null}
           {previewError ? (
             <div className="verify-result missing">
               <Info size={20} />
@@ -1912,8 +2031,9 @@ function VoteFlow({
           <p className="eyebrow">Procesando</p>
           <h1>Preparando tu comprobante</h1>
           <p>
-            El flujo reúne prueba, balanceo DUST/NIGHT, aprobación del wallet y confirmación
-            canónica.
+            {RELAYER_MODE
+              ? 'La prueba se crea localmente; el relay reserva DUST, envía una vez y espera confirmación del indexer.'
+              : 'El flujo reúne prueba, balanceo DUST/NIGHT, aprobación del wallet y confirmación canónica.'}
           </p>
           <div className="processing-track">
             <span />
@@ -1966,7 +2086,9 @@ function CivicApp() {
   const [policyDetailId, setPolicyDetailId] = useState<string | null>(null);
   const [dniResult, setDniResult] = useState<DniVerificationResult | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
-  const [activePollId, setActivePollId] = useState(DEFAULT_POLL.id);
+  // Runtime modes intentionally start without a fixture ID. The v2 catalog below
+  // selects the first configured referendum once it has been parsed.
+  const [activePollId, setActivePollId] = useState(APP_MODE === 'demo' ? DEFAULT_POLL.id : '');
   const [receipt, setReceipt] = useState<VoteReceipt | null>(null);
   const [receipts, setReceipts] = useState<VoteReceipt[]>([]);
   const [credential, setCredential] = useState<DemoCredentialSummary | null>(null);
@@ -1974,10 +2096,6 @@ function CivicApp() {
   const [passportError, setPassportError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [receiptToastVisible, setReceiptToastVisible] = useState(false);
-  const [eligibility, setEligibility] = useState<{
-    attestation: EligibilityAttestation;
-    voterSecret: Uint8Array;
-  } | null>(null);
   const closeOnboarding = () => {
     window.sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1');
     setOnboardingRequired(false);
@@ -1991,10 +2109,10 @@ function CivicApp() {
   };
   const { status: walletStatus, dustBalance } = useWallet();
   const {
-    providers,
     publicReadReady,
     publicReadError,
     referendumV2Providers,
+    referendumV2ActionContext,
     isReady,
     error: providersError,
   } = useMidnightProviders();
@@ -2006,7 +2124,7 @@ function CivicApp() {
     [],
   );
   const passportV2Runtime = useMemo(() => {
-    if (APP_MODE !== 'preview') return { config: null, error: null };
+    if (!CHAIN_RUNTIME_ENABLED) return { config: null, error: null };
 
     try {
       return {
@@ -2025,6 +2143,20 @@ function CivicApp() {
       };
     }
   }, []);
+  const polls = useMemo(
+    () =>
+      CHAIN_RUNTIME_ENABLED && passportV2Runtime.config
+        ? toRuntimePolls(passportV2Runtime.config.referenda)
+        : CHAIN_RUNTIME_ENABLED
+          ? []
+          : POLLS,
+    [passportV2Runtime.config],
+  );
+  useEffect(() => {
+    if ((!activePollId || !polls.some((poll) => poll.id === activePollId)) && polls[0]) {
+      setActivePollId(polls[0].id);
+    }
+  }, [activePollId, polls]);
   const passportJourneyPorts = useMemo<PreviewPassportJourneyPorts>(() => {
     const base = { passport: passportSessionPort };
     if (passportV2Runtime.error) {
@@ -2047,6 +2179,9 @@ function CivicApp() {
       issuerId: passportV2Runtime.config.issuerId,
       credentialEpoch: passportV2Runtime.config.credentialEpoch,
       credentialTtlMs: passportV2Runtime.config.credentialTtlMs,
+      vault: browserCivicCredentialVault(
+        `${APP_MODE}:${passportV2Runtime.config.issuerId}:${passportV2Runtime.config.credentialEpoch}`,
+      ),
       countryMapper: rarimoIsoCountryMapper,
       uniquenessTimestampUpperBoundUnixSeconds:
         passportV2Runtime.config.uniquenessTimestampUpperBoundUnixSeconds,
@@ -2056,6 +2191,9 @@ function CivicApp() {
           providers: referendumV2Providers,
           credential,
           referenda: passportV2Runtime.config.referenda,
+          ...(referendumV2ActionContext
+            ? { actionExecutionContext: referendumV2ActionContext }
+            : {}),
         })
       : undefined;
     return {
@@ -2065,21 +2203,36 @@ function CivicApp() {
       referenda: passportV2Runtime.config.referenda,
       runtimeCatalogConfigured: true,
     };
-  }, [passportSessionPort, passportV2Runtime, referendumV2Providers]);
+  }, [passportSessionPort, passportV2Runtime, referendumV2ActionContext, referendumV2Providers]);
+  const runtimeContractAddress = passportV2Runtime.config?.referenda[0]?.contractAddress ?? null;
+  useEffect(() => {
+    let active = true;
+    const credentialPort = passportJourneyPorts.credential;
+    if (!credentialPort)
+      return () => {
+        active = false;
+      };
+    void credentialPort.getCredentialSummary().then((stored) => {
+      if (active && stored?.status === 'issued') setCredential(toDisplayCredential(stored));
+    });
+    return () => {
+      active = false;
+    };
+  }, [passportJourneyPorts.credential]);
   const profileId = useMemo(() => deriveProfileId(passportSession), [passportSession]);
   const previewReadiness = getPreviewReadiness({
     appMode: APP_MODE === 'preview' ? 'preview' : APP_MODE === 'undeployed' ? 'undeployed' : 'demo',
-    contractAddress: CONTRACT_ADDRESS,
+    contractAddress: runtimeContractAddress,
     walletConnected: walletStatus === 'connected',
     providersReady: isReady && (!passportV2Runtime.config || referendumV2Providers !== null),
     providersError: providersError ?? passportV2Runtime.error,
     relayerMode: RELAYER_MODE,
-    v2RuntimeConfigured: passportV2Runtime.config !== null || passportV2Runtime.error !== null,
+    v2RuntimeConfigured: CHAIN_RUNTIME_ENABLED,
     credentialVerified: credential?.kind === 'verified-credential',
   });
   const publicReadiness = getPublicReadiness({
     appMode: APP_MODE === 'preview' ? 'preview' : APP_MODE === 'undeployed' ? 'undeployed' : 'demo',
-    contractAddress: CONTRACT_ADDRESS,
+    contractAddress: runtimeContractAddress,
     publicProviderReady: publicReadReady,
     publicProviderError: publicReadError,
   });
@@ -2111,7 +2264,7 @@ function CivicApp() {
   }, [receipt]);
   const connectPassport = async () => {
     setPassportError(null);
-    if (APP_MODE === 'demo' || APP_MODE === 'undeployed') {
+    if (APP_MODE === 'demo') {
       setPassportSession({
         sessionId: 'local-demo-session',
         origin: window.location.origin,
@@ -2135,7 +2288,7 @@ function CivicApp() {
   };
 
   const startVote = async (pollId: string) => {
-    const poll = POLLS.find((item) => item.id === pollId);
+    const poll = polls.find((item) => item.id === pollId);
     if (!poll || !getPollAvailability(poll).isOpen) {
       setPreviewError('Esta votación está cerrada y no acepta nuevas participaciones.');
       return;
@@ -2147,28 +2300,6 @@ function CivicApp() {
     setPreviewError(null);
     setDniResult(null);
     setFlowStage(credential ? 'choose' : 'verify');
-    // The fixture eligibility provider belongs only to the legacy Preview
-    // compatibility lane. A configured v2 runtime must obtain authorization
-    // from the verified credential and never fall through to fixture voting.
-    if (CHAIN_RUNTIME_ENABLED && !passportV2Runtime.config && !passportV2Runtime.error) {
-      try {
-        const { createFixtureEligibilityProvider, PRIVATE_STATE_ID } = await import(
-          'midnight-referendum-api'
-        );
-        const previousState = providers
-          ? await providers.privateStateProvider.get(PRIVATE_STATE_ID)
-          : null;
-        const result = await createFixtureEligibilityProvider(previousState?.voterSecret).attest(
-          null,
-          pollId,
-        );
-        setEligibility(result);
-      } catch (error) {
-        setPreviewError(
-          error instanceof Error ? error.message : 'No se pudo validar la elegibilidad',
-        );
-      }
-    }
   };
 
   const confirmVote = async () => {
@@ -2177,7 +2308,7 @@ function CivicApp() {
         setPreviewError(previewReadiness.message);
         return;
       }
-      const poll = POLLS.find((item) => item.id === activePollId);
+      const poll = polls.find((item) => item.id === activePollId);
       if (!poll || !getPollAvailability(poll).isOpen) {
         setPreviewError('Esta votación está cerrada y no acepta nuevas participaciones.');
         return;
@@ -2243,57 +2374,9 @@ function CivicApp() {
           return;
         }
 
-        if (!providers || !CONTRACT_ADDRESS) {
-          setPreviewError(`${APP_NETWORK_LABEL} no está listo para enviar.`);
-          setFlowStage('review');
-          return;
-        }
-        if (!eligibility) {
-          setPreviewError('Completá la validación de elegibilidad antes de firmar.');
-          setFlowStage('review');
-          return;
-        }
-        const { createReferendumExecutor, findEligibilityPath } = await import(
-          'midnight-referendum-api'
+        throw new Error(
+          `${APP_NETWORK_LABEL} requiere un manifiesto v2 completo; el flujo legado está deshabilitado.`,
         );
-        const voteSalt = crypto.getRandomValues(new Uint8Array(32));
-        const voterPath = await findEligibilityPath(
-          providers,
-          CONTRACT_ADDRESS,
-          eligibility.attestation.subjectCommitment,
-        );
-        const privateState: PrivateState = {
-          voterSecret: eligibility.voterSecret,
-          voterChoice: choice,
-          voteSalt,
-          voterPath,
-        };
-        const executor = createReferendumExecutor(providers, {
-          issuerSecret: new Uint8Array(32),
-          organizerSecret: new Uint8Array(32),
-          eventId: new Uint8Array(32),
-          explorerBaseUrl: EXPLORER_BASE_URL,
-        });
-        await executor.join(CONTRACT_ADDRESS, privateState);
-        const confirmed = await executor.castVote();
-        const nextReceipt: VoteReceipt = {
-          id: confirmed.txId,
-          pollId: activePollId,
-          createdAt: new Date().toISOString(),
-          status: 'confirmed',
-          network: APP_NETWORK_LABEL,
-          explorerUrl: confirmed.explorerUrl,
-        };
-        if (passportSession) {
-          const receiptProfileKey = await deriveReceiptProfileKey(passportSession);
-          await savePassportReceipt(receiptProfileKey, nextReceipt);
-        }
-        setReceipts((previous) => [
-          nextReceipt,
-          ...previous.filter((item) => item.id !== nextReceipt.id),
-        ]);
-        setReceipt(nextReceipt);
-        setFlowStage('receipt');
       } catch (error) {
         setPreviewError(
           error instanceof Error ? error.message : `Falló la transacción en ${APP_NETWORK_LABEL}`,
@@ -2324,11 +2407,12 @@ function CivicApp() {
 
   const currentTabContent =
     tab === 'understand' ? (
-      <UnderstandView onOpenPolicy={setPolicyDetailId} />
+      <UnderstandView polls={polls} onOpenPolicy={setPolicyDetailId} />
     ) : tab === 'verify' ? (
       <VerifyView receipts={receipts} />
     ) : tab === 'profile' ? (
       <ProfileView
+        polls={polls}
         passportSession={passportSession}
         profileId={profileId}
         receipts={receipts}
@@ -2338,14 +2422,16 @@ function CivicApp() {
       />
     ) : (
       <VotesView
+        polls={polls}
         credential={credential}
+        publicContractAddress={runtimeContractAddress}
         onStartVote={startVote}
         onOpenPolicy={setPolicyDetailId}
         onOpenPassportJourney={() => setPassportJourneyOpen(true)}
       />
     );
   const selectedPolicy = policyDetailId
-    ? (POLLS.find((poll) => poll.id === policyDetailId) ?? null)
+    ? (polls.find((poll) => poll.id === policyDetailId) ?? null)
     : null;
   const navigate = (nextTab: Tab) => {
     setTab(nextTab);
@@ -2375,7 +2461,7 @@ function CivicApp() {
                   : APP_MODE === 'showcase'
                     ? 'Passport en vivo · credencial pendiente'
                     : APP_MODE === 'undeployed'
-                      ? 'Recorrido sintético local · acción real deshabilitada'
+                      ? 'Passport oficial · contratos v2 en la red local'
                       : 'Recorrido educativo · wallet solo para una acción real'}
               </span>
             </div>
@@ -2402,32 +2488,54 @@ function CivicApp() {
           previewPorts={passportJourneyPorts}
         />
       ) : flowStage ? (
-        <VoteFlow
-          stage={flowStage}
-          choice={choice}
-          onChoice={setChoice}
-          onStage={setFlowStage}
-          onClose={() => setFlowStage(null)}
-          onConfirm={() => void confirmVote()}
-          onViewReceipt={() => {
-            setFlowStage(null);
-            setTab('verify');
-          }}
-          walletStatus={walletStatus}
-          passportSession={passportSession}
-          onConnectPassport={() => void connectPassport()}
-          credentialCountry={credential?.country ?? null}
-          previewError={previewError}
-          receipt={receipt}
-          previewReady={previewReadiness.state === 'ready'}
-          dustBalance={dustBalance}
-          pollId={activePollId}
-          dniResult={dniResult}
-          onDniVerified={(result) => {
-            setDniResult(result);
-            setFlowStage('eligible');
-          }}
-        />
+        (() => {
+          const activePoll = polls.find((poll) => poll.id === activePollId);
+          if (!activePoll) {
+            return (
+              <main className="page-content flow-page">
+                <section className="flow-card" role="alert">
+                  <h1>Consulta no disponible</h1>
+                  <p>El catálogo v2 cambió o todavía no está listo para esta acción.</p>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => setFlowStage(null)}
+                  >
+                    Volver a votaciones
+                  </button>
+                </section>
+              </main>
+            );
+          }
+          return (
+            <VoteFlow
+              poll={activePoll}
+              stage={flowStage}
+              choice={choice}
+              onChoice={setChoice}
+              onStage={setFlowStage}
+              onClose={() => setFlowStage(null)}
+              onConfirm={() => void confirmVote()}
+              onViewReceipt={() => {
+                setFlowStage(null);
+                setTab('verify');
+              }}
+              walletStatus={walletStatus}
+              passportSession={passportSession}
+              onConnectPassport={() => void connectPassport()}
+              credentialCountry={credential?.country ?? null}
+              previewError={previewError}
+              receipt={receipt}
+              previewReady={previewReadiness.state === 'ready'}
+              dustBalance={dustBalance}
+              dniResult={dniResult}
+              onDniVerified={(result) => {
+                setDniResult(result);
+                setFlowStage('eligible');
+              }}
+            />
+          );
+        })()
       ) : selectedPolicy ? (
         <PolicyDetailView
           poll={selectedPolicy}

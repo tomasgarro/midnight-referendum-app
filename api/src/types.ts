@@ -47,6 +47,7 @@ export interface PassportSession {
   requestId: string;
   nonce: string;
   origin: string;
+  network?: 'preview' | 'devnet' | 'mainnet';
   displayName?: string;
   passportContract?: { address: string; network: string };
   midnightAddresses?: {
