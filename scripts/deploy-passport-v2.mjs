@@ -14,7 +14,17 @@
  * command works against local `undeployed` services and Preview by selecting
  * RELAYER_NETWORK_ID in the corresponding relayer environment file.
  */
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,13 +39,33 @@ const api = await import('../api/dist/index.js');
 const { NodeZkConfigProvider } = await import(
   '@midnight-ntwrk/midnight-js-node-zk-config-provider'
 );
+const { httpClientProofProvider } = await import(
+  '@midnight-ntwrk/midnight-js-http-client-proof-provider'
+);
+const { indexerPublicDataProvider } = await import(
+  '@midnight-ntwrk/midnight-js-indexer-public-data-provider'
+);
+const { setNetworkId } = await import('@midnight-ntwrk/midnight-js-network-id');
+const { ShieldedCoinPublicKey, ShieldedEncryptionPublicKey } = await import(
+  '@midnight-ntwrk/wallet-sdk-address-format'
+);
+const { firstValueFrom, filter, timeout } = await import('rxjs');
 const { loadConfig } = await import('../relayer/dist/config.js');
+const { balanceAndFinalize, startRelayerWallet } = await import('../relayer/dist/wallet.js');
+const { UndeployedFixtureCapabilityIssuer } = await import(
+  './undeployed-fixture-capability-issuer.mjs'
+);
 
 const relayer = loadConfig();
 
 const networkId = optional('V2_NETWORK_ID', process.env.RELAYER_NETWORK_ID ?? 'undeployed');
 if (networkId !== 'undeployed' && networkId !== 'preview') {
   fail('V2_NETWORK_ID must be undeployed or preview');
+}
+setNetworkId(networkId);
+const evidencePhase = optional('V2_EVIDENCE_PHASE', 'complete');
+if (!['prepare', 'complete'].includes(evidencePhase)) {
+  fail('V2_EVIDENCE_PHASE must be prepare or complete');
 }
 
 const manifestPath = resolve(
@@ -116,6 +146,9 @@ const explorerBaseUrl = optional(
   networkId === 'preview' ? 'https://explorer.preview.midnight.network/tx' : '',
 );
 
+const source = readSourceIdentity();
+const services = readServiceIdentity();
+
 const artifacts = {
   compactLanguageVersion: optional('V2_COMPACT_LANGUAGE_VERSION', '0.23'),
   compactCompilerVersion: optional('V2_COMPACT_COMPILER_VERSION', '0.31.1'),
@@ -152,7 +185,7 @@ const credentialLeaf = api.deriveCredentialLeaf({
 });
 const issuerKey = api.deriveRoleKey('cico:registry:issuer:', issuerSecret);
 const organizerKey = api.deriveRoleKey('cico:referendum-v2:organizer:', organizerSecret);
-const executorNetwork = networkId === 'preview' ? 'preview' : 'devnet';
+const executorNetwork = networkId;
 
 let manifest;
 manifest = loadOrCreateManifest({
@@ -176,6 +209,8 @@ manifest = loadOrCreateManifest({
   description,
   artifacts,
   endpoints,
+  source,
+  services,
 });
 if (relayer.networkId !== networkId) {
   fail(
@@ -217,19 +252,66 @@ for (const directory of [registryZk.directory, referendumZk.directory]) {
     fail(`Missing compiled v2 assets at ${directory}; run npm run compile:v2 first`);
   }
 }
-const zkConfigProvider = {
-  getProverKey: (circuitId) => zkProvider(circuitId).getProverKey(circuitId),
-  getVerifierKey: (circuitId) => zkProvider(circuitId).getVerifierKey(circuitId),
-  getZKIR: (circuitId) => zkProvider(circuitId).getZKIR(circuitId),
-};
-const providers = await api.createRelayerProviders({
-  relayerUrl,
-  proofServerUri: relayer.provingServerUrl,
-  networkId,
-  indexerUri: relayer.indexerHttpUrl,
-  indexerWsUri: relayer.indexerWsUrl,
-  zkConfigProvider,
+manifest = updateManifest({
+  artifacts: {
+    ...manifest.artifacts,
+    hashes: {
+      'credential-registry-v1': hashDirectory(registryZk.directory),
+      'referendum-v2': hashDirectory(referendumZk.directory),
+    },
+  },
 });
+// Operator authority is an in-process wallet/provider. It never traverses the
+// public relay's compatibility /balance or /submit routes. Undeployed uses the
+// well-known local genesis fee wallet; issuer and organizer contract authority
+// remain independent run secrets. Preview must provide its own fee seed.
+const operatorFeeSeed =
+  networkId === 'undeployed'
+    ? optional('V2_OPERATOR_FEE_SEED_HEX', `${'0'.repeat(63)}1`)
+    : required('V2_OPERATOR_FEE_SEED_HEX');
+if (!/^[0-9a-f]{64}$/iu.test(operatorFeeSeed)) {
+  fail('V2_OPERATOR_FEE_SEED_HEX must be 32 bytes of hexadecimal');
+}
+const operatorWallet = await startRelayerWallet({ ...relayer, seedHex: operatorFeeSeed });
+const operatorState = await firstValueFrom(
+  operatorWallet.facade.state().pipe(
+    filter(
+      (state) =>
+        state.isSynced &&
+        state.dust.availableCoins.length > 0 &&
+        state.dust.balance(new Date()) > 0n &&
+        Boolean(state.shielded.coinPublicKey) &&
+        Boolean(state.shielded.encryptionPublicKey),
+    ),
+    timeout({ first: 8 * 60 * 1_000 }),
+  ),
+);
+const operatorProviders = {
+  privateStateProvider: api.inMemoryPrivateStateProvider(),
+  publicDataProvider: indexerPublicDataProvider(relayer.indexerHttpUrl, relayer.indexerWsUrl),
+  zkConfigProvider: registryZk,
+  proofProvider: httpClientProofProvider(relayer.provingServerUrl, registryZk),
+  walletProvider: {
+    getCoinPublicKey: () =>
+      ShieldedCoinPublicKey.codec
+        .encode(networkId, operatorState.shielded.coinPublicKey)
+        .asString(),
+    getEncryptionPublicKey: () =>
+      ShieldedEncryptionPublicKey.codec
+        .encode(networkId, operatorState.shielded.encryptionPublicKey)
+        .asString(),
+    balanceTx: (transaction) => balanceAndFinalize(operatorWallet, transaction),
+  },
+  midnightProvider: {
+    submitTx: (transaction) => operatorWallet.facade.submitTransaction(transaction),
+  },
+};
+
+const referendumOperatorProviders = {
+  ...operatorProviders,
+  zkConfigProvider: referendumZk,
+  proofProvider: httpClientProofProvider(relayer.provingServerUrl, referendumZk),
+};
 
 const registryPrivateState = {
   issuerSecret,
@@ -249,7 +331,7 @@ const registryConfig = {
   network: executorNetwork,
   ...(explorerBaseUrl ? { explorerBaseUrl } : {}),
 };
-const registryExecutor = api.createCredentialRegistryV1Executor(providers, registryConfig);
+const registryExecutor = api.createCredentialRegistryV1Executor(operatorProviders, registryConfig);
 let registryAddress = manifest.registry.contractAddress;
 let registryReceipt = stepReceipt('registry.deploy');
 if (registryAddress) {
@@ -350,7 +432,10 @@ const referendumPrivateState = {
   voterChoice: fixtureVoteChoice,
   voteSalt: fixtureVoteSalt,
 };
-const referendumExecutor = api.createReferendumV2Executor(providers, referendumConfig);
+const referendumExecutor = api.createReferendumV2Executor(
+  referendumOperatorProviders,
+  referendumConfig,
+);
 const referendumEntry = manifest.referenda[0];
 let referendumAddress = referendumEntry.contractAddress;
 let referendumReceipt = stepReceipt('referendum.deploy');
@@ -379,16 +464,65 @@ manifest = updateReferendum({
   registryContractBindingHex: toHex(referendumState.registryContractBinding),
 });
 await observe('referendum.deploy', registryAddress, referendumAddress);
+
+if (evidencePhase === 'prepare') {
+  await operatorWallet.stop().catch(() => undefined);
+  console.log(`Passport v2 ${networkId} preparation manifest: ${manifestPath}`);
+  process.exit(0);
+}
+
+// The citizen cast path has its own provider/private-state boundary. The
+// operator provider above remains available for close/reveal/finalize, but is
+// deliberately never passed to the citizen executor.
+const citizenCapabilityIssuer =
+  networkId === 'undeployed'
+    ? new UndeployedFixtureCapabilityIssuer({
+        secret: relayer.v2CapabilitySecret,
+        contractAddress: referendumAddress,
+        issuerOrigin: 'http://127.0.0.1',
+        ttlSeconds: 1_800,
+      })
+    : new api.HttpWalletlessActionCapabilityIssuer({ baseUrl: apiUrl });
+const citizenRuntime = await api.createReferendumV2WalletlessProviders({
+  relayUrl: relayerUrl,
+  proofServerUri: relayer.provingServerUrl,
+  networkId,
+  indexerUri: relayer.indexerHttpUrl,
+  indexerWsUri: relayer.indexerWsUrl,
+  capabilityIssuer: citizenCapabilityIssuer,
+  // Local managed assets keep the runner independent of a browser server and
+  // ensure the citizen proof uses the exact compiled referendum-v2 artifact.
+  zkConfigProvider: referendumZk,
+});
+const citizenReferendumExecutor = api.createReferendumV2Executor(
+  citizenRuntime.providers,
+  referendumConfig,
+);
+await citizenReferendumExecutor.join(referendumAddress, { ...referendumPrivateState });
+const fixtureCredentialAuthorization = `fixture:${referendumId}`;
 await verifyLifecycle(referendumAddress, referendumState);
 manifest = await updateDustAfterRun();
-manifest = { ...manifest, status: 'complete' };
+manifest = finalizeLifecycleManifest();
 saveManifest();
 
-console.log(`Passport v2 ${networkId} manifest: ${manifestPath}`);
-console.log(JSON.stringify(api.passportV2ManifestRuntimeEnvironment(manifest), null, 2));
+await operatorWallet.stop().catch(() => undefined);
 
-function zkProvider(circuitId) {
-  return ['addCredential', 'freeze'].includes(circuitId) ? registryZk : referendumZk;
+console.log(`Passport v2 ${networkId} manifest: ${manifestPath}`);
+if (manifest.status === 'complete') {
+  console.log(JSON.stringify(api.passportV2ManifestRuntimeEnvironment(manifest), null, 2));
+} else {
+  console.log(
+    JSON.stringify(
+      {
+        status: manifest.status,
+        network: manifest.network,
+        submissionTransport: manifest.submissionTransport,
+        message: 'Lifecycle is finalized; relay restart and DUST evidence are still pending.',
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 async function readRegistryState(address) {
@@ -405,7 +539,7 @@ async function waitForState(address, label) {
   let lastError;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const state = await providers.publicDataProvider.queryContractState(address);
+      const state = await operatorProviders.publicDataProvider.queryContractState(address);
       if (state) return state;
     } catch (error) {
       lastError = error;
@@ -420,10 +554,12 @@ async function waitForState(address, label) {
 async function findCredentialPathOrNull(_state) {
   try {
     return api.findCredentialPath(
-      await providers.publicDataProvider.queryContractState(registryAddress).then((value) => {
-        if (!value) throw new Error('registry state disappeared');
-        return value.data;
-      }),
+      await operatorProviders.publicDataProvider
+        .queryContractState(registryAddress)
+        .then((value) => {
+          if (!value) throw new Error('registry state disappeared');
+          return value.data;
+        }),
       credentialLeaf,
     );
   } catch (error) {
@@ -449,6 +585,9 @@ async function observe(stage, registryAddressValue, referendumAddressValue) {
   const observation = {
     stage,
     observedAt: new Date().toISOString(),
+    ...(stepReceipt(stage)?.transactionId
+      ? { transactionId: stepReceipt(stage).transactionId }
+      : {}),
     indexer: {
       available: Boolean(registrySnapshot || referendumSnapshot),
       source: endpoints.indexerHttp,
@@ -498,7 +637,7 @@ async function verifyLifecycle(address, initialState) {
   let state = initialState;
   if (state.phase === 'COMMIT') {
     if (state.issuedVotes === 0n) {
-      const receipt = await referendumExecutor.castVote();
+      const receipt = await castCitizenVote();
       recordStep('lifecycle.cast', 'confirmed', receipt);
       state = await readReferendumState(address);
     } else {
@@ -508,7 +647,7 @@ async function verifyLifecycle(address, initialState) {
 
     let replayRejected = false;
     try {
-      await referendumExecutor.castVote();
+      await castCitizenVote();
     } catch (error) {
       replayRejected = true;
       recordStep('lifecycle.replay-rejected', 'rejected', undefined, {
@@ -531,7 +670,7 @@ async function verifyLifecycle(address, initialState) {
     } else {
       let replayRejected = false;
       try {
-        await referendumExecutor.castVote();
+        await castCitizenVote();
       } catch (error) {
         replayRejected = true;
         recordStep('lifecycle.replay-rejected', 'rejected', undefined, {
@@ -558,7 +697,7 @@ async function verifyLifecycle(address, initialState) {
 
   state = await readReferendumState(address);
   if (state.phase === 'REVEAL') {
-    const canonical = await providers.publicDataProvider.queryContractState(address);
+    const canonical = await operatorProviders.publicDataProvider.queryContractState(address);
     if (!canonical) fail('Referendum canonical state disappeared before reveal');
     const ballot = api.deriveBallotCommitment(eventId, fixtureVoteChoice, fixtureVoteSalt);
     referendumPrivateState.revealPath = api.findBallotPath(canonical.data, ballot);
@@ -598,6 +737,34 @@ async function verifyLifecycle(address, initialState) {
   if (state.phase !== 'FINALIZED' || !state.closed)
     fail('Referendum did not reach a closed FINALIZED state');
   await observe('lifecycle.finalize', registryAddress, address);
+}
+
+async function castCitizenVote() {
+  const receipt = await citizenRuntime.actionContext.run(
+    {
+      credentialAuthorization: fixtureCredentialAuthorization,
+      contractAddress: referendumAddress,
+      circuit: 'castVote',
+      action: 'vote',
+    },
+    () => citizenReferendumExecutor.castVote(),
+  );
+  const trace = citizenRuntime.getLastActionTrace();
+  if (!trace) fail('Atomic citizen cast completed without action evidence');
+  manifest = updateManifest({
+    action: {
+      actionId: trace.actionId,
+      actionIdDigest: trace.actionIdDigest,
+      idempotencyKeyDigest: trace.idempotencyKeyDigest,
+      requestHash: trace.requestHash,
+      txDigest: trace.txDigest,
+      capabilityDigest: trace.capabilityDigest,
+      transactionId: trace.transactionId,
+      status: trace.status,
+    },
+    submissionTransport: 'v2-actions',
+  });
+  return receipt;
 }
 
 function assertRegistryMetadata(state) {
@@ -657,6 +824,9 @@ function loadOrCreateManifest(expected) {
     parsed.transcript ??= { steps: [], observations: [] };
     parsed.transcript.observations ??= [];
     parsed.registry.registryContractBindingHex ??= null;
+    parsed.dust.beforeObservedAt ??= null;
+    parsed.dust.afterObservedAt ??= null;
+    parsed.dust.valuationAt ??= null;
     for (const referendum of parsed.referenda ?? []) referendum.registryContractBindingHex ??= null;
     api.validatePassportV2DeploymentManifest(parsed);
     assertManifestMatches(parsed, expected);
@@ -669,6 +839,19 @@ function loadOrCreateManifest(expected) {
     network: networkId,
     networkId,
     generatedAt: new Date().toISOString(),
+    source: expected.source,
+    services: expected.services,
+    artifacts: expected.artifacts,
+    endpoints: expected.endpoints,
+    dust: {
+      before: null,
+      after: null,
+      spent: null,
+      beforeObservedAt: null,
+      afterObservedAt: null,
+      valuationAt: null,
+      accounted: false,
+    },
     runtime: {
       apiUrl: expected.apiUrl,
       credentialTtlMs: expected.credentialTtlMs,
@@ -823,6 +1006,144 @@ function saveManifest() {
     mode: 0o600,
   });
   renameSync(temporaryPath, manifestPath);
+}
+
+function finalizeLifecycleManifest() {
+  const cast = stepReceipt('lifecycle.cast');
+  const close = stepReceipt('lifecycle.close');
+  const reveal = stepReceipt('lifecycle.reveal');
+  const finalize = stepReceipt('lifecycle.finalize');
+  const replayRejected = manifest.transcript.steps.some(
+    (step) => step.id === 'lifecycle.replay-rejected' && step.status === 'rejected',
+  );
+  const evidence = {
+    submissionTransport: 'v2-actions',
+    relay: {
+      submissionTransport: 'v2-actions',
+      states: [
+        'authorized',
+        'validated',
+        'dust_reserved',
+        'finalized',
+        'submitted',
+        'indexer_pending',
+        'confirmed',
+      ],
+      accepted: Boolean(manifest.action?.transactionId),
+      duplicateResolved: false,
+      concurrentIdempotent: false,
+      restartRecovered: false,
+    },
+    lifecycle: {
+      castTransactionId: cast?.transactionId ?? '',
+      closeTransactionId: close?.transactionId ?? '',
+      revealTransactionId: reveal?.transactionId ?? '',
+      finalizeTransactionId: finalize?.transactionId ?? '',
+      replayRejected,
+      finalized: true,
+      indexerObservations: manifest.transcript.observations.filter((observation) =>
+        ['lifecycle.cast', 'lifecycle.close', 'lifecycle.reveal', 'lifecycle.finalize'].includes(
+          observation.stage,
+        ),
+      ).length,
+    },
+  };
+  return { ...manifest, ...evidence, status: 'in-progress' };
+}
+
+function readSourceIdentity() {
+  const commit = gitValue(['rev-parse', 'HEAD']);
+  const tree = gitValue(['rev-parse', 'HEAD^{tree}']);
+  if (!/^[0-9a-f]{40}$/iu.test(commit) || !/^[0-9a-f]{40}$/iu.test(tree)) {
+    fail('Unable to capture the source commit/tree identity');
+  }
+  return { commit, tree };
+}
+
+function readServiceIdentity() {
+  const packageVersion = (path) => {
+    try {
+      const value = JSON.parse(readFileSync(path, 'utf8'));
+      return typeof value.version === 'string' && value.version ? value.version : 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  };
+  const apiPackage = resolve(ROOT, 'api/package.json');
+  const relayerPackage = resolve(ROOT, 'relayer/package.json');
+  const lockHash = hashFile(resolve(ROOT, 'package-lock.json'));
+  const nodeImage = optional('V2_NODE_VERSION', 'midnightntwrk/midnight-node:1.0.0');
+  const indexerImage = optional('V2_INDEXER_VERSION', 'midnightntwrk/indexer-standalone:4.3.3');
+  const proofImage = optional('V2_PROOF_SERVER_VERSION', 'midnightntwrk/proof-server:8.1.0');
+  return {
+    api: { version: packageVersion(apiPackage), hash: hashDirectory(resolve(ROOT, 'api/dist')) },
+    relayer: {
+      version: packageVersion(relayerPackage),
+      hash: hashDirectory(resolve(ROOT, 'relayer/dist')),
+    },
+    node: { version: nodeImage, hash: dockerImageHash(nodeImage) },
+    indexer: {
+      version: indexerImage,
+      hash: dockerImageHash(indexerImage),
+    },
+    proofServer: {
+      version: proofImage,
+      hash: dockerImageHash(proofImage),
+    },
+    lockfile: { version: 'npm-lock', hash: lockHash },
+  };
+}
+
+function dockerImageHash(image) {
+  try {
+    const value = execFileSync('docker', ['image', 'inspect', '--format', '{{.Id}}', image], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    })
+      .trim()
+      .replace(/^sha256:/u, '');
+    if (/^[0-9a-f]{64}$/iu.test(value)) return value;
+  } catch {}
+  fail(`Unable to resolve the Docker image identity for ${image}`);
+}
+
+function gitValue(args) {
+  try {
+    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function hashFile(path) {
+  try {
+    return createHash('sha256').update(readFileSync(path)).digest('hex');
+  } catch {
+    return sha256(`missing:${path}`);
+  }
+}
+
+function hashDirectory(path) {
+  const files = [];
+  walk(path, files);
+  const hash = createHash('sha256');
+  for (const file of files.sort()) {
+    hash.update(file.slice(path.length).replaceAll('\\', '/'));
+    hash.update(readFileSync(file));
+  }
+  return hash.digest('hex');
+}
+
+function walk(path, files) {
+  for (const entry of readdirSync(path)) {
+    const child = resolve(path, entry);
+    if (statSync(child).isDirectory()) walk(child, files);
+    else files.push(child);
+  }
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
 function required(name) {

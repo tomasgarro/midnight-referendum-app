@@ -1,6 +1,7 @@
 import { ArrowLeft, Fingerprint, Info } from '@phosphor-icons/react';
 import type { CivicPassportSession, PassportSessionPort } from 'midnight-referendum-api';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import type { CicoLocale } from '@/integration/locale';
 import { PreviewPassportJourney, type PreviewPassportJourneyPorts } from './PreviewPassportJourney';
 import { UnifiedPassportOnboarding } from './UnifiedPassportOnboarding';
 
@@ -14,6 +15,8 @@ interface PassportJourneyProps {
   previewPorts?: PreviewPassportJourneyPorts;
   onCredentialReady?: (credential: DemoCredentialSummary) => void;
   onPassportConnected?: (session: CivicPassportSession | null) => void;
+  initialLocale?: CicoLocale;
+  onLocaleChange?: (locale: CicoLocale) => void;
 }
 
 function PreviewUnavailable({ onClose }: { onClose: () => void }) {
@@ -58,6 +61,8 @@ export function PassportJourney({
   previewPorts,
   onCredentialReady,
   onPassportConnected,
+  initialLocale,
+  onLocaleChange,
 }: PassportJourneyProps) {
   // Undeployed owns a local chain, but its account/identity surface is still
   // the official Preview Passport. Never fall back to the synthetic Unified
@@ -71,6 +76,8 @@ export function PassportJourney({
           onPassportConnected={onPassportConnected}
           mode={mode}
           ports={previewPorts}
+          initialLocale={initialLocale}
+          onLocaleChange={onLocaleChange}
         />
       );
     }
@@ -85,6 +92,8 @@ export function PassportJourney({
       onCredentialReady={onCredentialReady}
       onPassportConnected={onPassportConnected}
       passportPort={passportPort}
+      initialLocale={initialLocale}
+      onLocaleChange={onLocaleChange}
     />
   );
 }

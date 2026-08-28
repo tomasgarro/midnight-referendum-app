@@ -169,7 +169,10 @@ export async function startServer(): Promise<void> {
           submit: (tx) => enqueue(() => wallet.facade.submitTransaction(deserializeFinalized(tx))),
           transactionId: (tx) => {
             try {
-              return deserializeFinalized(tx).identifiers()[0];
+              // WalletFacade.submitTransaction() returns the final identifier.
+              // Balancing can add identifiers, so using the first one creates a
+              // false submission mismatch for the exact transaction submitted.
+              return deserializeFinalized(tx).identifiers().at(-1);
             } catch {
               return undefined;
             }
@@ -231,6 +234,17 @@ export async function startServer(): Promise<void> {
             send(response, 503, { synced: false, detail: 'wallet has not produced a state yet' });
             return;
           }
+          const dustAtValue = url.searchParams.get('dustAt');
+          const dustAt = dustAtValue === null ? new Date() : new Date(dustAtValue);
+          const now = Date.now();
+          if (
+            Number.isNaN(dustAt.getTime()) ||
+            dustAt.getTime() > now ||
+            now - dustAt.getTime() > 15 * 60 * 1_000
+          ) {
+            send(response, 400, { error: 'invalid_dust_evaluation_time' });
+            return;
+          }
           send(response, 200, {
             synced: state.isSynced,
             networkId: config.networkId,
@@ -246,7 +260,8 @@ export async function startServer(): Promise<void> {
             unshieldedBalances: Object.fromEntries(
               Object.entries(state.unshielded.balances).map(([k, v]) => [k, v.toString()]),
             ),
-            dustBalance: state.dust.balance(new Date()).toString(),
+            dustBalance: state.dust.balance(dustAt).toString(),
+            dustEvaluationTime: dustAt.toISOString(),
           });
           return;
         }

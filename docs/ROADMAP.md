@@ -1,8 +1,11 @@
 # CICO Passport product roadmap
 
-Status: working roadmap for a non-binding civic-consultation product on
+Status: working roadmap for a non-binding civic-consultation product targeting
 Midnight Preview. This is an outcome-driven plan, not a promise of dates or a
-claim that the product is suitable for governmental elections.
+claim that the product is suitable for governmental elections. Source code may
+be present while runtime evidence remains pending; this document does not
+assert a deployed network, Passport approval, NFC session, release identity,
+CI result, test total, URL, or video.
 
 The weekly product and submission cadence for the August–November 2026 program
 lives in [`BUILDATHON-ROADMAP.md`](BUILDATHON-ROADMAP.md). This document remains
@@ -36,15 +39,15 @@ private geography percentages.
 
 | Stage | Initiative | Intended outcome | Exit evidence | Status |
 | --- | --- | --- | --- | --- |
-| Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt Playwright journey; explicit synthetic/provider disclosures | Implemented |
-| Now | Provider-neutral domain ports | Rarimo and future Passport-native providers remain replaceable | Session, credential, and action conformance tests; no provider transports in use cases | Implemented |
-| Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Vercel package, Hostinger separation plan | Implemented |
-| Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while every referendum pins an exact frozen root | Compact simulator tests, TS/Compact golden vectors, wrong-root and policy rejection | Implemented locally |
-| Next | Rarimo evidence adapter + issuer | A physical passport verification can authorize a provider-neutral credential for an open enrollment epoch | Server-verified callback, claim-bound authorization, replay/idempotency tests, raw-data deletion test, synthetic and Rarimo conformance parity | In progress: claim-bound proof/enrollment/holder/claims validation, durable replay state, hardened HTTP gateway, dedicated Preview issuer wallet/runtime, and runnable service are implemented and tested locally; self-hosted verificator, funded canonical deployment, and physical NFC transcript remain release gates |
-| Now | Credential epoch coordinator | A bounded cohort enrolls, the canonical root freezes, and only then do matching consultations open | Indexer-reconciled enrollment close/freeze transcript; UI states for enrollment, freeze, eligible epoch, and next epoch | Implemented locally: the idempotent v2 operator deploys the registry, issues the fixture, freezes only the canonical current root, binds and deploys the referendum, and writes a versioned manifest; a fresh service transcript remains the environment gate |
-| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Implemented locally: catalog-selected v2 providers, encrypted address-scoped state, canonical registry/path checks, browser witness preparation, and fail-closed runtime composition; fresh Undeployed and Preview service transcripts remain deployment evidence gates |
-| Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag tests | Implemented locally: one-time credential-backed capabilities, allowlists, durable idempotent jobs, PostgreSQL transactional DUST lease, restart reconciliation, and indexer-only canonical receipts; hosted PostgreSQL and fresh DUST transcript remain external gates |
-| Next | Encrypted private state and receipts | Refresh/restart recovery does not require cleartext browser persistence | Threat model, encrypted IndexedDB tests, export/recovery UX, no sensitive storage/log matches | In progress: non-extractable AES-GCM IndexedDB storage, contract-address scoping, separate v2 state ID, defensive-copy material port, and confirmation recovery UX implemented; user-controlled export/recovery and durable receipt resolver pending |
+| Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Source path present; runtime evidence pending |
+| Now | Provider-neutral domain ports | Rarimo and future Passport-native providers remain replaceable | Session, credential, and action conformance checks; no provider transports in use cases | Source path present; verification pending |
+| Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Vercel package, Hostinger separation plan | Configuration present; release checks pending |
+| Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while every referendum pins an exact frozen root | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Source path present; current review verification pending |
+| Next | Rarimo evidence adapter + issuer | A physical passport verification can authorize a provider-neutral credential for an open enrollment epoch | Server-verified callback, claim-bound authorization, replay/idempotency checks, raw-data deletion check, synthetic and Rarimo conformance parity | In progress; source boundary exists, but trusted verificator, callback approval, funded issuer, physical NFC transcript, and runtime evidence remain gates |
+| Now | Credential epoch coordinator | A bounded cohort enrolls, the canonical root freezes, and only then do matching consultations open | Indexer-reconciled enrollment close/freeze transcript; UI states for enrollment, freeze, eligible epoch, and next epoch | Source path present; no committed runtime manifest/transcript |
+| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Source path present; fresh Undeployed and Preview evidence pending |
+| Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag checks | Source path present; service/DUST/restart transcript pending |
+| Next | Encrypted private state and receipts | Refresh/restart recovery does not require cleartext browser persistence | Threat model, encrypted IndexedDB checks, export/recovery UX, no sensitive storage/log matches | In progress; runtime recovery and durable receipt evidence pending |
 | Later | Invited Preview pilot | A small cohort completes real passport-backed consultations reliably | Acceptance funnel, support runbook, incident exercise, privacy review, uptime/error data | Gated |
 | Later | Geography decision | Country participation reporting has an honest privacy and trust model | Explicit approval of public opt-in or delayed ZK aggregation; dedicated audit | Human decision gate |
 | Later | Passport-native credential adapter | Passport becomes the credential provider when its supported capabilities permit it | Adapter conformance parity and migration rehearsal; no Compact/use-case rewrite | Capability-gated |
@@ -80,8 +83,9 @@ Gate:
 - public transcript and ZKIR review find no country, age, holder binding,
   credential opening, choice, or salt disclosure in `castVote`.
 
-Local status: complete. The remaining evidence belongs to R2/R3 and requires
-live Preview services rather than additional simulator claims.
+Source status: the contract and policy boundaries are in the checkout. The
+remaining evidence belongs to R2/R3 and requires a fresh local/Preview runtime
+transcript rather than additional prose or simulator claims.
 
 ### R2 — real passport enrollment
 
@@ -100,16 +104,12 @@ Gate:
 - MRZ, NFC payload, face image, birth date, and raw provider result are neither
   logged nor retained after the minimum verified claims are derived.
 
-Local status: partially implemented. The provider-neutral Rarimo request,
-248-bit proof-to-enrollment/holder binding, verified country/age/assurance
-authorization, issuance, durable replay/idempotency state, cleanup, QR
-interaction, complete assigned ISO catalogue, private material bridge,
-proof-free Node HTTP façade, dedicated issuer wallet/runtime, and runnable
-Preview-only process are tested. The trusted verificator performs Groth16
-verification; the adapter validates its exact status, schema and request-bound
-signals. A pinned self-hosted verificator, callback authentication, funded and
-deployed registry, physical-phone/NFC transcript, and recovery across the
-post-confirmation/pre-journal crash window are still required.
+Source status: the provider-neutral request, claim binding, minimal-claim
+boundary, replay/idempotency model, cleanup path, QR interaction, HTTP façade,
+issuer runtime, and Preview-only process are represented in the checkout. A
+trusted/pinned verificator, authenticated callback, funded and deployed
+registry, physical-phone/NFC transcript, and recovery across the
+post-confirmation/pre-journal crash window remain required evidence gates.
 
 ### R3 — real Preview consultation
 
@@ -127,20 +127,16 @@ Gate:
 - contract/circuit/network allowlists reject all other relay work;
 - two concurrent jobs cannot reuse a DUST input.
 
-Local status: implemented pending a fresh environment transcript. Registry/referendum compiled assets,
-typed witnesses, AES-GCM address-scoped private state, contract-specific wallet
-providers, canonical registry/path binding, browser-owned choice/witness
-preparation, choice-free receipts, pending confirmation recovery, and
-environment-driven Preview composition exist. The issuer now checks the
-canonical epoch before consuming evidence authorization, shares an exclusive
-mutation boundary with the freeze coordinator, freezes only the current root,
-reconciles that root through the indexer, and refuses stale frozen roots.
-The catalog fails closed for epoch, country, assurance, adult, and validity
-policy mismatches. The v2 operator command, one-time capability issuer,
-atomic durable relay, restart recovery, and indexer-only receipt lookup are
-implemented and tested. Fresh Undeployed/Preview transactions and the live independent
-indexer transcript remain. ADR-006 deliberately rejects an immediate passport
-scan against an already-frozen live referendum.
+Source status: registry/referendum assets, typed witnesses, address-scoped
+private state, contract-specific providers, canonical root/path binding,
+browser-owned choice/witness preparation, choice-free receipts, pending
+confirmation recovery, and environment-driven composition exist in the
+checkout. The issuer/coordinator and catalog fail-closed boundaries are part
+of the source design. The v2 operator command, one-time capability issuer,
+durable relay, restart path, and indexer-only receipt lookup still need a fresh
+Undeployed transcript and independent review. No current transaction or
+indexer observation is asserted here. ADR-006 deliberately rejects an
+immediate passport scan against an already-frozen live referendum.
 
 ### R4 — invited pilot
 

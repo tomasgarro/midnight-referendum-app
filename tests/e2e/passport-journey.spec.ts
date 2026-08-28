@@ -15,7 +15,10 @@ test('completes Passport onboarding, then creates a choice-free simulated receip
   await journey.issueSyntheticCredential();
   await expect(journey.credentialHeading).toBeVisible();
   await journey.openDashboard();
-  await expect(page.getByRole('tab', { name: 'World' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /World|Mundo/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await journey.openConsultationAndVote();
   await journey.submitSimulatedReceipt();
 
@@ -39,7 +42,7 @@ test('ends credential onboarding before scope, ballot, proving, or receipts', as
   await expect(page.getByRole('heading', { name: 'Consultas para vos' })).toBeVisible();
 });
 
-test('keeps the unified onboarding and dashboard within the viewport at 320px and 390px', async ({
+test('keeps the bilingual journey accessible and unclipped at all jury widths', async ({
   page,
 }) => {
   test.skip(showcase, 'The deployed public artifact uses the live Passport showcase path.');
@@ -54,16 +57,50 @@ test('keeps the unified onboarding and dashboard within the viewport at 320px an
     expect(metrics.documentScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
   };
 
-  for (const width of [320, 390]) {
-    await page.setViewportSize({ width, height: 720 });
-    const journey = new PassportJourneyPage(page);
-    await journey.open();
-    await expectNoHorizontalOverflow();
-    await journey.connectDemoPassport();
-    await journey.issueSyntheticCredential();
-    await expectNoHorizontalOverflow();
-    await journey.openDashboard();
-    await expectNoHorizontalOverflow();
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    window.localStorage.setItem('cico-locale', 'es');
+  });
+  await page.setViewportSize({ width: 390, height: 720 });
+  await page.goto('/');
+  for (const locale of ['en', 'es'] as const) {
+    await page.getByRole('combobox', { name: /Language|Idioma/i }).selectOption(locale);
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: width < 768 ? 720 : 900 });
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      await expectNoHorizontalOverflow();
+      const cta = page.getByRole('button', { name: /Comenzar|Get started/i });
+      await expect(cta).toBeVisible();
+      const box = await cta.boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.x ?? -1) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+      await cta.focus();
+      const focusVisible = await cta.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return style.outlineStyle !== 'none' || style.boxShadow !== 'none';
+      });
+      expect(focusVisible).toBe(true);
+      const semanticIssues = await page.evaluate(() => {
+        const issues: string[] = [];
+        if (!document.documentElement.lang) issues.push('missing html lang');
+        if (document.querySelectorAll('main').length !== 1) issues.push('main landmark count');
+        const ids = [...document.querySelectorAll('[id]')].map((node) => node.id);
+        if (new Set(ids).size !== ids.length) issues.push('duplicate ids');
+        for (const control of document.querySelectorAll('button, a, input, select')) {
+          const name =
+            control.getAttribute('aria-label') ??
+            control.getAttribute('title') ??
+            control.textContent?.trim() ??
+            '';
+          if (!name && !(control instanceof HTMLInputElement && control.labels?.length)) {
+            issues.push(`unnamed ${control.tagName.toLowerCase()}`);
+          }
+        }
+        return issues;
+      });
+      expect(semanticIssues).toEqual([]);
+    }
   }
 });
 

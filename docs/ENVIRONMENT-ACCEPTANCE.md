@@ -1,7 +1,10 @@
 # Environment acceptance matrix
 
-Every user-visible claim must match the selected environment. Synthetic data
-can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
+This is the target acceptance matrix, not a runtime transcript. The current
+review checkout has **no verified Undeployed v2 runtime evidence** and no
+committed sanitized manifest. Every user-visible claim must match the selected
+environment. Synthetic data can demonstrate UX, but it cannot satisfy an
+Undeployed or Preview release gate.
 
 | Capability | `demo` | `undeployed` | `preview` |
 | --- | --- | --- | --- |
@@ -17,7 +20,12 @@ can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
 | Receipt | Synthetic and labelled | Canonical only after local indexer observation | Canonical only after independent Preview indexer observation |
 | NFC/passport evidence | Not available or synthetic | Fixture evidence only until physical companion transcript exists | Rarimo/native companion only after physical-device gate; raw document data never enters this web app |
 
-## Required runtime evidence
+## Required runtime evidence (pending)
+
+The following evidence is required before the corresponding environment may be
+described as live or verified. None is asserted by this document until a fresh
+run is reviewed and its sanitized manifest/transcript is deliberately
+committed.
 
 ### Demo
 
@@ -55,4 +63,3 @@ can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
 - Submission without indexer confirmation remains pending.
 - Unknown environment/provider capability is reported as unavailable, not
   inferred or fabricated.
-

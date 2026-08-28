@@ -40,7 +40,15 @@ function manifest(
       relay: null,
       explorer: null,
     },
-    dust: { before: null, after: null, spent: null, accounted: false },
+    dust: {
+      before: null,
+      after: null,
+      spent: null,
+      beforeObservedAt: null,
+      afterObservedAt: null,
+      valuationAt: null,
+      accounted: false,
+    },
     registry: {
       contractAddress: null,
       registryContractBindingHex: null,
@@ -78,6 +86,23 @@ describe('Passport v2 deployment manifest', () => {
     const value = manifest();
     expect(() => validatePassportV2DeploymentManifest(value)).not.toThrow();
     expect(serializePassportV2DeploymentManifest(value)).toContain('"observations": []');
+  });
+
+  it('fails closed for a complete manifest without v2 evidence identity', () => {
+    expect(() => validatePassportV2DeploymentManifest(manifest({ status: 'complete' }))).toThrow(
+      'source commit/tree',
+    );
+  });
+
+  it('rejects private fixture material instead of serializing it', () => {
+    const value = manifest({
+      transcript: {
+        steps: [],
+        observations: [],
+        secret: 'must-not-cross-boundary',
+      } as never,
+    });
+    expect(() => serializePassportV2DeploymentManifest(value)).toThrow('private fixture material');
   });
 
   it('rejects a registry binding that does not match its selected address', () => {

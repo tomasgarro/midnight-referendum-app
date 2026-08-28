@@ -59,6 +59,7 @@ export class InMemoryV2ActionStore implements V2ActionStore {
         circuit: requireId(input.circuit, 'circuit'),
         action: input.action,
         status: 'authorized',
+        transitions: ['authorized'],
         createdAt: input.now,
         updatedAt: input.now,
       };
@@ -104,6 +105,10 @@ export class InMemoryV2ActionStore implements V2ActionStore {
       const next = {
         ...job,
         ...patch,
+        transitions:
+          patch.status && patch.status !== job.status
+            ? [...job.transitions, patch.status]
+            : job.transitions,
         updatedAt: new Date().toISOString(),
       };
       const receipt = next.receipt ? sanitizeCanonicalReceipt(next.receipt) : undefined;
@@ -128,6 +133,7 @@ export class InMemoryV2ActionStore implements V2ActionStore {
       const next: V2ActionJob = {
         ...job,
         status: 'dust_reserved',
+        transitions: [...job.transitions, 'dust_reserved'],
         dustReservationId: reservationId,
         updatedAt: new Date().toISOString(),
       };
@@ -209,6 +215,7 @@ export class FileV2ActionStore implements V2ActionStore {
         circuit: requireId(input.circuit, 'circuit'),
         action: input.action,
         status: 'authorized',
+        transitions: ['authorized'],
         createdAt: input.now,
         updatedAt: input.now,
       };
@@ -248,7 +255,15 @@ export class FileV2ActionStore implements V2ActionStore {
       const job = state.jobs[id];
       if (!job || !(Array.isArray(expected) ? expected : [expected]).includes(job.status))
         return null;
-      const next = { ...job, ...patch, updatedAt: new Date().toISOString() };
+      const next = {
+        ...job,
+        ...patch,
+        transitions:
+          patch.status && patch.status !== job.status
+            ? [...job.transitions, patch.status]
+            : job.transitions,
+        updatedAt: new Date().toISOString(),
+      };
       const receipt = next.receipt ? sanitizeCanonicalReceipt(next.receipt) : undefined;
       const persisted: V2ActionJob = { ...next, ...(receipt ? { receipt } : {}) };
       state.jobs[id] = persisted;
@@ -271,6 +286,7 @@ export class FileV2ActionStore implements V2ActionStore {
       const next: V2ActionJob = {
         ...job,
         status: 'dust_reserved',
+        transitions: [...job.transitions, 'dust_reserved'],
         dustReservationId: reservationId,
         updatedAt: new Date().toISOString(),
       };
@@ -359,6 +375,8 @@ function parseJob(value: unknown): V2ActionJob {
     typeof value.circuit !== 'string' ||
     !isAction(value.action) ||
     !isStatus(status) ||
+    (value.transitions !== undefined &&
+      (!Array.isArray(value.transitions) || !value.transitions.every(isStatus))) ||
     typeof value.createdAt !== 'string' ||
     typeof value.updatedAt !== 'string' ||
     (value.transactionId !== undefined && typeof value.transactionId !== 'string') ||
@@ -378,6 +396,10 @@ function parseJob(value: unknown): V2ActionJob {
     circuit: value.circuit,
     action: value.action,
     status,
+    transitions:
+      value.transitions === undefined
+        ? [status]
+        : (value.transitions as readonly V2ActionJobStatus[]),
     ...(value.dustReservationId ? { dustReservationId: value.dustReservationId } : {}),
     ...(value.transactionId ? { transactionId: value.transactionId } : {}),
     ...(value.receipt ? { receipt: sanitizeCanonicalReceipt(value.receipt) } : {}),
@@ -390,6 +412,7 @@ function parseJob(value: unknown): V2ActionJob {
 function cloneJob(job: V2ActionJob): V2ActionJob {
   return {
     ...job,
+    transitions: [...job.transitions],
     ...(job.receipt ? { receipt: { ...job.receipt } } : {}),
   };
 }

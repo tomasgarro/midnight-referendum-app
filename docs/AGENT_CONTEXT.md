@@ -6,48 +6,43 @@ Build a Midnight Passport-first, passport-backed, non-binding civic consultation
 
 ## Source of truth
 
-- Repository: `/home/tomas/src/referendum`
-- Implementation branch: `feat/passport-credential-v2`
-- Baseline: `feat/wallet-less-voting` at `ed10357`
+- Repository: the reviewed checkout containing this document
+- Implementation branch: `feat/undeployed-v2-evidence-release`
+- Baseline: no release SHA is assigned; inspect the current worktree before
+  making evidence claims
 - Runtime: Linux/WSL, Node `22.22.0` from `.nvmrc`
 - Baseline verification: `bash scripts/verify-linux.sh demo`
 - Compact compiler metadata: compiler `0.31.1`, language `0.23`, runtime `0.16.0`
 
 Never edit the historical Windows project copy. Generated Compact assets are synchronized by repository scripts.
 
-## Current implementation status (2026-08-24)
+## Current implementation status (review checkout)
 
-Implemented and locally verified:
+The checkout contains v2 contract, provider, issuer, browser, relayer, and
+operator-runner code. That is implementation status only. Runtime evidence is
+**in progress and unverified**: no committed sanitized Undeployed manifest or
+transcript is present, and no current Preview transaction or Passport/NFC
+session is asserted by this document. Do not add transaction IDs, addresses,
+release SHAs, CI results, test totals, hosted URLs, videos, or provider-approval
+claims until a fresh run is independently reviewed and its sanitized evidence
+is deliberately committed.
 
-- `CredentialRegistryV1` and `ReferendumV2` contracts, generated assets,
-  TS/Compact golden vectors, frozen-root policy, nullifier replay rejection,
-  country/adult/assurance/validity predicates, and constructor public role keys;
-- separate registry/referendum private-state IDs, contract-address-scoped
-  storage, typed witnesses, Preview/devnet executors, and public-only canonical
-  receipts;
-- Midnight Passport profile/session adapter with only `session` and `profile`
-  capabilities;
-- Rarimo request/evidence/issuer boundary with exact verified status, fresh
-  bindings, minimal claims, replay/idempotent cleanup, QR interaction, and no
-  raw proof in the browser contract;
-- full Preview UI composition through injected session, credential, and action
-  ports, including a second canonical-receipt equality check;
-- optional browser-safe HTTPS ports selected by
-  `VITE_PASSPORT_V2_API_URL`; unset deployments connect Passport and then stop
-  honestly before document verification.
-
-Latest green gate: 8 Compact simulator tests, 26 API tests, 69 UI tests, 2
-Chromium E2E tests, production API/UI builds, Biome quality (warnings only),
-`git diff --check`, and `npm audit --omit=dev` with zero findings.
+The bounded local procedure is `npm run evidence:undeployed:v2`. It generates
+secrets in ignored files, starts the pinned services, and fails closed when
+genesis funding or a lifecycle step is unavailable. A generated manifest or
+transcript is not evidence until it has passed the review gate in
+`docs/ENVIRONMENT-ACCEPTANCE.md`.
 
 Still external/live-environment gated:
 
-- self-hosted and authenticated Rarimo verificator/callback service;
-- single-use evidence-authorization store and real Midnight credential issuer;
-- deployed v2 registry/referendum addresses and fresh Preview transaction
-  transcript;
-- atomic sponsored-relay job, DUST concurrency/idempotency, encrypted recovery,
-  and pilot operations.
+- self-hosted and authenticated Rarimo verificator/callback service and a
+  physical NFC transcript;
+- a real credential issuer run against the canonical local/Preview registry;
+- deployed v2 registry/referendum addresses and fresh Undeployed/Preview
+  transaction transcripts;
+- independent Passport origin approval and account/network validation;
+- atomic sponsored-relay, DUST concurrency/idempotency, restart/recovery, and
+  pilot operations evidence.
 
 ## Architecture decisions
 

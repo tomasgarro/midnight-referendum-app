@@ -53,6 +53,8 @@ export interface V2ActionJob {
   readonly circuit: string;
   readonly action: CivicActionKind;
   readonly status: V2ActionJobStatus;
+  /** Append-only, digest-free lifecycle evidence persisted with the job. */
+  readonly transitions: readonly V2ActionJobStatus[];
   readonly dustReservationId?: string;
   readonly transactionId?: string;
   readonly receipt?: CanonicalReceipt;
@@ -134,6 +136,7 @@ export interface PublicV2ActionJob {
   readonly network: string;
   readonly contractAddress: string;
   readonly circuit: string;
+  readonly transitions: readonly V2ActionJobStatus[];
   readonly transactionId?: string;
   readonly receipt?: CanonicalReceipt;
   readonly errorCode?: V2ActionErrorCode;
@@ -166,6 +169,7 @@ export function publicJob(job: V2ActionJob): PublicV2ActionJob {
     network: job.network,
     contractAddress: job.contractAddress,
     circuit: job.circuit,
+    transitions: [...job.transitions],
     ...(job.transactionId ? { transactionId: job.transactionId } : {}),
     ...(job.receipt ? { receipt: job.receipt } : {}),
     ...(job.errorCode ? { errorCode: job.errorCode } : {}),

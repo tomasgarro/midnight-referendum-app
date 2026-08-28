@@ -41,6 +41,8 @@ interface UnifiedPassportOnboardingProps {
   dismissible?: boolean;
   onCredentialReady?: (credential: DemoCredentialSummary) => void;
   onPassportConnected?: (session: CivicPassportSession | null) => void;
+  initialLocale?: CicoLocale;
+  onLocaleChange?: (locale: CicoLocale) => void;
 }
 
 const DEFAULT_DEMO_COUNTRY = 'AR';
@@ -279,8 +281,10 @@ export function UnifiedPassportOnboarding({
   dismissible = true,
   onCredentialReady,
   onPassportConnected,
+  initialLocale,
+  onLocaleChange,
 }: UnifiedPassportOnboardingProps) {
-  const [locale, setLocale] = useState<CicoLocale>(() => detectLocale());
+  const [locale, setLocale] = useState<CicoLocale>(() => initialLocale ?? detectLocale());
   const [stage, setStage] = useState<OnboardingStage>('welcome');
   const [session, setSession] = useState<CivicPassportSession | null>(null);
   const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
@@ -319,6 +323,7 @@ export function UnifiedPassportOnboarding({
   const setLanguage = (next: CicoLocale) => {
     setLocale(next);
     persistLocale(next);
+    onLocaleChange?.(next);
   };
 
   const connect = async () => {

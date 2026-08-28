@@ -10,8 +10,23 @@ managed/
 # Local configuration and secrets
 .env
 .env.*
+*.env
+*.env.*
 !.env.example
+!**/.env.example
+!*.env.example
+!*.env.*.example
 *.local
+
+# Runtime state and generated evidence are private until explicitly reviewed.
+**/.state/
+**/.cico-state/
+**/postgres-data/
+*.db
+*.sqlite
+*.sqlite3
+deploy/passport-v2/*.manifest.json
+deploy/passport-v2/*.transcript.json
 
 # Temporary smoke-test material
 tmp/

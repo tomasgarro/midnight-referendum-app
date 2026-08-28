@@ -3,7 +3,11 @@ import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import type { FinalizedTransaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
-import type { MidnightProvider, WalletProvider } from '@midnight-ntwrk/midnight-js-types';
+import type {
+  MidnightProvider,
+  WalletProvider,
+  ZKConfigProvider,
+} from '@midnight-ntwrk/midnight-js-types';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
 import { catchError, retry, throwError } from 'rxjs';
 import { browserPrivateStateProvider, inMemoryPrivateStateProvider } from '../private-state.js';
@@ -79,6 +83,19 @@ export interface WalletlessActionExecutionContext {
   run<T>(scope: WalletlessActionScope, operation: () => Promise<T>): Promise<T>;
 }
 
+/** Public, digest-only evidence for one walletless relay invocation. */
+export interface WalletlessActionTrace {
+  readonly actionId: string;
+  readonly idempotencyKey: string;
+  readonly actionIdDigest: string;
+  readonly idempotencyKeyDigest: string;
+  readonly requestHash: string;
+  readonly txDigest: string;
+  readonly capabilityDigest: string;
+  readonly transactionId: string;
+  readonly status: 'confirmed';
+}
+
 interface PendingActionRecord {
   readonly actionId: string;
   readonly idempotencyKey: string;
@@ -116,6 +133,8 @@ export interface ReferendumV2WalletlessProviderOptions {
   readonly indexerWsUri: string;
   readonly capabilityIssuer: WalletlessActionCapabilityIssuer;
   readonly zkConfigBaseUrl?: string;
+  /** Node/operator escape hatch; browser callers must use the fetched provider. */
+  readonly zkConfigProvider?: ZKConfigProvider<ReferendumV2CircuitKeys>;
   readonly pendingStore?: WalletlessPendingActionStore;
   readonly pollIntervalMs?: number;
   readonly submissionTimeoutMs?: number;
@@ -125,6 +144,8 @@ export interface ReferendumV2WalletlessProviderOptions {
 export interface ReferendumV2WalletlessRuntime {
   readonly providers: ReferendumV2Providers;
   readonly actionContext: WalletlessActionExecutionContext;
+  /** Returns the last confirmed action without exposing the capability token. */
+  readonly getLastActionTrace: () => WalletlessActionTrace | null;
 }
 
 /**
@@ -174,13 +195,23 @@ export async function createReferendumV2WalletlessProviders(
         >();
   const browserOrigin = typeof window === 'undefined' ? '' : window.location.origin;
   const zkConfigBaseUrl = options.zkConfigBaseUrl ?? `${browserOrigin}/managed/referendum-v2`;
-  if (typeof window === 'undefined' && !/^https?:\/\//iu.test(zkConfigBaseUrl)) {
+  if (options.zkConfigProvider) {
+    // Explicitly injected providers are only intended for Node-side runners
+    // with local managed assets; browser callers cannot serialize these keys.
+    if (typeof window !== 'undefined') {
+      throw new TypeError('zkConfigProvider injection is unavailable in a browser');
+    }
+  }
+  if (
+    !options.zkConfigProvider &&
+    typeof window === 'undefined' &&
+    !/^https?:\/\//iu.test(zkConfigBaseUrl)
+  ) {
     throw new TypeError('zkConfigBaseUrl must be absolute outside a browser');
   }
-  const zkConfigProvider = new FetchZkConfigProvider<ReferendumV2CircuitKeys>(
-    zkConfigBaseUrl,
-    fetchImpl,
-  );
+  const zkConfigProvider =
+    options.zkConfigProvider ??
+    new FetchZkConfigProvider<ReferendumV2CircuitKeys>(zkConfigBaseUrl, fetchImpl);
   const proofProvider = httpClientProofProvider<ReferendumV2CircuitKeys>(
     options.proofServerUri,
     zkConfigProvider,
@@ -192,6 +223,7 @@ export async function createReferendumV2WalletlessProviders(
     'submissionTimeoutMs',
   );
   let activeScope: WalletlessActionScope | null = null;
+  let lastActionTrace: WalletlessActionTrace | null = null;
 
   const actionContext: WalletlessActionExecutionContext = {
     async run(scope, operation) {
@@ -272,6 +304,21 @@ export async function createReferendumV2WalletlessProviders(
         pollIntervalMs,
         submissionTimeoutMs,
       );
+      lastActionTrace = {
+        actionId,
+        idempotencyKey,
+        actionIdDigest: await digestText(`midnight-referendum:v2-action-id-digest:1:${actionId}`),
+        idempotencyKeyDigest: await digestText(
+          `midnight-referendum:v2-idempotency-digest:1:${idempotencyKey}`,
+        ),
+        requestHash,
+        txDigest: await digestText(`midnight-referendum:v2-tx:1:${tx}`),
+        capabilityDigest: await digestText(
+          `midnight-referendum:v2-capability-digest:1:${actionCapability}`,
+        ),
+        transactionId,
+        status: 'confirmed',
+      };
       await pendingStore.delete(pendingKey);
       return transactionId;
     },
@@ -287,6 +334,7 @@ export async function createReferendumV2WalletlessProviders(
       midnightProvider,
     },
     actionContext,
+    getLastActionTrace: () => (lastActionTrace ? { ...lastActionTrace } : null),
   };
 }
 

@@ -61,6 +61,17 @@ describe('v2 action stores', () => {
     await store.transition(first.id, 'finalized', { status: 'submitted', transactionId: 'tx-1' });
     await store.transition(first.id, 'submitted', { status: 'indexer_pending' });
 
+    await expect(store.get(first.id)).resolves.toMatchObject({
+      transitions: [
+        'authorized',
+        'validated',
+        'dust_reserved',
+        'finalized',
+        'submitted',
+        'indexer_pending',
+      ],
+    });
+
     await expect(store.reserveDust(second.id, 'dust-2')).resolves.toBeNull();
 
     if ('directory' in created) {

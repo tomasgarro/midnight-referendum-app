@@ -1,7 +1,10 @@
 # CICO Passport Buildathon roadmap
 
 Status: execution roadmap for the Midnight Buildathon. This document owns the
-three-wave product cadence and submission evidence. [`ROADMAP.md`](ROADMAP.md)
+three-wave product cadence and submission evidence. The current Undeployed v2
+runtime evidence is not verified in the review checkout; this roadmap contains
+targets and source-status notes, not deployed transaction, Passport, NFC, CI,
+test-count, release-SHA, URL, or video evidence. [`ROADMAP.md`](ROADMAP.md)
 remains the source of truth for cryptographic release gates and
 [`FIRST-PUBLIC-DEPLOYMENT.md`](FIRST-PUBLIC-DEPLOYMENT.md) owns the release
 runbook.
@@ -57,31 +60,32 @@ Program references: [Midnight Buildathon overview](https://midnight.network/hack
 
 | Capability | Evidence today | Status |
 | --- | --- | --- |
-| Passport-first journey | Deterministic consent-to-receipt unit and browser journeys | Implemented locally |
-| Provider-neutral boundaries | Session, credential and civic-action ports with conformance tests | Implemented |
-| Passport bridge | Exact origin/source, request ID and nonce binding; embedded and popup paths | Implemented locally |
-| Credential policy | Issuer-bound reusable leaf, frozen epoch root, global/country/adult/assurance predicates | Implemented and simulator-tested |
-| Rarimo boundary | Verified-status gate, request/holder binding, minimal claims, replay state and cleanup | Implemented locally |
-| CICO issuer | Preview-only issuer runtime, canonical root checks and epoch coordinator | Implemented locally |
-| Private browser state | Address-scoped AES-GCM IndexedDB state and choice-free receipts | Implemented locally |
-| Public-mode isolation | Demo/showcase cannot activate wallet, relayer, proof, CICO, indexer or real contract ports | Implemented and browser-tested |
-| Seedless onboarding signal | Showcase performs a non-invasive platform-passkey capability check without creating a credential or contacting a wallet | Implemented locally; no vendor integration claim |
-| Vercel release path | Protected-main, pinned Compact/Vercel CLI, strict CSP, local font and exact prebuilt showcase artifact | Implemented; deployment credentials remain an external gate |
+| Passport-first journey | Deterministic consent-to-receipt unit and browser journeys | Source path present; runtime evidence pending |
+| Provider-neutral boundaries | Session, credential and civic-action ports with conformance checks | Source path present; verification pending |
+| Passport bridge | Exact origin/source, request ID and nonce binding; embedded and popup paths | Source path present; origin approval pending |
+| Credential policy | Issuer-bound reusable leaf, frozen epoch root, global/country/adult/assurance predicates | Source path present; current review verification pending |
+| Rarimo boundary | Verified-status gate, request/holder binding, minimal claims, replay state and cleanup | In progress; provider and physical-device evidence pending |
+| CICO issuer | Preview-only issuer runtime, canonical root checks and epoch coordinator | Source path present; runtime evidence pending |
+| Private browser state | Address-scoped AES-GCM IndexedDB state and choice-free receipts | Source path present; recovery evidence pending |
+| Public-mode isolation | Demo/showcase cannot activate wallet, relayer, proof, CICO, indexer or real contract ports | Source path present; privacy check pending |
+| Seedless onboarding signal | Showcase performs a non-invasive platform-passkey capability check without creating a credential or contacting a wallet | Source path present; no vendor integration claim |
+| Vercel release path | Protected-main, pinned Compact/Vercel CLI, strict CSP, local font and exact prebuilt showcase artifact | Workflow present; deployment not verified |
 | Physical NFC evidence | Hosted verifier and physical-device transcript | Not yet evidenced |
-| Wallet-less v2 action | Atomic sponsored action job and canonical live receipt | Not implemented |
+| Wallet-less v2 action | Atomic sponsored action job and canonical live receipt | In progress; fresh runtime transcript pending |
 | Private geography | Delayed ZK aggregation and audit | Intentionally deferred |
 
 ## Pre-wave foundation — Aug 25–27
 
 ### Outcome
 
-Publish a safe `showcase` mode in which Midnight Passport is live and every
-credential/vote state is explicitly synthetic.
+Prepare a safe `showcase` mode in which Midnight Passport may be enabled only
+after origin approval and every credential/vote state is explicitly synthetic.
 
 ### Delivery
 
-- Support three modes: `demo` (fully local), `showcase` (live Passport only),
-  and `preview` (real configured credential/action ports).
+- Support three modes: `demo` (fully local), `showcase` (Passport-only after
+  origin approval), and `preview` (real configured credential/action ports only
+  after their runtime gates are evidenced).
 - In showcase mode, hard-disable wallet, CICO, Rarimo, relayer, proof, indexer
   and contract initialization even when stale environment variables exist.
 - Request only Passport `displayName` by default. Render an approved `.night`
@@ -100,7 +104,7 @@ The protected GitHub `public-preview` environment requires
 
 ```text
 VITE_APP_MODE=showcase
-VITE_PASSPORT_ORIGIN=https://midnightpassport.com
+VITE_PASSPORT_ORIGIN=<APPROVED_PASSPORT_ORIGIN>
 VITE_MIDNIGHT_CONTRACT_ADDRESS=
 VITE_RELAYER_URL=
 VITE_MIDNIGHT_PROOF_SERVER_URL=
@@ -115,7 +119,7 @@ deployed Passport journeys before the URL is published.
 
 ## Wave 1 — public Passport-first product
 
-### Week 1: live identity
+### Week 1: identity boundary
 
 - Use the interim Passport profile bridge in the showcase journey, with a
   controlled-origin E2E fixture until the official `mn-passport-connect` C23

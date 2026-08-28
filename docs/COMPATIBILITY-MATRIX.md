@@ -2,7 +2,8 @@
 
 This is the local-first compatibility contract for the referendum MVP. It is
 deliberately pinned so the app, generated Compact assets, and the three local
-Midnight services do not drift independently.
+Midnight services do not drift independently. It describes target versions and
+procedures; the current review checkout has no verified runtime transcript.
 
 Checked 2026-08-27 against the official [Midnight local-dev standalone
 configuration](https://github.com/midnightntwrk/midnight-local-dev/blob/main/standalone.yml)
@@ -22,7 +23,7 @@ matrix](https://github.com/midnightntwrk/midnight-sdk/blob/main/COMPATIBILITY.md
 | On-chain runtime | `3.0.0` | Direct root pin; must resolve to one shared WASM module |
 | Midnight.js | `4.1.1` family | All `midnight-js-*` packages stay lockstep |
 | DApp Connector API | `4.0.1` | Root/UI dependency; discovery accepts only valid semver on the v4 line, validates the connected network, sanitizes wallet metadata, and presents a choice when multiple compatible connectors are injected |
-| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | Integrated through `PassportSessionPort`; responses are origin/nonce/request/network validated and no profile field becomes eligibility authority |
+| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | Target integration through `PassportSessionPort`; origin approval and a live session remain unverified |
 | Compact toolchain | CLI/compiler `0.31.1`, language `0.23` | Generated assets must be rebuilt with this line |
 | Node.js | `22.22.0` | `.nvmrc` source of truth; run in Linux/WSL2 |
 
@@ -67,11 +68,12 @@ proving, so it must not be replaced by a public or third-party endpoint.
 6. The ignored `managed/` and `ui/public/managed/` assets are generated from
    the checked-in Compact sources. A fresh clone cannot run contract tests or a
    production build until the Linux Compact compiler has regenerated them.
-7. Undeployed uses the real official Passport session/profile flow when the
-   configured origin accepts the CICO origin. A returned official account is
-   labelled with its actual network and is never presented as deployed on the
-   local Undeployed chain. If Passport is unavailable, the capability is
-   unavailable; it does not fall back to a synthetic account.
+7. When configured and independently verified, Undeployed may use the official
+   Passport session/profile flow only when the approved origin accepts the CICO
+   origin. A returned official account must be labelled with its actual network
+   and never presented as deployed on the local Undeployed chain. If Passport
+   is unavailable, the capability is unavailable; it does not fall back to a
+   synthetic account. No such session is asserted by this matrix.
 
 ## Passport integration boundary
 

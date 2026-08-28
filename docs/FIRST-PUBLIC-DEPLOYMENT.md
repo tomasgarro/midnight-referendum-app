@@ -1,7 +1,9 @@
 # First public deployment: Passport-first Midnight Preview MVP
 
-Status: release runbook. The first public artifact is a Passport-first showcase:
-profile consent is live, while credential issuance and voting are synthetic.
+Status: target release runbook. The first public artifact is intended to be a
+Passport-first showcase: profile consent may be enabled only after the release
+owner verifies the approved origin; credential issuance and voting remain
+synthetic. No public deployment is asserted by this runbook.
 
 ## Release boundary
 
@@ -61,7 +63,8 @@ transcript.
 
 Every `VITE_*` value is public build output. For the public showcase:
 
-- set `VITE_APP_MODE=showcase` and `VITE_PASSPORT_ORIGIN=https://midnightpassport.com`;
+- set `VITE_APP_MODE=showcase` and set `VITE_PASSPORT_ORIGIN` only to the exact
+  Passport origin approved for this release;
 - leave contract address, CICO URL, relayer URL, and remote proof-server URL empty;
 - never place a secret, seed, private callback header, service-role key, or database credential in
   a `VITE_*` variable;

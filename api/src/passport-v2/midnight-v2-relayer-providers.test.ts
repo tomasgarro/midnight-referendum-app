@@ -30,8 +30,10 @@ describe('v2 walletless providers', () => {
         return 'signed.one-time.capability';
       }),
     };
+    const requests: string[] = [];
     const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
+      requests.push(url);
       if (url.endsWith('/keys')) {
         return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
       }
@@ -93,6 +95,12 @@ describe('v2 walletless providers', () => {
     });
     expect(posted).toMatchObject({ requestHash: expectedHash, tx: 'abcd' });
     expect(JSON.stringify(posted)).not.toContain(scope.credentialAuthorization);
+    expect(requests.some((url) => url.endsWith('/balance') || url.endsWith('/submit'))).toBe(false);
+    expect(runtime.getLastActionTrace()).toMatchObject({
+      requestHash: expectedHash,
+      transactionId: 'tx-1',
+      status: 'confirmed',
+    });
   });
 
   it('recovers a previously accepted action after a provider restart without resubmitting', async () => {

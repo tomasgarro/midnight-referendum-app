@@ -3,7 +3,8 @@ import type { CanonicalReceipt } from './types.js';
 
 /** Versioned public output of the v2 operator command. */
 export const PASSPORT_V2_MANIFEST_KIND = 'midnight-passport-v2-runtime' as const;
-export const PASSPORT_V2_MANIFEST_VERSION = 1 as const;
+/** Version 2 is the evidence-bearing format; v1 journals are not complete. */
+export const PASSPORT_V2_MANIFEST_VERSION = 2 as const;
 
 export type PassportV2ManifestNetwork = 'undeployed' | 'preview';
 export type PassportV2ManifestStatus = 'in-progress' | 'complete';
@@ -45,6 +46,58 @@ export interface PassportV2ManifestArtifacts {
   readonly onchainRuntimeVersion: string;
   readonly registryArtifact: string;
   readonly referendumArtifact: string;
+  /** SHA-256 hashes of the public generated artifact trees. */
+  readonly hashes?: Readonly<Record<string, string>>;
+}
+
+export interface PassportV2ManifestSource {
+  readonly commit: string;
+  readonly tree: string;
+}
+
+export interface PassportV2ManifestServiceVersion {
+  readonly version: string;
+  readonly hash: string;
+}
+
+export interface PassportV2ManifestServices {
+  readonly api: PassportV2ManifestServiceVersion;
+  readonly relayer: PassportV2ManifestServiceVersion;
+  readonly node: PassportV2ManifestServiceVersion;
+  readonly indexer: PassportV2ManifestServiceVersion;
+  readonly proofServer: PassportV2ManifestServiceVersion;
+  readonly lockfile: PassportV2ManifestServiceVersion;
+}
+
+/** Digest-only evidence linking the citizen cast to the atomic relay. */
+export interface PassportV2ManifestActionEvidence {
+  readonly actionId: string;
+  readonly actionIdDigest: string;
+  readonly idempotencyKeyDigest: string;
+  readonly requestHash: string;
+  readonly txDigest: string;
+  readonly capabilityDigest: string;
+  readonly transactionId: string;
+  readonly status: 'confirmed';
+}
+
+export interface PassportV2ManifestRelayEvidence {
+  readonly submissionTransport: 'v2-actions';
+  readonly states: readonly string[];
+  readonly accepted: boolean;
+  readonly duplicateResolved: boolean;
+  readonly concurrentIdempotent: boolean;
+  readonly restartRecovered: boolean;
+}
+
+export interface PassportV2ManifestLifecycleEvidence {
+  readonly castTransactionId: string;
+  readonly closeTransactionId: string;
+  readonly revealTransactionId: string;
+  readonly finalizeTransactionId: string;
+  readonly replayRejected: boolean;
+  readonly finalized: boolean;
+  readonly indexerObservations: number;
 }
 
 /** Public infrastructure origins; credentials and query-string secrets are forbidden. */
@@ -64,6 +117,7 @@ export interface PassportV2ManifestObservation {
     readonly available: boolean;
     readonly source: string | null;
   };
+  readonly transactionId?: string;
   readonly registry?: {
     readonly contractAddress: string;
     readonly currentRootField: string;
@@ -86,6 +140,11 @@ export interface PassportV2ManifestDust {
   readonly before: string | null;
   readonly after: string | null;
   readonly spent: string | null;
+  /** Wall-clock instants when the public wallet states were sampled. */
+  readonly beforeObservedAt: string | null;
+  readonly afterObservedAt: string | null;
+  /** Shared valuation instant, because DUST continues to accrue over time. */
+  readonly valuationAt: string | null;
   readonly accounted: boolean;
 }
 
@@ -126,10 +185,18 @@ export interface PassportV2DeploymentManifest {
   /** Midnight SDK network identifier (`undeployed` or `preview`). */
   readonly networkId: PassportV2ManifestNetwork;
   readonly generatedAt: string;
+  readonly source?: PassportV2ManifestSource;
+  readonly services?: PassportV2ManifestServices;
   readonly runtime: PassportV2ManifestRuntime;
   readonly artifacts: PassportV2ManifestArtifacts;
   readonly endpoints: PassportV2ManifestEndpoints;
   readonly dust: PassportV2ManifestDust;
+  readonly submissionTransport?: 'legacy' | 'v2-actions';
+  readonly action?: PassportV2ManifestActionEvidence;
+  readonly relay?: PassportV2ManifestRelayEvidence;
+  readonly lifecycle?: PassportV2ManifestLifecycleEvidence;
+  /** SHA-256 digest over the canonical manifest with this field omitted. */
+  readonly manifestDigest?: string;
   readonly registry: PassportV2ManifestRegistry;
   readonly referenda: readonly PassportV2ManifestReferendum[];
   readonly transcript: {
@@ -155,6 +222,7 @@ export function serializePassportV2DeploymentManifest(
  * configuration is only generated from a complete manifest.
  */
 export function validatePassportV2DeploymentManifest(manifest: PassportV2DeploymentManifest): void {
+  assertNoPrivateManifestFields(manifest);
   if (manifest.kind !== PASSPORT_V2_MANIFEST_KIND) {
     throw new TypeError('Unsupported Passport v2 deployment manifest kind');
   }
@@ -223,6 +291,9 @@ export function validatePassportV2DeploymentManifest(manifest: PassportV2Deploym
     }
     if (observation.indexer.source !== null)
       assertPublicUrl(observation.indexer.source, 'indexer source');
+    if (observation.transactionId !== undefined && !observation.transactionId.trim()) {
+      throw new TypeError(`${observation.stage} transactionId must not be empty`);
+    }
     if (observation.registry) {
       assertHex32(observation.registry.contractAddress, `${observation.stage} registry address`);
       assertDecimal(observation.registry.currentRootField, `${observation.stage} currentRootField`);
@@ -242,6 +313,27 @@ export function validatePassportV2DeploymentManifest(manifest: PassportV2Deploym
   }
   if (manifest.status === 'complete') {
     assertCompletePassportV2DeploymentManifest(manifest);
+  }
+}
+
+/** A manifest is public evidence; private fixture material must fail closed. */
+function assertNoPrivateManifestFields(value: unknown): void {
+  const forbidden =
+    /^(?:secret|seed|seedphrase|witness|proof|credentialblind|credentialleaf|votersecret|votesalt|capabilitytoken)$/iu;
+  const pending: unknown[] = [value];
+  while (pending.length > 0) {
+    const item = pending.pop();
+    if (Array.isArray(item)) {
+      pending.push(...item);
+      continue;
+    }
+    if (!item || typeof item !== 'object') continue;
+    for (const [key, child] of Object.entries(item)) {
+      if (forbidden.test(key.replace(/[-_]/gu, ''))) {
+        throw new TypeError('Manifest contains private fixture material');
+      }
+      if (child && typeof child === 'object') pending.push(child);
+    }
   }
 }
 
@@ -265,6 +357,69 @@ export function assertCompletePassportV2DeploymentManifest(
 } {
   if (manifest.status !== 'complete') {
     throw new Error('Passport v2 deployment manifest is not complete');
+  }
+  const source = manifest.source;
+  if (!source || !/^[0-9a-f]{40}$/iu.test(source.commit) || !/^[0-9a-f]{40}$/iu.test(source.tree)) {
+    throw new Error('Complete manifest is missing the source commit/tree identity');
+  }
+  const services = manifest.services;
+  if (!services) throw new Error('Complete manifest is missing service versions and hashes');
+  for (const [name, service] of Object.entries(services)) {
+    if (
+      !service ||
+      typeof service.version !== 'string' ||
+      !service.version.trim() ||
+      typeof service.hash !== 'string' ||
+      !/^[0-9a-f]{64}$/iu.test(service.hash)
+    ) {
+      throw new Error(`Complete manifest is missing ${name} service version/hash`);
+    }
+  }
+  const artifactHashes = manifest.artifacts.hashes;
+  if (!artifactHashes || Object.keys(artifactHashes).length === 0) {
+    throw new Error('Complete manifest is missing artifact hashes');
+  }
+  for (const [name, hash] of Object.entries(artifactHashes)) {
+    if (!/^[0-9a-f]{64}$/iu.test(hash)) {
+      throw new Error(`Complete manifest artifact hash ${name} is invalid`);
+    }
+  }
+  if (manifest.submissionTransport !== 'v2-actions') {
+    throw new Error('Complete manifest must prove submissionTransport=v2-actions');
+  }
+  const action = manifest.action;
+  if (
+    !action?.actionId ||
+    !action.transactionId ||
+    action.status !== 'confirmed' ||
+    !/^[0-9a-f]{64}$/iu.test(action.actionIdDigest) ||
+    !/^[0-9a-f]{64}$/iu.test(action.idempotencyKeyDigest) ||
+    !/^[0-9a-f]{64}$/iu.test(action.requestHash) ||
+    !/^[0-9a-f]{64}$/iu.test(action.txDigest) ||
+    !/^[0-9a-f]{64}$/iu.test(action.capabilityDigest)
+  ) {
+    throw new Error('Complete manifest is missing atomic action/idempotency evidence');
+  }
+  const relay = manifest.relay;
+  const requiredRelayStates = [
+    'authorized',
+    'validated',
+    'dust_reserved',
+    'finalized',
+    'submitted',
+    'indexer_pending',
+    'confirmed',
+  ];
+  if (
+    relay?.submissionTransport !== 'v2-actions' ||
+    !relay.accepted ||
+    !relay.duplicateResolved ||
+    !relay.concurrentIdempotent ||
+    !relay.restartRecovered ||
+    relay.states.length === 0 ||
+    !requiredRelayStates.every((state) => relay.states.includes(state))
+  ) {
+    throw new Error('Complete manifest is missing relay state/idempotency evidence');
   }
   const registry = manifest.registry;
   if (
@@ -309,8 +464,50 @@ export function assertCompletePassportV2DeploymentManifest(
   ) {
     throw new Error('Complete manifest is missing deployment or lifecycle transcript steps');
   }
+  const requiredReceipts: PassportV2DeploymentStepId[] = [
+    'lifecycle.cast',
+    'lifecycle.close',
+    'lifecycle.reveal',
+    'lifecycle.finalize',
+  ];
+  for (const id of requiredReceipts) {
+    const step = manifest.transcript.steps.find((candidate) => candidate.id === id);
+    if (!step?.receipt?.transactionId) {
+      throw new Error(`Complete manifest is missing ${id} transaction evidence`);
+    }
+  }
+  const replayStep = manifest.transcript.steps.find(
+    (candidate) => candidate.id === 'lifecycle.replay-rejected',
+  );
+  if (replayStep?.status !== 'rejected') {
+    throw new Error('Complete manifest is missing replay rejection evidence');
+  }
   if (manifest.transcript.observations.length < 5) {
     throw new Error('Complete manifest is missing canonical indexer observations');
+  }
+  for (const id of requiredReceipts) {
+    if (
+      !manifest.transcript.observations.some(
+        (observation) => observation.stage === id && observation.indexer.available,
+      )
+    ) {
+      throw new Error(`Complete manifest is missing ${id} indexer observation`);
+    }
+  }
+  const lifecycle = manifest.lifecycle;
+  if (
+    !lifecycle?.replayRejected ||
+    !lifecycle.finalized ||
+    lifecycle.indexerObservations < requiredReceipts.length ||
+    !lifecycle.castTransactionId ||
+    !lifecycle.closeTransactionId ||
+    !lifecycle.revealTransactionId ||
+    !lifecycle.finalizeTransactionId
+  ) {
+    throw new Error('Complete manifest is missing finalized lifecycle evidence');
+  }
+  if (!manifest.manifestDigest || !/^[0-9a-f]{64}$/iu.test(manifest.manifestDigest)) {
+    throw new Error('Complete manifest is missing its manifest digest');
   }
   if (
     manifest.endpoints.nodeRpc === null ||
@@ -325,6 +522,9 @@ export function assertCompletePassportV2DeploymentManifest(
     manifest.dust.before === null ||
     manifest.dust.after === null ||
     manifest.dust.spent === null ||
+    manifest.dust.beforeObservedAt === null ||
+    manifest.dust.afterObservedAt === null ||
+    manifest.dust.valuationAt === null ||
     !manifest.dust.accounted
   ) {
     throw new Error('Complete manifest is missing DUST accounting');
@@ -333,6 +533,15 @@ export function assertCompletePassportV2DeploymentManifest(
 
 function assertPublicArtifacts(artifacts: PassportV2ManifestArtifacts): void {
   for (const [key, value] of Object.entries(artifacts)) {
+    if (key === 'hashes') {
+      if (
+        value !== undefined &&
+        (typeof value !== 'object' || value === null || Array.isArray(value))
+      ) {
+        throw new TypeError('Manifest artifact hashes must be an object');
+      }
+      continue;
+    }
     if (typeof value !== 'string' || !value.trim()) {
       throw new TypeError(`Manifest artifact ${key} is required`);
     }
@@ -361,9 +570,15 @@ function assertPublicUrl(value: string, label: string): void {
 }
 
 function assertDust(dust: PassportV2ManifestDust): void {
-  for (const [key, value] of Object.entries(dust)) {
-    if (key === 'accounted') continue;
+  for (const key of ['before', 'after', 'spent'] as const) {
+    const value = dust[key];
     if (value !== null) assertDecimal(value, `dust.${key}`);
+  }
+  for (const key of ['beforeObservedAt', 'afterObservedAt', 'valuationAt'] as const) {
+    const value = dust[key];
+    if (value !== null && Number.isNaN(Date.parse(value))) {
+      throw new TypeError(`dust.${key} must be an ISO timestamp`);
+    }
   }
   if (dust.before !== null && dust.after !== null && dust.spent !== null) {
     const before = BigInt(dust.before);

@@ -32,7 +32,6 @@ import {
   watchReferendumV2State,
 } from 'midnight-referendum-api';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { DniVerification, type DniVerificationResult } from '@/components/dni-verification';
 import { PassportJourney } from '@/components/passport-v2/PassportJourney';
 import type { PreviewPassportJourneyPorts } from '@/components/passport-v2/PreviewPassportJourney';
 import { WalletWidget } from '@/components/wallet-widget';
@@ -41,6 +40,7 @@ import { resolveAppMode } from '@/integration/app-mode';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import type { ActionMode, ConsultationArea } from '@/integration/civic-state';
 import { ASSIGNED_COUNTRIES, countryName as getCountryName } from '@/integration/country-catalog';
+import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
 import { PassportIdentityBridge } from '@/integration/passport';
 import { MidnightPassportSessionAdapter } from '@/integration/passport-session-port';
 import { countryPolicyCode, toPassportV2Catalog } from '@/integration/passport-v2-catalog';
@@ -75,14 +75,7 @@ import { WalletProvider } from '@/providers/wallet-context';
 
 type Tab = 'understand' | 'votes' | 'verify' | 'profile';
 type Choice = VoteReveal['choice'];
-type FlowStage =
-  | 'verify'
-  | 'document'
-  | 'eligible'
-  | 'choose'
-  | 'review'
-  | 'processing'
-  | 'receipt';
+type FlowStage = 'verify' | 'eligible' | 'choose' | 'review' | 'processing' | 'receipt';
 
 interface Poll {
   id: string;
@@ -113,6 +106,158 @@ interface Poll {
 
 type VoteReceipt = PassportReceiptRecord;
 
+/** The active app keeps the same language across identity, jury, and receipt surfaces. */
+const APP_COPY = {
+  es: {
+    brand: 'Referéndum Cívico',
+    brandNote: 'Prototipo independiente',
+    language: 'Idioma',
+    nav: { understand: 'Entendé', votes: 'Votaciones', verify: 'Verificá', profile: 'Mi perfil' },
+    network: { undeployed: 'Local no desplegado', preview: 'Preview', demo: 'Demo local' },
+  },
+  en: {
+    brand: 'Civic Referendum',
+    brandNote: 'Independent prototype',
+    language: 'Language',
+    nav: { understand: 'Learn', votes: 'Consultations', verify: 'Verify', profile: 'Profile' },
+    network: { undeployed: 'Undeployed local', preview: 'Preview', demo: 'Local demo' },
+  },
+} as const;
+
+const EN_POLL_COPY: Record<string, Partial<Poll>> = {
+  'tierras-rurales': {
+    title: 'Rural land and foreign ownership',
+    description:
+      'A consultation on national limits and controls for foreign ownership of rural land.',
+    question:
+      'Should Argentina keep national limits and controls on foreign ownership and possession of rural land, with regular public review?',
+    opened: 'August 8, 2026',
+    deadline: 'August 16, 2026',
+    whyNow:
+      'Law 26.737 remains under debate. The consultation presents the current legal frame and the open questions without taking an institutional position.',
+    legalFrame:
+      'Law 26.737: rural land rules, the national registry, and national, provincial, and departmental limits.',
+    evidence:
+      'The official registry published a 2025 report on departments above the registered 15% threshold.',
+    evidenceLabel: 'FACT · official registry, August 2025',
+    argumentsFor: [
+      'More traceability for rural land ownership and possession.',
+      'Common rules for border areas, water, and other strategic resources.',
+    ],
+    argumentsAgainst: [
+      'Uniform limits may not reflect provincial and productive differences.',
+      'A review could improve legal certainty, investment, and administrative processes.',
+    ],
+    uncertainty:
+      'The final text, its legislative scope, and effects on investment, production, and the environment remain unknown.',
+  },
+  'federalismo-fiscal': {
+    title: 'Fiscal federalism and revenue sharing',
+    description:
+      'How resources are distributed between the national government, provinces, and the city of Buenos Aires.',
+    question:
+      'Should Argentina reform revenue sharing to make it more transparent, predictable, and reviewable?',
+    opened: 'August 8, 2026',
+    deadline: 'August 23, 2026',
+    whyNow:
+      'Transfers and shared revenue remain central to funding public services across jurisdictions.',
+    legalFrame:
+      'Law 23.548 and Article 75 of the Constitution: revenue-sharing rules and the framework for an agreement law.',
+    evidence:
+      'Official series publish daily and consolidated transfers to provinces with a stated methodology.',
+    evidenceLabel: 'FACT · Treasury Secretariat, 2003–2025 series',
+    argumentsFor: [
+      'A published formula could improve predictability and accountability.',
+      'A reform could include explicit transition and review mechanisms.',
+    ],
+    argumentsAgainst: [
+      'Changing the formula creates relative winners and losers during the transition.',
+      'Known rules can avoid short-term fiscal uncertainty.',
+    ],
+    uncertainty:
+      'There is no agreed formula and the net effects on each jurisdiction are not known.',
+  },
+  'reforma-laboral': {
+    title: 'Labour reform and registered employment',
+    description: 'A consultation on formalisation, job creation, and explicit labour protections.',
+    question:
+      'Should Argentina modify the labour framework to prioritise formal employment while keeping explicit protections and public impact reviews?',
+    opened: 'August 8, 2026',
+    deadline: 'August 30, 2026',
+    whyNow:
+      'The discussion combines formalisation costs, collective bargaining, rights, and registered employment.',
+    legalFrame:
+      'Law 27.802 and labour-market statistics; this consultation does not replace the legal text or regulations.',
+    evidence:
+      'Household surveys and administrative records cover different populations and should not be conflated.',
+    evidenceLabel: 'FACT · national statistics and labour methodology',
+    argumentsFor: [
+      'Changing incentives could support formal registration and job creation.',
+      'Public evaluation could track implementation costs and impacts.',
+    ],
+    argumentsAgainst: [
+      'Formalisation alone does not guarantee good jobs or higher wages.',
+      'Broad changes can weaken protections without clear limits and transition.',
+    ],
+    uncertainty:
+      'Future employment effects cannot be attributed to one law without isolating the economic cycle and implementation.',
+  },
+  jubilaciones: {
+    title: 'Pensions and long-term sustainability',
+    description: 'Coverage, adequacy, and financial sustainability of the pension system.',
+    question:
+      'Should Argentina reform pensions to improve sustainability, coverage, and adequacy while protecting people with incomplete contributions?',
+    opened: 'August 8, 2026',
+    deadline: 'September 6, 2026',
+    whyNow:
+      'The debate combines indexation, funding, contributory coverage, and protection for incomplete work histories.',
+    legalFrame:
+      'Law 24.241: the national pension system, benefits, requirements, and indexation rules.',
+    evidence:
+      'ANSES publishes statistical reports that must be read with their cutoff date and methodology.',
+    evidenceLabel: 'FACT · ANSES, June 2025 report',
+    argumentsFor: [
+      'A comprehensive review can make coverage, funding, and transition parameters visible.',
+      'Explicit protection for incomplete contributions can organise fragmented rules.',
+    ],
+    argumentsAgainst: [
+      'Parameter changes may move costs to current or future pensioners.',
+      'Financial sustainability alone does not ensure adequate benefits.',
+    ],
+    uncertainty:
+      'No single proposal resolves coverage, adequacy, and funding at once; effects depend on design and transition.',
+  },
+  'energia-renovable': {
+    title: 'Energy, tariffs, and the renewable transition',
+    description:
+      'More renewable power and networks, with targeted protection for vulnerable users.',
+    question:
+      'Should Argentina prioritise an energy transition with more renewables, network expansion, and targeted protection for vulnerable users?',
+    opened: 'August 8, 2026',
+    deadline: 'September 13, 2026',
+    whyNow:
+      'Renewable targets, distributed generation, tariffs, and targeted subsidies combine investment and protection choices.',
+    legalFrame: 'Laws 27.191 and 27.424, together with the targeted energy subsidy framework.',
+    evidence: 'The 20% renewable target is a legal objective, not an observed measurement.',
+    evidenceLabel: 'FACT · Law 27.191, statutory target',
+    argumentsFor: [
+      'Renewables, networks, and distributed generation can diversify the mix and attract investment.',
+      'Targeting can focus protection on the users who need it most.',
+    ],
+    argumentsAgainst: [
+      'Expansion requires networks, backup, and finance; costs do not disappear.',
+      'A fast transition can increase tariffs or exclude misclassified users.',
+    ],
+    uncertainty:
+      'Technology, budget, schedule, and subsidy scope are not defined by this question.',
+  },
+};
+
+function localizePoll(poll: Poll, locale: CicoLocale): Poll {
+  if (locale === 'es' || poll.runtimeContractAddress) return poll;
+  return { ...poll, ...EN_POLL_COPY[poll.id] };
+}
+
 function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary {
   const country =
     ASSIGNED_COUNTRIES.find((entry) => entry.numeric === String(summary.country))?.alpha2 ??
@@ -138,6 +283,13 @@ const APP_NETWORK_LABEL =
     : APP_MODE === 'preview'
       ? 'Preview'
       : 'Demo local';
+function networkLabel(locale: CicoLocale): string {
+  return APP_MODE === 'undeployed'
+    ? APP_COPY[locale].network.undeployed
+    : APP_MODE === 'preview'
+      ? APP_COPY[locale].network.preview
+      : APP_COPY[locale].network.demo;
+}
 const PASSPORT_ORIGIN =
   import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com';
 const ONBOARDING_SESSION_KEY = 'cico-wave1-onboarding-complete';
@@ -399,7 +551,6 @@ const COUNTRY_POLL_IDS = new Set(['tierras-rurales']);
 const COUNTRY_POLL_COUNTRIES = new Map([['tierras-rurales', 'AR']]);
 const DASHBOARD_COUNTRIES = ASSIGNED_COUNTRIES.map((country) => ({
   code: country.alpha2,
-  name: getCountryName(country.alpha2, 'es'),
   numeric: country.numeric,
 }));
 
@@ -474,9 +625,11 @@ async function copyReceiptId(value: string): Promise<void> {
 function CopyReceiptButton({
   receiptId,
   compact = false,
+  locale = 'es',
 }: {
   receiptId: string;
   compact?: boolean;
+  locale?: CicoLocale;
 }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
@@ -493,10 +646,12 @@ function CopyReceiptButton({
       type="button"
       className={`copy-receipt ${compact ? 'compact' : ''}`}
       onClick={() => void handleCopy()}
-      aria-label={`Copiar comprobante ${receiptId}`}
+      aria-label={`${locale === 'es' ? 'Copiar comprobante' : 'Copy receipt'} ${receiptId}`}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
-      <span>{copied ? 'Copiado' : 'Copiar'}</span>
+      <span>
+        {copied ? (locale === 'es' ? 'Copiado' : 'Copied') : locale === 'es' ? 'Copiar' : 'Copy'}
+      </span>
     </button>
   );
 }
@@ -506,12 +661,17 @@ function Header({
   passportError,
   onConnectPassport,
   onDismissPassportError,
+  locale,
+  onLocaleChange,
 }: {
   passportSession: CivicPassportSession | null;
   passportError: string | null;
   onConnectPassport: () => void;
   onDismissPassportError: () => void;
+  locale: CicoLocale;
+  onLocaleChange: (locale: CicoLocale) => void;
 }) {
+  const copy = APP_COPY[locale];
   return (
     <header className="site-header">
       <div className="brand-lockup">
@@ -519,8 +679,8 @@ function Header({
           <Globe size={24} weight="duotone" />
         </span>
         <div>
-          <p className="brand-name">Referéndum Cívico</p>
-          <p className="brand-note">Prototipo independiente</p>
+          <p className="brand-name">{copy.brand}</p>
+          <p className="brand-note">{copy.brandNote}</p>
         </div>
       </div>
       <div className="wallet-area">
@@ -528,8 +688,21 @@ function Header({
           type="button"
           className={`wallet-chip ${passportSession ? 'connected' : ''}`}
           onClick={onConnectPassport}
-          title={passportError ?? 'Identidad pública de Midnight Passport'}
-          aria-label={passportSession ? 'Abrir Midnight Passport' : 'Conectar Midnight Passport'}
+          title={
+            passportError ??
+            (locale === 'es'
+              ? 'Identidad pública de Midnight Passport'
+              : 'Public Midnight Passport identity')
+          }
+          aria-label={
+            passportSession
+              ? locale === 'es'
+                ? 'Abrir Midnight Passport'
+                : 'Open Midnight Passport'
+              : locale === 'es'
+                ? 'Conectar Midnight Passport'
+                : 'Connect Midnight Passport'
+          }
         >
           <Fingerprint size={14} weight="bold" />{' '}
           <span>{passportSession?.profile?.displayName ?? 'Passport'}</span>
@@ -544,27 +717,52 @@ function Header({
             >
               <X size={15} />
             </button>
-            <strong>No se pudo conectar Passport</strong>
+            <strong>
+              {locale === 'es' ? 'No se pudo conectar Passport' : 'Passport could not connect'}
+            </strong>
             <p>{passportError}</p>
             <button type="button" className="popover-action" onClick={onConnectPassport}>
-              Reintentar
+              {locale === 'es' ? 'Reintentar' : 'Try again'}
             </button>
           </div>
         ) : null}
+        <label className="app-language-switcher">
+          <span className="sr-only">{copy.language}</span>
+          <select
+            aria-label={copy.language}
+            value={locale}
+            onChange={(event) => onLocaleChange(event.target.value as CicoLocale)}
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
       </div>
     </header>
   );
 }
 
-function BottomNav({ tab, onChange }: { tab: Tab; onChange: (tab: Tab) => void }) {
+function BottomNav({
+  tab,
+  onChange,
+  locale,
+}: {
+  tab: Tab;
+  onChange: (tab: Tab) => void;
+  locale: CicoLocale;
+}) {
+  const copy = APP_COPY[locale];
   const items = [
-    { id: 'understand' as const, label: 'Entendé', Icon: BookOpen },
-    { id: 'votes' as const, label: 'Votaciones', Icon: Stamp },
-    { id: 'verify' as const, label: 'Verificá', Icon: ShieldCheck },
-    { id: 'profile' as const, label: 'Mi perfil', Icon: UserCircle },
+    { id: 'understand' as const, label: copy.nav.understand, Icon: BookOpen },
+    { id: 'votes' as const, label: copy.nav.votes, Icon: Stamp },
+    { id: 'verify' as const, label: copy.nav.verify, Icon: ShieldCheck },
+    { id: 'profile' as const, label: copy.nav.profile, Icon: UserCircle },
   ];
   return (
-    <nav className="bottom-nav" aria-label="Navegación principal">
+    <nav
+      className="bottom-nav"
+      aria-label={locale === 'es' ? 'Navegación principal' : 'Primary navigation'}
+    >
       {items.map(({ id, label, Icon }) => (
         <button
           type="button"
@@ -593,15 +791,25 @@ function StatusPill({ children }: { children: ReactNode }) {
 }
 
 const PHASE_COPY = {
-  COMMIT: {
-    label: 'Votación abierta',
-    note: 'Los votos están sellados. Todavía no hay nada que contar.',
+  es: {
+    COMMIT: {
+      label: 'Votación abierta',
+      note: 'Los votos están sellados. Todavía no hay nada que contar.',
+    },
+    REVEAL: {
+      label: 'Recuento en curso',
+      note: 'Cada voto se suma a su total sin revelar de quién vino.',
+    },
+    FINALIZED: { label: 'Resultado final', note: 'El recuento está cerrado y publicado.' },
   },
-  REVEAL: {
-    label: 'Recuento en curso',
-    note: 'Cada voto se suma a su total sin revelar de quién vino.',
+  en: {
+    COMMIT: { label: 'Voting open', note: 'Votes are sealed. There is nothing to count yet.' },
+    REVEAL: {
+      label: 'Counting in progress',
+      note: 'Each vote is added without revealing who cast it.',
+    },
+    FINALIZED: { label: 'Final result', note: 'Counting is closed and published.' },
   },
-  FINALIZED: { label: 'Resultado final', note: 'El recuento está cerrado y publicado.' },
 } as const;
 
 interface PublicReferendumState {
@@ -654,9 +862,11 @@ function usePublicReferendumState(contractAddress: string | null): PublicReferen
 function ResultsPanel({
   contractAddress,
   title,
+  locale,
 }: {
   contractAddress: string | null;
   title?: string;
+  locale: CicoLocale;
 }) {
   const { state, error, loading } = usePublicReferendumState(contractAddress);
 
@@ -671,16 +881,26 @@ function ResultsPanel({
     );
   }
   if (loading && !state)
-    return <CommitPhasePanel title={title} contractAddress={contractAddress} />;
-  if (!state) return <CommitPhasePanel title={title} contractAddress={contractAddress} />;
+    return <CommitPhasePanel title={title} contractAddress={contractAddress} locale={locale} />;
+  if (!state)
+    return <CommitPhasePanel title={title} contractAddress={contractAddress} locale={locale} />;
 
-  const phase = PHASE_COPY[state.phase];
+  const phase = PHASE_COPY[locale][state.phase];
   const resultsTitleId = title
     ? `results-title-${contractAddress?.replace(/[^a-z0-9_-]/giu, '-') ?? 'runtime'}`
     : 'results-title';
   const votes = (['YES', 'NO', 'ABSTAIN'] as const).map((key) => ({
     key,
-    label: key === 'YES' ? 'Sí' : key === 'NO' ? 'No' : 'Abstención',
+    label:
+      key === 'YES'
+        ? locale === 'es'
+          ? 'Sí'
+          : 'Yes'
+        : key === 'NO'
+          ? 'No'
+          : locale === 'es'
+            ? 'Abstención'
+            : 'Abstain',
     count: state.tally.get(key) ?? 0n,
   }));
   const total = votes.reduce((sum, vote) => sum + vote.count, 0n);
@@ -699,8 +919,17 @@ function ResultsPanel({
           <ShieldCheck size={20} />
           <p>
             {state.issuedVotes.toString()}{' '}
-            {state.issuedVotes === 1n ? 'persona habilitada' : 'personas habilitadas'}. Los totales
-            aparecen recién cuando se abre el recuento.
+            {locale === 'es'
+              ? state.issuedVotes === 1n
+                ? 'persona habilitada'
+                : 'personas habilitadas'
+              : state.issuedVotes === 1n
+                ? 'eligible person'
+                : 'eligible people'}
+            .{' '}
+            {locale === 'es'
+              ? 'Los totales aparecen recién cuando se abre el recuento.'
+              : 'Totals appear only when counting opens.'}
           </p>
         </div>
       ) : (
@@ -725,7 +954,9 @@ function ResultsPanel({
             );
           })}
           <p className="tally-total">
-            {total.toString()} de {state.issuedVotes.toString()} habilitadas · leído del contrato
+            {locale === 'es'
+              ? `${total.toString()} de ${state.issuedVotes.toString()} habilitadas · leído del contrato`
+              : `${total.toString()} of ${state.issuedVotes.toString()} eligible · read from contract`}
           </p>
         </div>
       )}
@@ -736,9 +967,11 @@ function ResultsPanel({
 function CommitPhasePanel({
   title,
   contractAddress,
+  locale,
 }: {
   title?: string;
   contractAddress?: string | null;
+  locale: CicoLocale;
 }) {
   const resultsTitleId = title
     ? `results-title-${contractAddress?.replace(/[^a-z0-9_-]/giu, '-') ?? 'runtime'}`
@@ -750,17 +983,24 @@ function CommitPhasePanel({
         <div>
           <h2 id={resultsTitleId}>
             {title
-              ? `${title} · Compromiso privado durante la votación`
-              : 'Compromiso privado durante la votación'}
+              ? `${title} · ${locale === 'es' ? 'Compromiso privado durante la votación' : 'Private commitment during voting'}`
+              : locale === 'es'
+                ? 'Compromiso privado durante la votación'
+                : 'Private commitment during voting'}
           </h2>
-          <p>Las respuestas se revelan y agregan después del cierre.</p>
+          <p>
+            {locale === 'es'
+              ? 'Las respuestas se revelan y agregan después del cierre.'
+              : 'Responses are revealed and aggregated after closing.'}
+          </p>
         </div>
       </div>
       <div className="results-note">
         <ShieldCheck size={20} />
         <p>
-          El contrato registra compromisos anónimos, nullifiers de un voto y publica solo el
-          agregado YES/NO/ABSTAIN durante reveal.
+          {locale === 'es'
+            ? 'El contrato registra compromisos anónimos, marcas de un voto y publica solo el agregado YES/NO/ABSTAIN durante el recuento.'
+            : 'The contract records anonymous commitments and one-vote markers, then publishes only the YES/NO/ABSTAIN aggregate during counting.'}
         </p>
       </div>
     </section>
@@ -774,6 +1014,7 @@ function VotesView({
   onStartVote,
   onOpenPolicy,
   onOpenPassportJourney,
+  locale,
 }: {
   polls: readonly Poll[];
   credential: DemoCredentialSummary | null;
@@ -781,17 +1022,16 @@ function VotesView({
   onStartVote: (pollId: string) => void;
   onOpenPolicy: (pollId: string) => void;
   onOpenPassportJourney: () => void;
+  locale: CicoLocale;
 }) {
   const [area, setArea] = useState<ConsultationArea>('world');
   const [selectedCountry, setSelectedCountry] = useState(credential?.country ?? 'AR');
   const [countrySearch, setCountrySearch] = useState('');
   const [now, setNow] = useState(() => new Date());
-  const selectedCountryName =
-    DASHBOARD_COUNTRIES.find((country) => country.code === selectedCountry)?.name ??
-    selectedCountry;
+  const selectedCountryName = getCountryName(selectedCountry, locale);
   const filteredCountries = countrySearch.trim()
     ? DASHBOARD_COUNTRIES.filter((country) =>
-        `${country.name} ${country.code} ${country.numeric}`
+        `${getCountryName(country.code, locale)} ${country.code} ${country.numeric}`
           .toLocaleLowerCase()
           .includes(countrySearch.trim().toLocaleLowerCase()),
       )
@@ -814,28 +1054,38 @@ function VotesView({
     <main className="page-content civic-dashboard">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Tu panel cívico</p>
-          <h1>Consultas para vos</h1>
+          <p className="eyebrow">{locale === 'es' ? 'Tu panel cívico' : 'Your civic dashboard'}</p>
+          <h1>{locale === 'es' ? 'Consultas para vos' : 'Consultations for you'}</h1>
         </div>
         <span className="open-count">
           <span className="status-dot" />
-          {openPollCount} disponibles
+          {openPollCount} {locale === 'es' ? 'disponibles' : 'available'}
         </span>
       </div>
       {credential ? (
-        <section className="credential-status-card" aria-label="Estado de tu credencial">
+        <section
+          className="credential-status-card"
+          aria-label={locale === 'es' ? 'Estado de tu credencial' : 'Credential status'}
+        >
           <span className="credential-status-icon">
             <ShieldCheck size={22} />
           </span>
           <span>
-            <strong>Credencial lista</strong>
+            <strong>{locale === 'es' ? 'Credencial lista' : 'Credential ready'}</strong>
             <small>
-              {getCountryName(credential.country, 'es')} ({credential.country}) ·{' '}
-              {credential.ageClass} · solo para elegibilidad
+              {getCountryName(credential.country, locale)} ({credential.country}) ·{' '}
+              {credential.ageClass} ·{' '}
+              {locale === 'es' ? 'solo para elegibilidad' : 'eligibility only'}
             </small>
           </span>
           <span className="synthetic-badge">
-            {credential.kind === 'synthetic-demo-credential' ? 'SINTÉTICA' : 'VERIFICADA'}
+            {credential.kind === 'synthetic-demo-credential'
+              ? locale === 'es'
+                ? 'SINTÉTICA'
+                : 'SYNTHETIC'
+              : locale === 'es'
+                ? 'VERIFICADA'
+                : 'VERIFIED'}
           </span>
         </section>
       ) : (
@@ -847,20 +1097,32 @@ function VotesView({
             <Fingerprint size={24} />
           </div>
           <div>
-            <p className="eyebrow">Empezá por tu identidad</p>
-            <h2 id="passport-entry-title">Prepará tu credencial para explorar</h2>
+            <p className="eyebrow">
+              {locale === 'es' ? 'Empezá por tu identidad' : 'Start with your identity'}
+            </p>
+            <h2 id="passport-entry-title">
+              {locale === 'es'
+                ? 'Prepará tu credencial para explorar'
+                : 'Prepare your credential to explore'}
+            </h2>
             <p>
-              Conectá Passport, revisá la evidencia y después elegí qué consulta querés conocer. No
-              necesitás wallet para este recorrido.
+              {locale === 'es'
+                ? 'Conectá Passport, revisá la evidencia y después elegí qué consulta querés conocer. No necesitás wallet para este recorrido.'
+                : 'Connect Passport, review the evidence, and then choose a consultation. This journey does not need a wallet.'}
             </p>
             <button className="passport-entry-button" onClick={onOpenPassportJourney} type="button">
-              Preparar mi credencial <ArrowRight size={17} />
+              {locale === 'es' ? 'Preparar mi credencial' : 'Prepare my credential'}{' '}
+              <ArrowRight size={17} />
             </button>
           </div>
         </section>
       )}
 
-      <div className="dashboard-area-tabs" role="tablist" aria-label="Espacio de participación">
+      <div
+        className="dashboard-area-tabs"
+        role="tablist"
+        aria-label={locale === 'es' ? 'Espacio de participación' : 'Participation scope'}
+      >
         <button
           type="button"
           role="tab"
@@ -868,7 +1130,7 @@ function VotesView({
           className={area === 'world' ? 'active' : ''}
           onClick={() => setArea('world')}
         >
-          <Globe size={18} /> World
+          <Globe size={18} /> {locale === 'es' ? 'Mundo' : 'World'}
         </button>
         <button
           type="button"
@@ -877,7 +1139,7 @@ function VotesView({
           className={area === 'countries' ? 'active' : ''}
           onClick={() => setArea('countries')}
         >
-          <IdentificationCard size={18} /> Countries
+          <IdentificationCard size={18} /> {locale === 'es' ? 'Países' : 'Countries'}
         </button>
       </div>
 
@@ -885,20 +1147,24 @@ function VotesView({
         <section className="country-selector-card" aria-labelledby="country-selector-title">
           <div className="section-title-row">
             <div>
-              <p className="eyebrow">Consultas por país</p>
-              <h2 id="country-selector-title">Elegí un país</h2>
+              <p className="eyebrow">
+                {locale === 'es' ? 'Consultas por país' : 'Country consultations'}
+              </p>
+              <h2 id="country-selector-title">
+                {locale === 'es' ? 'Elegí un país' : 'Choose a country'}
+              </h2>
             </div>
             <Globe size={22} />
           </div>
-          <label htmlFor="country-selector">País</label>
+          <label htmlFor="country-selector">{locale === 'es' ? 'País' : 'Country'}</label>
           <input
             id="country-search"
             className="country-search-input"
             type="search"
             value={countrySearch}
             onChange={(event) => setCountrySearch(event.target.value)}
-            placeholder="Buscar por nombre o código"
-            aria-label="Buscar un país"
+            placeholder={locale === 'es' ? 'Buscar por nombre o código' : 'Search by name or code'}
+            aria-label={locale === 'es' ? 'Buscar un país' : 'Search for a country'}
           />
           <select
             id="country-selector"
@@ -907,25 +1173,34 @@ function VotesView({
           >
             {filteredCountries.map((country) => (
               <option key={country.code} value={country.code}>
-                {country.name}
+                {getCountryName(country.code, locale)}
               </option>
             ))}
           </select>
           <p className="country-selector-help">
             {credential
-              ? `Tu credencial prueba ${getCountryName(credential.country, 'es')}; solo ese espacio está desbloqueado.`
-              : 'Completá el recorrido Passport para desbloquear tu espacio.'}
+              ? locale === 'es'
+                ? `Tu credencial prueba ${getCountryName(credential.country, 'es')}; solo ese espacio está desbloqueado.`
+                : `Your credential proves ${getCountryName(credential.country, 'en')}; only that scope is unlocked.`
+              : locale === 'es'
+                ? 'Completá el recorrido Passport para desbloquear tu espacio.'
+                : 'Complete the Passport journey to unlock your scope.'}
           </p>
         </section>
       ) : (
         <section className="dashboard-intro-card">
           <div>
-            <p className="eyebrow">World</p>
-            <h2>Ideas que cualquier credencial válida puede explorar</h2>
+            <p className="eyebrow">{locale === 'es' ? 'Mundo' : 'World'}</p>
+            <h2>
+              {locale === 'es'
+                ? 'Ideas que cualquier credencial válida puede explorar'
+                : 'Ideas any valid credential can explore'}
+            </h2>
           </div>
           <p>
-            Leé el contexto antes de decidir. La wallet solo aparece si después elegís realizar una
-            acción real.
+            {locale === 'es'
+              ? 'Leé el contexto antes de decidir. La wallet solo aparece si después elegís realizar una acción real.'
+              : 'Read the context before deciding. A wallet appears only if you later choose a real action.'}
           </p>
         </section>
       )}
@@ -934,10 +1209,15 @@ function VotesView({
         <section className="locked-country-card" role="status">
           <Lock size={24} />
           <div>
-            <strong>{selectedCountryName} todavía está bloqueado</strong>
+            <strong>
+              {locale === 'es'
+                ? `${selectedCountryName} todavía está bloqueado`
+                : `${selectedCountryName} is still locked`}
+            </strong>
             <p>
-              Tu credencial no prueba elegibilidad para este espacio. No se habilita por elegirlo en
-              el selector.
+              {locale === 'es'
+                ? 'Tu credencial no prueba elegibilidad para este espacio. No se habilita por elegirlo en el selector.'
+                : 'Your credential does not prove eligibility for this scope. Selecting it does not unlock it.'}
             </p>
           </div>
         </section>
@@ -946,59 +1226,97 @@ function VotesView({
           <div className="section-title-row">
             <div>
               <p className="eyebrow">
-                {area === 'world' ? 'Consultas globales' : selectedCountryName}
+                {area === 'world'
+                  ? locale === 'es'
+                    ? 'Consultas globales'
+                    : 'Global consultations'
+                  : selectedCountryName}
               </p>
-              <h2 id="consultations-title">Conocé antes de participar</h2>
+              <h2 id="consultations-title">
+                {locale === 'es' ? 'Conocé antes de participar' : 'Learn before participating'}
+              </h2>
             </div>
             <BookOpen size={22} />
           </div>
           <div className="dashboard-poll-list">
-            {visiblePolls.map((poll) => (
-              <article className="dashboard-poll-card" key={poll.id}>
-                <div className="poll-meta">
-                  <StatusPill>
-                    {getPollAvailability(poll, now).isOpen
-                      ? 'Votación abierta'
-                      : 'Votación cerrada'}
-                  </StatusPill>
-                  <span>Cierra el {poll.deadline}</span>
-                </div>
-                <h3>{poll.title}</h3>
-                <p>{poll.description}</p>
-                <div className="poll-card-actions">
-                  <button type="button" className="text-link" onClick={() => onOpenPolicy(poll.id)}>
-                    Leer propuesta <ArrowRight size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="primary-button yellow"
-                    disabled={!getPollAvailability(poll, now).isOpen}
-                    onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
-                  >
-                    <Stamp size={19} />{' '}
-                    {getPollAvailability(poll, now).isOpen
-                      ? credential
-                        ? 'Votá ahora'
-                        : 'Preparar credencial'
-                      : 'Votación cerrada'}
-                  </button>
-                </div>
-                <p className="demo-stat">
-                  <Info size={14} />{' '}
-                  {poll.runtimeContractAddress
-                    ? 'Catálogo v2 · estado público consultado en Midnight.'
-                    : `${poll.participation}. Cifra simulada para este prototipo.`}
-                </p>
-              </article>
-            ))}
+            {visiblePolls.map((poll) => {
+              const displayPoll = localizePoll(poll, locale);
+              return (
+                <article className="dashboard-poll-card" key={poll.id}>
+                  <div className="poll-meta">
+                    <StatusPill>
+                      {getPollAvailability(poll, now).isOpen
+                        ? locale === 'es'
+                          ? 'Votación abierta'
+                          : 'Voting open'
+                        : locale === 'es'
+                          ? 'Votación cerrada'
+                          : 'Voting closed'}
+                    </StatusPill>
+                    <span>
+                      {locale === 'es' ? `Cierra el ${poll.deadline}` : `Closes ${poll.deadline}`}
+                    </span>
+                  </div>
+                  <h3>{displayPoll.title}</h3>
+                  <p>{displayPoll.description}</p>
+                  <div className="poll-card-actions">
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => onOpenPolicy(poll.id)}
+                    >
+                      {locale === 'es' ? 'Leer propuesta' : 'Read proposal'}{' '}
+                      <ArrowRight size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="primary-button yellow"
+                      disabled={!getPollAvailability(poll, now).isOpen}
+                      onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
+                    >
+                      <Stamp size={19} />{' '}
+                      {getPollAvailability(poll, now).isOpen
+                        ? credential
+                          ? locale === 'es'
+                            ? 'Votá ahora'
+                            : 'Vote now'
+                          : locale === 'es'
+                            ? 'Preparar credencial'
+                            : 'Prepare credential'
+                        : locale === 'es'
+                          ? 'Votación cerrada'
+                          : 'Voting closed'}
+                    </button>
+                  </div>
+                  <p className="demo-stat">
+                    <Info size={14} />{' '}
+                    {poll.runtimeContractAddress
+                      ? locale === 'es'
+                        ? 'Catálogo v2 · estado público consultado en Midnight.'
+                        : 'v2 catalogue · public state read from Midnight.'
+                      : locale === 'es'
+                        ? `${poll.participation}. Cifra simulada para este prototipo.`
+                        : `${poll.participation}. Simulated figure for this prototype.`}
+                  </p>
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : (
         <section className="dashboard-empty-card">
           <Lock size={24} />
           <div>
-            <strong>No hay consultas disponibles en este espacio</strong>
-            <p>Volvé a World o elegí el país desbloqueado por tu credencial.</p>
+            <strong>
+              {locale === 'es'
+                ? 'No hay consultas disponibles en este espacio'
+                : 'No consultations are available in this scope'}
+            </strong>
+            <p>
+              {locale === 'es'
+                ? 'Volvé a Mundo o elegí el país desbloqueado por tu credencial.'
+                : 'Return to World or choose the country unlocked by your credential.'}
+            </p>
           </div>
         </section>
       )}
@@ -1008,11 +1326,12 @@ function VotesView({
           <ResultsPanel
             key={`results-${poll.id}`}
             contractAddress={poll.runtimeContractAddress ?? null}
-            title={poll.title}
+            title={localizePoll(poll, locale).title}
+            locale={locale}
           />
         ))
       ) : area === 'world' ? (
-        <ResultsPanel contractAddress={publicContractAddress} />
+        <ResultsPanel contractAddress={publicContractAddress} locale={locale} />
       ) : null}
     </main>
   );
@@ -1024,42 +1343,64 @@ function PolicyDetailView({
   onStartVote,
   credential,
   onOpenPassportJourney,
+  locale,
 }: {
   poll: Poll;
   onBack: () => void;
   onStartVote: (pollId: string) => void;
   credential: DemoCredentialSummary | null;
   onOpenPassportJourney: () => void;
+  locale: CicoLocale;
 }) {
+  const displayPoll = localizePoll(poll, locale);
   const consultationCountry = poll.runtimeCountryCode ?? COUNTRY_POLL_COUNTRIES.get(poll.id);
   const runtimePoll = Boolean(poll.runtimeContractAddress);
   const pollAvailability = getPollAvailability(poll);
   const consultationCountryName = consultationCountry
-    ? getCountryName(consultationCountry, 'es')
+    ? getCountryName(consultationCountry, locale)
     : null;
   return (
     <main className="page-content policy-page">
       <button type="button" className="back-button" onClick={onBack}>
-        <ArrowLeft size={18} /> Volver a votaciones
+        <ArrowLeft size={18} /> {locale === 'es' ? 'Volver a votaciones' : 'Back to consultations'}
       </button>
       <div className="policy-status">
-        <StatusPill>{pollAvailability.isOpen ? 'Votación abierta' : 'Votación cerrada'}</StatusPill>
+        <StatusPill>
+          {pollAvailability.isOpen
+            ? locale === 'es'
+              ? 'Votación abierta'
+              : 'Voting open'
+            : locale === 'es'
+              ? 'Votación cerrada'
+              : 'Voting closed'}
+        </StatusPill>
         <span>
-          {runtimePoll ? 'Identidad y reglas del catálogo v2' : 'Actualizado: 8 de agosto de 2026'}
+          {runtimePoll
+            ? locale === 'es'
+              ? 'Identidad y reglas del catálogo v2'
+              : 'v2 catalogue identity and rules'
+            : locale === 'es'
+              ? 'Actualizado: 8 de agosto de 2026'
+              : 'Updated: August 8, 2026'}
         </span>
       </div>
       <section className="policy-hero">
-        <p className="eyebrow">Resumen para decidir</p>
-        <h1>{poll.title}</h1>
-        <p>{poll.question}</p>
+        <p className="eyebrow">{locale === 'es' ? 'Resumen para decidir' : 'Decision summary'}</p>
+        <h1>{displayPoll.title}</h1>
+        <p>{displayPoll.question}</p>
         <div className="policy-facts">
           <span>
-            <Calendar size={17} /> Cierra: <strong>{poll.deadline}</strong>
+            <Calendar size={17} /> {locale === 'es' ? 'Cierra:' : 'Closes:'}{' '}
+            <strong>{displayPoll.deadline}</strong>
           </span>
           <span>
             <Users size={17} />{' '}
             <strong>
-              {runtimePoll ? 'Estado en el contrato' : `${poll.eligible} habilitadas*`}
+              {runtimePoll
+                ? locale === 'es'
+                  ? 'Estado en el contrato'
+                  : 'Contract state'
+                : `${displayPoll.eligible} ${locale === 'es' ? 'habilitadas*' : 'eligible*'}`}
             </strong>
           </span>
         </div>
@@ -1068,39 +1409,43 @@ function PolicyDetailView({
       <section className="policy-section">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">En dos minutos</p>
-            <h2>¿De qué se trata?</h2>
+            <p className="eyebrow">{locale === 'es' ? 'En dos minutos' : 'In two minutes'}</p>
+            <h2>{locale === 'es' ? '¿De qué se trata?' : 'What is it about?'}</h2>
           </div>
           <BookOpen size={22} />
         </div>
-        <p>{poll.whyNow}</p>
+        <p>{displayPoll.whyNow}</p>
         <div className="evidence-card">
-          <span>{poll.evidenceLabel}</span>
-          <p>{poll.evidence}</p>
+          <span>{displayPoll.evidenceLabel}</span>
+          <p>{displayPoll.evidence}</p>
         </div>
       </section>
 
       <section className="policy-section policy-frame">
-        <p className="eyebrow">Marco vigente</p>
-        <p>{poll.legalFrame}</p>
+        <p className="eyebrow">{locale === 'es' ? 'Marco vigente' : 'Current framework'}</p>
+        <p>{displayPoll.legalFrame}</p>
       </section>
 
       <section className="policy-section" aria-labelledby="arguments-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Perspectivas</p>
-            <h2 id="arguments-title">Argumentos en discusión</h2>
+            <p className="eyebrow">{locale === 'es' ? 'Perspectivas' : 'Perspectives'}</p>
+            <h2 id="arguments-title">
+              {locale === 'es' ? 'Argumentos en discusión' : 'Arguments in the discussion'}
+            </h2>
           </div>
           <Question size={22} />
         </div>
         <p className="policy-section-intro">
-          Son posiciones para evaluar, no recomendaciones del proyecto.
+          {locale === 'es'
+            ? 'Son posiciones para evaluar, no recomendaciones del proyecto.'
+            : 'These are positions to evaluate, not recommendations from the project.'}
         </p>
         <div className="argument-columns">
           <article className="argument-card for">
-            <h3>A favor de la propuesta</h3>
+            <h3>{locale === 'es' ? 'A favor de la propuesta' : 'In favour of the proposal'}</h3>
             <ul>
-              {poll.argumentsFor.map((item) => (
+              {displayPoll.argumentsFor.map((item) => (
                 <li key={item}>
                   <Check size={15} /> {item}
                 </li>
@@ -1108,9 +1453,13 @@ function PolicyDetailView({
             </ul>
           </article>
           <article className="argument-card against">
-            <h3>A favor de revisar o limitar</h3>
+            <h3>
+              {locale === 'es'
+                ? 'A favor de revisar o limitar'
+                : 'In favour of reviewing or limiting it'}
+            </h3>
             <ul>
-              {poll.argumentsAgainst.map((item) => (
+              {displayPoll.argumentsAgainst.map((item) => (
                 <li key={item}>
                   <Info size={15} /> {item}
                 </li>
@@ -1121,52 +1470,82 @@ function PolicyDetailView({
       </section>
 
       <section className="policy-section uncertainty-card">
-        <p className="eyebrow">Incertidumbre</p>
-        <p>{poll.uncertainty}</p>
+        <p className="eyebrow">{locale === 'es' ? 'Incertidumbre' : 'Uncertainty'}</p>
+        <p>{displayPoll.uncertainty}</p>
       </section>
 
       <section className="policy-section" aria-labelledby="outcomes-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Qué expresa cada opción</p>
-            <h2 id="outcomes-title">Tu voto no cambia la ley</h2>
+            <p className="eyebrow">
+              {locale === 'es' ? 'Qué expresa cada opción' : 'What each option expresses'}
+            </p>
+            <h2 id="outcomes-title">
+              {locale === 'es' ? 'Tu voto no cambia la ley' : 'Your vote does not change the law'}
+            </h2>
           </div>
           <Stamp size={22} />
         </div>
         <div className="outcome-list">
           <div>
-            <strong>Sí</strong>
-            <p>Expresa apoyo a priorizar la propuesta en los términos de esta consulta.</p>
+            <strong>{locale === 'es' ? 'Sí' : 'Yes'}</strong>
+            <p>
+              {locale === 'es'
+                ? 'Expresa apoyo a priorizar la propuesta en los términos de esta consulta.'
+                : 'Expresses support for prioritising the proposal on these terms.'}
+            </p>
           </div>
           <div>
             <strong>No</strong>
-            <p>Expresa que no apoyás priorizarla en estos términos.</p>
+            <p>
+              {locale === 'es'
+                ? 'Expresa que no apoyás priorizarla en estos términos.'
+                : 'Expresses that you do not support prioritising it on these terms.'}
+            </p>
           </div>
           <div>
-            <strong>Abstención</strong>
-            <p>Registra que preferís no tomar una posición binaria.</p>
+            <strong>{locale === 'es' ? 'Abstención' : 'Abstain'}</strong>
+            <p>
+              {locale === 'es'
+                ? 'Registra que preferís no tomar una posición binaria.'
+                : 'Records that you prefer not to take a binary position.'}
+            </p>
           </div>
         </div>
       </section>
 
       <section className="policy-section eligibility-card">
-        <p className="eyebrow">{runtimePoll ? 'Reglas publicadas' : 'Reglas de esta demo'}</p>
+        <p className="eyebrow">
+          {runtimePoll
+            ? locale === 'es'
+              ? 'Reglas publicadas'
+              : 'Published rules'
+            : locale === 'es'
+              ? 'Reglas de esta demo'
+              : 'Demo rules'}
+        </p>
         <p>
           {runtimePoll
-            ? 'La credencial cívica se comprueba en privado contra la política publicada en este catálogo. El perfil Passport, el documento y la elección permanecen separados.'
-            : 'La credencial Passport prueba una regla de elegibilidad sin exponer tu documento. En esta experiencia la credencial de fixture representa la nacionalidad elegida y clase de edad 18+.'}
+            ? locale === 'es'
+              ? 'La credencial cívica se comprueba en privado contra la política publicada en este catálogo. El perfil Passport, la evidencia y la elección permanecen separados.'
+              : 'The civic credential is checked privately against the policy published in this catalogue. The Passport profile, evidence, and choice remain separate.'
+            : locale === 'es'
+              ? 'La credencial Passport prueba una regla de elegibilidad sin exponer tu evidencia. En esta experiencia la credencial de fixture representa el país elegido y clase de edad 18+.'
+              : 'The Passport credential proves an eligibility rule without exposing your evidence. In this experience the fixture represents the selected country and an 18+ age class.'}
           {consultationCountryName
-            ? ` Esta consulta está configurada para ${consultationCountryName}.`
+            ? locale === 'es'
+              ? ` Esta consulta está configurada para ${consultationCountryName}.`
+              : ` This consultation is configured for ${consultationCountryName}.`
             : ''}{' '}
-          No es un padrón oficial.
+          {locale === 'es' ? 'No es un padrón oficial.' : 'This is not an official register.'}
         </p>
       </section>
 
       <section className="policy-section" aria-labelledby="sources-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Para profundizar</p>
-            <h2 id="sources-title">Fuentes primarias</h2>
+            <p className="eyebrow">{locale === 'es' ? 'Para profundizar' : 'Read further'}</p>
+            <h2 id="sources-title">{locale === 'es' ? 'Fuentes primarias' : 'Primary sources'}</h2>
           </div>
           <Globe size={22} />
         </div>
@@ -1186,8 +1565,12 @@ function PolicyDetailView({
       <p className="independent-note">
         <Info size={16} />{' '}
         {runtimePoll
-          ? 'La identidad del contrato y sus resultados públicos se leen desde Midnight; esta consulta no es un referéndum oficial ni tiene efecto legal.'
-          : '* Las personas habilitadas y la participación son cifras simuladas. Esta consulta no es un referéndum oficial ni tiene efecto legal.'}
+          ? locale === 'es'
+            ? 'La identidad del contrato y sus resultados públicos se leen desde Midnight; esta consulta no es un referéndum oficial ni tiene efecto legal.'
+            : 'Contract identity and public results are read from Midnight; this consultation is not an official referendum and has no legal effect.'
+          : locale === 'es'
+            ? '* Las personas habilitadas y la participación son cifras simuladas. Esta consulta no es un referéndum oficial ni tiene efecto legal.'
+            : '* Eligible people and participation are simulated figures. This consultation is not an official referendum and has no legal effect.'}
       </p>
       <button
         type="button"
@@ -1198,9 +1581,15 @@ function PolicyDetailView({
         <Stamp size={22} />{' '}
         {pollAvailability.isOpen
           ? credential
-            ? 'Votar esta consulta'
-            : 'Preparar mi credencial'
-          : 'Votación cerrada'}
+            ? locale === 'es'
+              ? 'Votar esta consulta'
+              : 'Vote on this consultation'
+            : locale === 'es'
+              ? 'Preparar mi credencial'
+              : 'Prepare my credential'
+          : locale === 'es'
+            ? 'Votación cerrada'
+            : 'Voting closed'}
       </button>
     </main>
   );
@@ -1209,8 +1598,8 @@ function PolicyDetailView({
 const HOW_IT_WORKS = [
   {
     Icon: IdentificationCard,
-    title: 'Probás que podés votar',
-    body: 'Leemos el código del dorso de tu DNI en tu propio teléfono para confirmar tu edad. El documento no se sube a ningún lado.',
+    title: 'Probás que podés participar',
+    body: 'Una credencial Passport verifica una regla de elegibilidad en un proveedor configurado. La evidencia cruda no se comparte con esta app.',
   },
   {
     Icon: Stamp,
@@ -1253,7 +1642,7 @@ const PUBLIC_DATA = [
 ];
 
 const PRIVATE_DATA = [
-  'Tu nombre, tu número de DNI y tu foto.',
+  'Tu nombre, tus datos de identidad y la evidencia cruda.',
   'Qué votaste, mientras la votación sigue abierta.',
   'La relación entre tu identidad y tu voto, siempre.',
 ];
@@ -1272,8 +1661,8 @@ const FAQ = [
     a: 'Cada persona habilitada genera una marca única e irrepetible para esta consulta, derivada de un secreto que solo vive en tu dispositivo. Si esa marca ya figura, el contrato rechaza el segundo voto. La marca no permite averiguar de quién es.',
   },
   {
-    q: '¿Qué pasa con mi DNI?',
-    a: 'Se lee en tu navegador y se descarta. No se sube, no se guarda y no queda ninguna imagen. Lo único que sale de tu teléfono es un código derivado que sirve para que el mismo documento no se registre dos veces, y que cambia en cada consulta.',
+    q: '¿Qué pasa con mi evidencia?',
+    a: 'La evidencia se procesa mediante el proveedor configurado y se convierte en claims mínimos. Esta app no muestra ni conserva material crudo; si el proveedor no está configurado, la acción se bloquea.',
   },
   {
     q: '¿Es un referéndum oficial?',
@@ -1281,7 +1670,7 @@ const FAQ = [
   },
   {
     q: '¿Qué NO puede prometer todavía?',
-    a: 'Leer el código del DNI demuestra que tenés los datos de un documento, no que el documento sea auténtico: eso requiere validar el chip contra RENAPER. La prueba de presencia detecta que hay alguien moviéndose frente a la cámara, pero no es un cotejo biométrico. Y el contrato no fue auditado.',
+    a: 'La credencial prueba únicamente la regla publicada por su emisor. No mostramos una atestación como garantía de autenticidad, no inventamos un proveedor y el contrato debe verificarse por sus fuentes públicas.',
   },
 ];
 
@@ -1300,23 +1689,173 @@ const GLOSSARY = [
   },
 ];
 
+const HOW_IT_WORKS_EN = [
+  {
+    Icon: IdentificationCard,
+    title: 'Prove you can participate',
+    body: 'A Passport credential verifies an eligibility rule through a configured provider. Raw evidence is not shared with this app.',
+  },
+  {
+    Icon: Stamp,
+    title: 'Vote in private',
+    body: 'Your response is recorded as an encrypted commitment. Neither the team nor the network can read it while voting is open.',
+  },
+  {
+    Icon: ChartBar,
+    title: 'Count in public',
+    body: 'After closing, only Yes, No, and Abstain totals are published. Anyone can recount them without linking them to a person.',
+  },
+];
+const SEPARATION_EN = [
+  {
+    Icon: Fingerprint,
+    label: 'Your Passport identity',
+    knows: 'Your visible name and profile.',
+    never: 'Never sees your vote.',
+  },
+  {
+    Icon: Lock,
+    label: 'Your voter secret',
+    knows: 'That an eligible person voted once.',
+    never: 'Never knows who you are.',
+  },
+  {
+    Icon: EyeSlash,
+    label: 'Your choice',
+    knows: 'Added to the total when counting opens.',
+    never: 'Never stored with your identity.',
+  },
+];
+const PUBLIC_DATA_EN = [
+  'A valid vote was issued.',
+  'A unique marker prevents a second vote.',
+  'Yes, No, and Abstain totals after closing.',
+];
+const PRIVATE_DATA_EN = [
+  'Your name, identity data, and raw evidence.',
+  'Your choice while voting is open.',
+  'The relationship between your identity and your vote, always.',
+];
+const FAQ_EN = [
+  {
+    q: 'What are we building?',
+    a: 'An independent civic consultation prototype on Midnight. It demonstrates how a response can be private and publicly verifiable at the same time.',
+  },
+  {
+    q: 'Can you see what I voted?',
+    a: 'Not while voting is open: your choice travels as an encrypted commitment that neither the team nor the network can open. After closing, only totals are published.',
+  },
+  {
+    q: 'How do you prevent a second vote?',
+    a: 'Each eligible person produces a unique marker for this consultation. If it is already present, the contract rejects a second vote without revealing who cast the first.',
+  },
+  {
+    q: 'What happens to my evidence?',
+    a: 'Evidence is processed by the configured provider and reduced to minimal claims. This app does not display or retain raw material; if the provider is unavailable, the action is blocked.',
+  },
+  {
+    q: 'Is this an official referendum?',
+    a: 'No. It is an independent prototype for a hackathon. It has no legal validity or connection to a public authority.',
+  },
+  {
+    q: 'What can it not promise yet?',
+    a: 'A credential only proves the rule published by its issuer. We do not present an attestation as a guarantee of authenticity, invent a provider, or hide the public contract evidence.',
+  },
+];
+const GLOSSARY_EN = [
+  {
+    term: 'Commitment',
+    meaning:
+      'A closed box containing your vote. You can prove it did not change without opening it.',
+  },
+  {
+    term: 'Unique marker',
+    meaning: 'A fingerprint that reveals a second vote without saying who cast the first.',
+  },
+  {
+    term: 'Zero-knowledge proof',
+    meaning: 'A demonstration that something is true without revealing why it is true.',
+  },
+];
+
 function UnderstandView({
   polls,
   onOpenPolicy,
+  locale,
 }: {
   polls: readonly Poll[];
   onOpenPolicy: (pollId: string) => void;
+  locale: CicoLocale;
 }) {
+  const copy =
+    locale === 'es'
+      ? {
+          welcome: 'Bienvenido/a',
+          title: 'Decidir en comunidad, con información clara.',
+          lead: 'Antes de votar, entendé qué se hace público, qué queda privado y por qué podés comprobarlo vos.',
+          library: 'Biblioteca editorial',
+          beforeVote: 'Antes de votar, leé',
+          dossiers:
+            'dossiers con marco vigente, puntos de vista contrapuestos, incertidumbres y fuentes oficiales fechadas.',
+          how: 'Cómo funciona',
+          howTitle: 'Tres pasos, una sola vez',
+          central: 'La idea central',
+          separationTitle: 'Tres piezas que nunca se cruzan',
+          separationLead:
+            'La privacidad no depende de que confíes en nosotros. Depende de que estas tres cosas se mantengan separadas por diseño.',
+          transparency: 'Transparencia',
+          visibilityTitle: 'Qué se ve y qué no',
+          public: 'Queda público',
+          private: 'Nunca sale de tu teléfono',
+          stages: 'Etapas',
+          timelineTitle: 'De tu voto al resultado',
+          faq: 'Preguntas frecuentes',
+          faqTitle: 'Entendé la propuesta',
+          glossary: 'En criollo',
+          independent:
+            'Prototipo independiente para hackathon. No es un referéndum oficial ni tiene validez legal.',
+          read: 'Consulta, fuentes y consecuencias posibles',
+        }
+      : {
+          welcome: 'Welcome',
+          title: 'Decide together, with clear information.',
+          lead: 'Before voting, understand what is public, what stays private, and how you can check it yourself.',
+          library: 'Editorial library',
+          beforeVote: 'Read before voting',
+          dossiers:
+            'dossiers with the current framework, opposing perspectives, uncertainties, and dated official sources.',
+          how: 'How it works',
+          howTitle: 'Three steps, once',
+          central: 'The central idea',
+          separationTitle: 'Three pieces that never meet',
+          separationLead:
+            'Privacy does not depend on trusting us. It depends on keeping these three things separate by design.',
+          transparency: 'Transparency',
+          visibilityTitle: 'What is visible and what is not',
+          public: 'Public',
+          private: 'Never leaves your device',
+          stages: 'Stages',
+          timelineTitle: 'From your vote to the result',
+          faq: 'Frequently asked questions',
+          faqTitle: 'Understand the proposal',
+          glossary: 'In plain terms',
+          independent:
+            'Independent hackathon prototype. It is not an official referendum and has no legal validity.',
+          read: 'Consultation, sources, and possible consequences',
+        };
+  const howItems = locale === 'es' ? HOW_IT_WORKS : HOW_IT_WORKS_EN;
+  const separationItems = locale === 'es' ? SEPARATION : SEPARATION_EN;
+  const publicData = locale === 'es' ? PUBLIC_DATA : PUBLIC_DATA_EN;
+  const privateData = locale === 'es' ? PRIVATE_DATA : PRIVATE_DATA_EN;
+  const faqItems = locale === 'es' ? FAQ : FAQ_EN;
+  const glossaryItems = locale === 'es' ? GLOSSARY : GLOSSARY_EN;
   return (
     <main className="page-content">
       <section className="welcome-panel">
         <div className="welcome-copy">
-          <p className="eyebrow">Bienvenido/a</p>
-          <h1>Decidir en comunidad, con información clara.</h1>
-          <p>
-            Antes de votar, entendé qué se hace público, qué queda privado y por qué podés
-            comprobarlo vos.
-          </p>
+          <p className="eyebrow">{copy.welcome}</p>
+          <h1>{copy.title}</h1>
+          <p>{copy.lead}</p>
         </div>
         <img
           className="gaucho"
@@ -1328,21 +1867,21 @@ function UnderstandView({
       <section className="library-section" aria-labelledby="library-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Biblioteca editorial</p>
-            <h2 id="library-title">Antes de votar, leé</h2>
+            <p className="eyebrow">{copy.library}</p>
+            <h2 id="library-title">{copy.beforeVote}</h2>
           </div>
           <BookOpen size={22} />
         </div>
         <p className="section-lead">
-          Cinco dossiers con marco vigente, puntos de vista contrapuestos, incertidumbres y fuentes
-          oficiales fechadas.
+          {locale === 'es' ? 'Cinco ' : 'Five '}
+          {copy.dossiers}
         </p>
         <div className="library-list">
           {polls.map((poll) => (
             <button type="button" key={poll.id} onClick={() => onOpenPolicy(poll.id)}>
               <span>
                 <strong>{poll.title}</strong>
-                <small>Consulta, fuentes y consecuencias posibles</small>
+                <small>{copy.read}</small>
               </span>
               <ArrowRight size={18} />
             </button>
@@ -1353,13 +1892,13 @@ function UnderstandView({
       <section className="how-section" aria-labelledby="how-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Cómo funciona</p>
-            <h2 id="how-title">Tres pasos, una sola vez</h2>
+            <p className="eyebrow">{copy.how}</p>
+            <h2 id="how-title">{copy.howTitle}</h2>
           </div>
           <BookOpen size={22} />
         </div>
         <ol className="how-list">
-          {HOW_IT_WORKS.map(({ Icon, title, body }, index) => (
+          {howItems.map(({ Icon, title, body }, index) => (
             <li key={title}>
               <span className="how-step">
                 <Icon size={20} />
@@ -1377,17 +1916,14 @@ function UnderstandView({
       <section className="separation-section" aria-labelledby="separation-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">La idea central</p>
-            <h2 id="separation-title">Tres piezas que nunca se cruzan</h2>
+            <p className="eyebrow">{copy.central}</p>
+            <h2 id="separation-title">{copy.separationTitle}</h2>
           </div>
           <ShieldCheck size={22} />
         </div>
-        <p className="section-lead">
-          La privacidad no depende de que confíes en nosotros. Depende de que estas tres cosas se
-          mantengan separadas por diseño.
-        </p>
+        <p className="section-lead">{copy.separationLead}</p>
         <div className="separation-grid">
-          {SEPARATION.map(({ Icon, label, knows, never }) => (
+          {separationItems.map(({ Icon, label, knows, never }) => (
             <article key={label}>
               <span className="separation-icon">
                 <Icon size={20} />
@@ -1405,18 +1941,18 @@ function UnderstandView({
       <section className="visibility-section" aria-labelledby="visibility-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Transparencia</p>
-            <h2 id="visibility-title">Qué se ve y qué no</h2>
+            <p className="eyebrow">{copy.transparency}</p>
+            <h2 id="visibility-title">{copy.visibilityTitle}</h2>
           </div>
           <Eye size={22} />
         </div>
         <div className="visibility-columns">
           <div className="visibility-column public">
             <h3>
-              <Eye size={17} /> Queda público
+              <Eye size={17} /> {copy.public}
             </h3>
             <ul>
-              {PUBLIC_DATA.map((item) => (
+              {publicData.map((item) => (
                 <li key={item}>
                   <Check size={15} /> {item}
                 </li>
@@ -1425,10 +1961,10 @@ function UnderstandView({
           </div>
           <div className="visibility-column private">
             <h3>
-              <EyeSlash size={17} /> Nunca sale de tu teléfono
+              <EyeSlash size={17} /> {copy.private}
             </h3>
             <ul>
-              {PRIVATE_DATA.map((item) => (
+              {privateData.map((item) => (
                 <li key={item}>
                   <X size={15} /> {item}
                 </li>
@@ -1441,8 +1977,8 @@ function UnderstandView({
       <section className="timeline-section" aria-labelledby="timeline-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Etapas</p>
-            <h2 id="timeline-title">De tu voto al resultado</h2>
+            <p className="eyebrow">{copy.stages}</p>
+            <h2 id="timeline-title">{copy.timelineTitle}</h2>
           </div>
           <Clock size={22} />
         </div>
@@ -1450,25 +1986,34 @@ function UnderstandView({
           <li>
             <span />
             <div>
-              <strong>Votación abierta</strong>
+              <strong>{locale === 'es' ? 'Votación abierta' : 'Voting open'}</strong>
               <p>
-                Se reciben compromisos cifrados. Los totales no existen todavía: no hay nada que
-                filtrar.
+                {locale === 'es'
+                  ? 'Se reciben compromisos cifrados. Los totales no existen todavía: no hay nada que filtrar.'
+                  : 'Encrypted commitments are accepted. Totals do not exist yet, so there is nothing to filter.'}
               </p>
             </div>
           </li>
           <li>
             <span />
             <div>
-              <strong>Recuento</strong>
-              <p>Cerrada la votación, cada voto se suma a su total sin revelar de quién vino.</p>
+              <strong>{locale === 'es' ? 'Recuento' : 'Counting'}</strong>
+              <p>
+                {locale === 'es'
+                  ? 'Cerrada la votación, cada voto se suma a su total sin revelar de quién vino.'
+                  : 'After voting closes, each vote is added to its total without revealing who cast it.'}
+              </p>
             </div>
           </li>
           <li>
             <span />
             <div>
-              <strong>Resultado final</strong>
-              <p>Los totales quedan publicados y cualquiera puede verificarlos contra la red.</p>
+              <strong>{locale === 'es' ? 'Resultado final' : 'Final result'}</strong>
+              <p>
+                {locale === 'es'
+                  ? 'Los totales quedan publicados y cualquiera puede verificarlos contra la red.'
+                  : 'Totals are published and anyone can verify them against the network.'}
+              </p>
             </div>
           </li>
         </ol>
@@ -1477,13 +2022,13 @@ function UnderstandView({
       <section className="faq-section" aria-labelledby="faq-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Preguntas frecuentes</p>
-            <h2 id="faq-title">Entendé la propuesta</h2>
+            <p className="eyebrow">{copy.faq}</p>
+            <h2 id="faq-title">{copy.faqTitle}</h2>
           </div>
           <Question size={24} />
         </div>
         <div className="faq-list">
-          {FAQ.map(({ q, a }) => (
+          {faqItems.map(({ q, a }) => (
             <details className="faq-item" key={q}>
               <summary>
                 <span>{q}</span>
@@ -1496,9 +2041,9 @@ function UnderstandView({
       </section>
 
       <section className="glossary-section" aria-labelledby="glossary-title">
-        <h2 id="glossary-title">En criollo</h2>
+        <h2 id="glossary-title">{copy.glossary}</h2>
         <dl className="glossary-list">
-          {GLOSSARY.map(({ term, meaning }) => (
+          {glossaryItems.map(({ term, meaning }) => (
             <div key={term}>
               <dt>{term}</dt>
               <dd>{meaning}</dd>
@@ -1508,14 +2053,13 @@ function UnderstandView({
       </section>
 
       <p className="independent-note">
-        <Info size={16} /> Prototipo independiente para hackathon. No es un referéndum oficial ni
-        tiene validez legal.
+        <Info size={16} /> {copy.independent}
       </p>
     </main>
   );
 }
 
-function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
+function VerifyView({ receipts, locale }: { receipts: VoteReceipt[]; locale: CicoLocale }) {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<'found' | 'missing' | null>(null);
   const matched = receipts.find((receipt) => receipt.id === query.trim());
@@ -1525,9 +2069,15 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
         <div className="verify-icon">
           <ShieldCheck size={32} />
         </div>
-        <p className="eyebrow">Transparencia pública</p>
-        <h1>Verificá un comprobante</h1>
-        <p>Buscá el identificador para consultar si fue confirmado en {APP_NETWORK_LABEL}.</p>
+        <p className="eyebrow">
+          {locale === 'es' ? 'Transparencia pública' : 'Public transparency'}
+        </p>
+        <h1>{locale === 'es' ? 'Verificá un comprobante' : 'Verify a receipt'}</h1>
+        <p>
+          {locale === 'es'
+            ? `Buscá el identificador para consultar si fue confirmado en ${networkLabel(locale)}.`
+            : `Search the identifier to see whether it was confirmed on ${networkLabel(locale)}.`}
+        </p>
       </section>
       <form
         className="verify-form"
@@ -1536,7 +2086,9 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
           setResult(matched ? 'found' : 'missing');
         }}
       >
-        <label htmlFor="receipt-id">Identificador del comprobante</label>
+        <label htmlFor="receipt-id">
+          {locale === 'es' ? 'Identificador del comprobante' : 'Receipt identifier'}
+        </label>
         <div className="search-control">
           <MagnifyingGlass size={20} />
           <input
@@ -1546,10 +2098,10 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
               setQuery(event.target.value);
               setResult(null);
             }}
-            placeholder="tx-..."
+            placeholder={locale === 'es' ? 'tx-...' : 'tx-...'}
           />
           <button type="submit" disabled={!query.trim()}>
-            Buscar
+            {locale === 'es' ? 'Buscar' : 'Search'}
           </button>
         </div>
       </form>
@@ -1558,21 +2110,31 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
           <CheckCircle size={28} />
           <div>
             <strong>
-              {matched.status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante simulado'}
+              {matched.status === 'confirmed'
+                ? locale === 'es'
+                  ? 'Comprobante confirmado'
+                  : 'Receipt confirmed'
+                : locale === 'es'
+                  ? 'Comprobante simulado'
+                  : 'Simulated receipt'}
             </strong>
             <p>
-              La opción permanece privada.{' '}
+              {locale === 'es' ? 'La opción permanece privada. ' : 'Your choice remains private. '}
               {matched.status === 'confirmed'
-                ? `El registro está confirmado en ${matched.network}.`
-                : 'Este registro local no representa una transacción ni una prueba de voto real.'}
+                ? locale === 'es'
+                  ? `El registro está confirmado en ${matched.network}.`
+                  : `The record is confirmed on ${matched.network}.`
+                : locale === 'es'
+                  ? 'Este registro local no representa una transacción ni una prueba de voto real.'
+                  : 'This local record is not a transaction or a real vote proof.'}
             </p>
             <div className="receipt-actions">
               <code>{matched.id}</code>
-              <CopyReceiptButton receiptId={matched.id} compact />
+              <CopyReceiptButton receiptId={matched.id} compact locale={locale} />
             </div>
             {matched.explorerUrl ? (
               <a href={matched.explorerUrl} target="_blank" rel="noreferrer">
-                Abrir en explorer
+                {locale === 'es' ? 'Abrir en explorer' : 'Open in explorer'}
               </a>
             ) : null}
           </div>
@@ -1582,22 +2144,37 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
         <section className="verify-result missing" aria-live="polite">
           <Info size={24} />
           <div>
-            <strong>No encontramos ese comprobante</strong>
-            <p>Revisá el identificador o esperá la confirmación.</p>
+            <strong>
+              {locale === 'es'
+                ? 'No encontramos ese comprobante'
+                : 'We could not find that receipt'}
+            </strong>
+            <p>
+              {locale === 'es'
+                ? 'Revisá el identificador o esperá la confirmación.'
+                : 'Check the identifier or wait for confirmation.'}
+            </p>
           </div>
         </section>
       ) : null}
       <section className="verify-explanation">
-        <h2>¿Qué podés comprobar?</h2>
+        <h2>{locale === 'es' ? '¿Qué podés comprobar?' : 'What can you verify?'}</h2>
         <ul>
           <li>
-            <Check size={18} /> Que el comprobante existe.
+            <Check size={18} />{' '}
+            {locale === 'es' ? 'Que el comprobante existe.' : 'That the receipt exists.'}
           </li>
           <li>
-            <Check size={18} /> Que tiene estado confirmado o simulado.
+            <Check size={18} />{' '}
+            {locale === 'es'
+              ? 'Que tiene estado confirmado o simulado.'
+              : 'That it is confirmed or simulated.'}
           </li>
           <li>
-            <Check size={18} /> Que no necesitás compartir tus datos personales otra vez.
+            <Check size={18} />{' '}
+            {locale === 'es'
+              ? 'Que no necesitás compartir tus datos personales otra vez.'
+              : 'That you do not need to share personal data again.'}
           </li>
         </ul>
       </section>
@@ -1613,6 +2190,7 @@ function ProfileView({
   walletStatus,
   onConnectPassport,
   onReplayOnboarding,
+  locale,
 }: {
   polls: readonly Poll[];
   passportSession: CivicPassportSession | null;
@@ -1621,6 +2199,7 @@ function ProfileView({
   walletStatus: string;
   onConnectPassport: () => void;
   onReplayOnboarding: () => void;
+  locale: CicoLocale;
 }) {
   return (
     <main className="page-content">
@@ -1628,64 +2207,93 @@ function ProfileView({
         <div className="profile-avatar">
           <UserCircle size={34} weight="duotone" />
         </div>
-        <p className="eyebrow">Mi identidad</p>
-        <h1>{passportSession?.profile?.displayName ?? 'Tu espacio ciudadano'}</h1>
+        <p className="eyebrow">{locale === 'es' ? 'Mi identidad' : 'My identity'}</p>
+        <h1>
+          {passportSession?.profile?.displayName ??
+            (locale === 'es' ? 'Tu espacio ciudadano' : 'Your civic space')}
+        </h1>
         <p>
-          Un perfil para reunir tus comprobantes sin convertir tu identidad Passport en tu voto.
+          {locale === 'es'
+            ? 'Un perfil para reunir tus comprobantes sin convertir tu identidad Passport en tu voto.'
+            : 'A profile for your receipts that never turns your Passport identity into your vote.'}
         </p>
         {passportSession ? (
           <div className="profile-status">
-            <CheckCircle size={17} /> Passport conectado
+            <CheckCircle size={17} />{' '}
+            {locale === 'es' ? 'Passport conectado' : 'Passport connected'}
           </div>
         ) : (
           <button type="button" className="secondary-button" onClick={onConnectPassport}>
-            <Fingerprint size={18} /> Conectar Passport
+            <Fingerprint size={18} /> {locale === 'es' ? 'Conectar Passport' : 'Connect Passport'}
           </button>
         )}
       </section>
       <section className="profile-card" aria-labelledby="profile-id-title">
         <div className="profile-card-heading">
           <div>
-            <p className="eyebrow">Identificador de perfil</p>
+            <p className="eyebrow">
+              {locale === 'es' ? 'Identificador de perfil' : 'Profile identifier'}
+            </p>
             <h2 id="profile-id-title">{profileId}</h2>
           </div>
           <ShieldCheck size={24} />
         </div>
         <p>
-          Es un identificador de presentación específico para esta app. No participa en la
-          elegibilidad, el compromiso ni el nullifier anónimo.
+          {locale === 'es'
+            ? 'Es un identificador de presentación específico para esta app. No participa en la elegibilidad, el compromiso ni la marca anónima.'
+            : 'A presentation identifier for this app. It is not part of eligibility, the commitment, or the anonymous marker.'}
         </p>
         <div className="profile-connections">
           <span>
-            <Fingerprint size={17} /> Passport: {passportSession ? 'conectado' : 'pendiente'}
+            <Fingerprint size={17} /> Passport:{' '}
+            {passportSession
+              ? locale === 'es'
+                ? 'conectado'
+                : 'connected'
+              : locale === 'es'
+                ? 'pendiente'
+                : 'pending'}
           </span>
           <span>
             <Wallet size={17} /> Wallet:{' '}
-            {walletStatus === 'connected' ? 'conectada' : 'no conectada'}
+            {walletStatus === 'connected'
+              ? locale === 'es'
+                ? 'conectada'
+                : 'connected'
+              : locale === 'es'
+                ? 'no conectada'
+                : 'not connected'}
           </span>
         </div>
       </section>
       <section className="profile-card profile-help-card" aria-labelledby="profile-help-title">
         <div className="profile-card-heading">
           <div>
-            <p className="eyebrow">Ayuda</p>
-            <h2 id="profile-help-title">Revisar cómo funciona</h2>
+            <p className="eyebrow">{locale === 'es' ? 'Ayuda' : 'Help'}</p>
+            <h2 id="profile-help-title">
+              {locale === 'es' ? 'Revisar cómo funciona' : 'Review how it works'}
+            </h2>
           </div>
           <Info size={24} />
         </div>
         <p>
-          Volvé a la explicación de Passport, credenciales y acciones sin cambiar tu identidad ni
-          conectar una wallet.
+          {locale === 'es'
+            ? 'Volvé a la explicación de Passport, credenciales y acciones sin cambiar tu identidad ni conectar una wallet.'
+            : 'Review Passport, credential, and action boundaries without changing your identity or connecting a wallet.'}
         </p>
         <button type="button" className="secondary-button" onClick={onReplayOnboarding}>
-          Revisar el recorrido <ArrowRight size={18} />
+          {locale === 'es' ? 'Revisar el recorrido' : 'Review the journey'} <ArrowRight size={18} />
         </button>
       </section>
       <section className="profile-history" aria-labelledby="profile-history-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Actividad local</p>
-            <h2 id="profile-history-title">Mis comprobantes {APP_NETWORK_LABEL}</h2>
+            <p className="eyebrow">{locale === 'es' ? 'Actividad local' : 'Local activity'}</p>
+            <h2 id="profile-history-title">
+              {locale === 'es'
+                ? `Mis comprobantes ${networkLabel(locale)}`
+                : `My receipts · ${networkLabel(locale)}`}
+            </h2>
           </div>
           <span className="profile-count">{receipts.length}</span>
         </div>
@@ -1696,20 +2304,32 @@ function ProfileView({
                 <div>
                   <strong>
                     {receipt.pollId
-                      ? (polls.find((poll) => poll.id === receipt.pollId)?.title ??
-                        'Consulta ciudadana')
-                      : 'Consulta ciudadana'}
+                      ? (() => {
+                          const found = polls.find((poll) => poll.id === receipt.pollId);
+                          return found
+                            ? localizePoll(found, locale).title
+                            : locale === 'es'
+                              ? 'Consulta ciudadana'
+                              : 'Civic consultation';
+                        })()
+                      : locale === 'es'
+                        ? 'Consulta ciudadana'
+                        : 'Civic consultation'}
                   </strong>
                   <small>
                     {new Date(receipt.createdAt).toLocaleDateString('es-AR')} ·{' '}
                     {receipt.status === 'confirmed'
-                      ? `Confirmado en ${receipt.network}`
-                      : `Simulado en ${receipt.network}`}
+                      ? locale === 'es'
+                        ? `Confirmado en ${receipt.network}`
+                        : `Confirmed on ${receipt.network}`
+                      : locale === 'es'
+                        ? `Simulado en ${receipt.network}`
+                        : `Simulated on ${receipt.network}`}
                   </small>
                 </div>
                 <div className="profile-receipt-actions">
                   <code>{receipt.id}</code>
-                  <CopyReceiptButton receiptId={receipt.id} compact />
+                  <CopyReceiptButton receiptId={receipt.id} compact locale={locale} />
                   {receipt.explorerUrl ? (
                     <a
                       href={receipt.explorerUrl}
@@ -1726,8 +2346,16 @@ function ProfileView({
           </div>
         ) : (
           <div className="profile-empty">
-            <p>Todavía no tenés comprobantes guardados en este navegador.</p>
-            <span>Cuando participes, aparecerán acá sin publicar tu elección.</span>
+            <p>
+              {locale === 'es'
+                ? 'Todavía no tenés comprobantes guardados en este navegador.'
+                : 'You have no receipts saved in this browser yet.'}
+            </p>
+            <span>
+              {locale === 'es'
+                ? 'Cuando participes, aparecerán acá sin publicar tu elección.'
+                : 'After you participate, they will appear here without publishing your choice.'}
+            </span>
           </div>
         )}
       </section>
@@ -1736,11 +2364,14 @@ function ProfileView({
           <Globe size={25} />
         </div>
         <div>
-          <p className="eyebrow">Próximamente</p>
-          <h2 id="domains-title">Tu identidad .night</h2>
+          <p className="eyebrow">{locale === 'es' ? 'Próximamente' : 'Coming soon'}</p>
+          <h2 id="domains-title">
+            {locale === 'es' ? 'Tu identidad .night' : 'Your .night identity'}
+          </h2>
           <p>
-            Podés registrar un alias en Midnight Domains y usarlo como una identidad legible para tu
-            perfil.
+            {locale === 'es'
+              ? 'Podés registrar un alias en Midnight Domains y usarlo como una identidad legible para tu perfil.'
+              : 'You can register an alias in Midnight Domains and use it as a readable profile identity.'}
           </p>
           <a
             className="text-link"
@@ -1748,11 +2379,13 @@ function ProfileView({
             target="_blank"
             rel="noreferrer"
           >
-            Explorar Midnight Domains <ArrowRight size={16} />
+            {locale === 'es' ? 'Explorar Midnight Domains' : 'Explore Midnight Domains'}{' '}
+            <ArrowRight size={16} />
           </a>
           <small>
-            El registro y el pago requieren una wallet compatible y DUST; todavía no se ejecutan
-            dentro de esta app.
+            {locale === 'es'
+              ? 'El registro y el pago requieren una wallet compatible y DUST; todavía no se ejecutan dentro de esta app.'
+              : 'Registration and payment require a compatible wallet and DUST; they do not run inside this app yet.'}
           </small>
         </div>
       </section>
@@ -1760,10 +2393,11 @@ function ProfileView({
   );
 }
 
-function FlowStepper({ active }: { active: number }) {
+function FlowStepper({ active, locale }: { active: number; locale: CicoLocale }) {
+  const steps = locale === 'es' ? ['Entendé', 'Verificá', 'Votá'] : ['Learn', 'Verify', 'Vote'];
   return (
     <div className="flow-stepper">
-      {['Entendé', 'Verificá', 'Votá'].map((step, index) => (
+      {steps.map((step, index) => (
         <div
           className={`flow-step ${index + 1 === active ? 'current' : index + 1 < active ? 'done' : ''}`}
           key={step}
@@ -1793,8 +2427,7 @@ function VoteFlow({
   receipt,
   previewReady,
   dustBalance = null,
-  dniResult,
-  onDniVerified,
+  locale,
 }: {
   poll: Poll;
   stage: FlowStage;
@@ -1812,76 +2445,81 @@ function VoteFlow({
   receipt: VoteReceipt | null;
   previewReady: boolean;
   dustBalance?: bigint | null;
-  dniResult: DniVerificationResult | null;
-  onDniVerified: (result: DniVerificationResult) => void;
+  locale: CicoLocale;
 }) {
   const actionMode: ActionMode = CHAIN_RUNTIME_ENABLED ? 'live' : 'simulated';
-  const activeStep = stage === 'verify' || stage === 'document' || stage === 'eligible' ? 2 : 3;
+  const activeStep = stage === 'verify' || stage === 'eligible' ? 2 : 3;
   return (
     <main className="page-content flow-page">
       <button type="button" className="back-button" onClick={onClose}>
-        <ArrowLeft size={18} /> Volver a la propuesta
+        <ArrowLeft size={18} /> {locale === 'es' ? 'Volver a la propuesta' : 'Back to proposal'}
       </button>
-      <FlowStepper active={activeStep} />
+      <FlowStepper active={activeStep} locale={locale} />
       {stage === 'verify' ? (
         <section className="flow-card">
           <div className="flow-card-icon">
             <Fingerprint size={32} />
           </div>
-          <p className="eyebrow">Identidad y elegibilidad</p>
-          <h1>Antes de votar</h1>
-          <h2>Conectá Midnight Passport (opcional)</h2>
+          <p className="eyebrow">
+            {locale === 'es' ? 'Identidad y elegibilidad' : 'Identity and eligibility'}
+          </p>
+          <h1>{locale === 'es' ? 'Antes de votar' : 'Before you vote'}</h1>
+          <h2>
+            {locale === 'es'
+              ? 'Conectá Midnight Passport (opcional)'
+              : 'Connect Midnight Passport (optional)'}
+          </h2>
           <p>
-            Passport aporta onboarding y un perfil visible. No firma el voto: una wallet compatible
-            aprueba la transacción y el secreto anónimo permanece separado.
+            {locale === 'es'
+              ? 'Passport aporta onboarding y un perfil visible. No firma el voto: una wallet compatible aprueba la transacción y el secreto anónimo permanece separado.'
+              : 'Passport provides onboarding and a visible profile. It does not sign the vote: a compatible wallet approves the transaction while the anonymous secret stays separate.'}
           </p>
           {passportSession ? (
             <div className="data-summary">
               <span>
-                <CheckCircle size={18} /> Passport conectado
+                <CheckCircle size={18} />{' '}
+                {locale === 'es' ? 'Passport conectado' : 'Passport connected'}
                 {passportSession.profile?.displayName
                   ? ` · ${passportSession.profile.displayName}`
                   : ''}
               </span>
               <span>
-                <ShieldCheck size={18} /> Secreto anónimo separado
+                <ShieldCheck size={18} />{' '}
+                {locale === 'es' ? 'Secreto anónimo separado' : 'Anonymous secret kept separate'}
               </span>
             </div>
           ) : (
             <button type="button" className="secondary-button" onClick={onConnectPassport}>
-              <Fingerprint size={18} /> Conectar Passport
+              <Fingerprint size={18} /> {locale === 'es' ? 'Conectar Passport' : 'Connect Passport'}
             </button>
           )}
           <div className="flow-requirements">
-            <strong>Reglas de esta demo</strong>
+            <strong>{locale === 'es' ? 'Reglas de esta demo' : 'Demo rules'}</strong>
             <span>
               {credentialCountry
-                ? `${getCountryName(credentialCountry, 'es')} · 16+ · DNI verificable`
-                : 'Credencial compatible · 16+ · evidencia verificable'}
+                ? `${getCountryName(credentialCountry, locale)} · 18+ · ${locale === 'es' ? 'credencial verificable' : 'verifiable credential'}`
+                : locale === 'es'
+                  ? 'Credencial compatible · 18+ · evidencia verificable'
+                  : 'Compatible credential · 18+ · verifiable evidence'}
             </span>
           </div>
           <button
             type="button"
             className="primary-button yellow"
             disabled={actionMode === 'live' && !previewReady}
-            onClick={() => onStage('document')}
+            onClick={() => onStage('eligible')}
           >
-            Validar elegibilidad <ArrowRight size={20} />
+            {locale === 'es' ? 'Validar elegibilidad' : 'Check eligibility'}{' '}
+            <ArrowRight size={20} />
           </button>
           {actionMode === 'simulated' ? (
             <p className="flow-hint">
-              Modo local: podés recorrer la interfaz, pero no se crea ningún comprobante.
+              {locale === 'es'
+                ? 'Modo local: podés recorrer la interfaz, pero no se crea ningún comprobante.'
+                : 'Local mode: you can explore the interface, but no receipt is created.'}
             </p>
           ) : null}
         </section>
-      ) : null}
-      {stage === 'document' ? (
-        <DniVerification
-          demoOnly={APP_MODE !== 'preview'}
-          eventSalt={poll.id}
-          onVerified={onDniVerified}
-          onCancel={() => onStage('verify')}
-        />
       ) : null}
       {stage === 'eligible' ? (
         <section className="flow-card success-card">
@@ -1889,59 +2527,48 @@ function VoteFlow({
             <Check size={34} />
           </div>
           <p className="eyebrow">
-            {dniResult?.source === 'demo' ? 'Documento de demostración' : 'Documento verificado'}
+            {locale === 'es' ? 'Credencial v2 verificada' : 'Verified v2 credential'}
           </p>
-          <h1>Listo, podés votar</h1>
+          <h1>{locale === 'es' ? 'Listo, podés votar' : 'You are ready to vote'}</h1>
           <p>
-            La elegibilidad se convierte en un compromiso de membresía anónimo. El documento se leyó
-            en tu dispositivo y no se guardó.
+            {locale === 'es'
+              ? 'La elegibilidad se convierte en un compromiso anónimo. La evidencia cruda no se guarda en esta interfaz.'
+              : 'Eligibility becomes an anonymous commitment. Raw evidence is not stored in this interface.'}
           </p>
           <div className="data-summary">
-            {dniResult ? (
-              <>
-                <span>
-                  <CheckCircle size={18} /> {dniResult.summary.initials} ·{' '}
-                  {dniResult.summary.maskedNumber} · {dniResult.summary.age} años
-                </span>
-                <span>
-                  {dniResult.livenessPassed ? (
-                    <>
-                      <CheckCircle size={18} /> Prueba de presencia superada
-                    </>
-                  ) : (
-                    <>
-                      <Info size={18} /> Sin comprobación de presencia
-                    </>
-                  )}
-                </span>
-              </>
-            ) : (
-              <span>
-                <CheckCircle size={18} /> Elegibilidad validada
-              </span>
-            )}
             <span>
-              <ShieldCheck size={18} /> Ni el número ni las imágenes salieron del teléfono
+              <CheckCircle size={18} />{' '}
+              {locale === 'es' ? 'Elegibilidad validada' : 'Eligibility verified'}
+            </span>
+            <span>
+              <ShieldCheck size={18} />{' '}
+              {locale === 'es'
+                ? 'La evidencia cruda no salió de tu dispositivo'
+                : 'Raw evidence did not leave your device'}
             </span>
           </div>
           <button type="button" className="primary-button blue" onClick={() => onStage('choose')}>
-            Continuar al voto <ArrowRight size={20} />
+            {locale === 'es' ? 'Continuar al voto' : 'Continue to vote'} <ArrowRight size={20} />
           </button>
         </section>
       ) : null}
       {stage === 'choose' ? (
         <section className="flow-card">
-          <p className="eyebrow">Paso 3 de 3</p>
-          <h1>Elegí tu respuesta</h1>
-          <p>{poll.question}</p>
+          <p className="eyebrow">{locale === 'es' ? 'Paso 3 de 3' : 'Step 3 of 3'}</p>
+          <h1>{locale === 'es' ? 'Elegí tu respuesta' : 'Choose your response'}</h1>
+          <p>{localizePoll(poll, locale).question}</p>
           <div className="choice-list">
             <button
               type="button"
               className={`choice-button yes ${choice === 'YES' ? 'selected' : ''}`}
               onClick={() => onChoice('YES')}
             >
-              <span>Sí</span>
-              <small>Estoy de acuerdo con priorizar esta propuesta</small>
+              <span>{locale === 'es' ? 'Sí' : 'Yes'}</span>
+              <small>
+                {locale === 'es'
+                  ? 'Estoy de acuerdo con priorizar esta propuesta'
+                  : 'I support prioritising this proposal'}
+              </small>
               <span className="choice-check">{choice === 'YES' ? <Check size={18} /> : null}</span>
             </button>
             <button
@@ -1950,7 +2577,11 @@ function VoteFlow({
               onClick={() => onChoice('NO')}
             >
               <span>No</span>
-              <small>No estoy de acuerdo con priorizarla así</small>
+              <small>
+                {locale === 'es'
+                  ? 'No estoy de acuerdo con priorizarla así'
+                  : 'I do not support prioritising it this way'}
+              </small>
               <span className="choice-check">{choice === 'NO' ? <Check size={18} /> : null}</span>
             </button>
             <button
@@ -1958,8 +2589,12 @@ function VoteFlow({
               className={`choice-button abstain ${choice === 'ABSTAIN' ? 'selected' : ''}`}
               onClick={() => onChoice('ABSTAIN')}
             >
-              <span>Abstención</span>
-              <small>Prefiero no tomar una posición binaria</small>
+              <span>{locale === 'es' ? 'Abstención' : 'Abstain'}</span>
+              <small>
+                {locale === 'es'
+                  ? 'Prefiero no tomar una posición binaria'
+                  : 'I prefer not to take a binary position'}
+              </small>
               <span className="choice-check">
                 {choice === 'ABSTAIN' ? <Check size={18} /> : null}
               </span>
@@ -1971,34 +2606,50 @@ function VoteFlow({
             disabled={!choice}
             onClick={() => onStage('review')}
           >
-            Revisar mi voto <ArrowRight size={20} />
+            {locale === 'es' ? 'Revisar mi voto' : 'Review my vote'} <ArrowRight size={20} />
           </button>
         </section>
       ) : null}
       {stage === 'review' ? (
         <section className="flow-card">
-          <p className="eyebrow">Revisá antes de confirmar</p>
-          <h1>Tu compromiso</h1>
-          <p className="review-poll-title">{poll.title}</p>
+          <p className="eyebrow">
+            {locale === 'es' ? 'Revisá antes de confirmar' : 'Review before confirming'}
+          </p>
+          <h1>{locale === 'es' ? 'Tu compromiso' : 'Your commitment'}</h1>
+          <p className="review-poll-title">{localizePoll(poll, locale).title}</p>
           <div
             className={`review-choice ${choice === 'NO' ? 'no' : choice === 'ABSTAIN' ? 'abstain' : 'yes'}`}
           >
-            <span>{choice === 'YES' ? 'Sí' : choice === 'NO' ? 'No' : 'Abstención'}</span>
-            <small>La opción se mantiene privada hasta reveal.</small>
+            <span>
+              {choice === 'YES'
+                ? locale === 'es'
+                  ? 'Sí'
+                  : 'Yes'
+                : choice === 'NO'
+                  ? 'No'
+                  : locale === 'es'
+                    ? 'Abstención'
+                    : 'Abstain'}
+            </span>
+            <small>
+              {locale === 'es'
+                ? 'La opción se mantiene privada hasta el recuento.'
+                : 'Your choice stays private until counting.'}
+            </small>
           </div>
           <div className="review-notice">
             <Info size={20} />
             <p>
-              Passport gestiona la identidad y la credencial; no firma el voto.{' '}
+              {locale === 'es'
+                ? 'Passport gestiona la identidad y la credencial; no firma el voto. '
+                : 'Passport handles identity and the credential; it does not sign the vote. '}
               {RELAYER_MODE
-                ? 'El navegador prueba localmente y el relay atómico aporta DUST y envía sin recibir tu elección ni tu credencial.'
-                : `La wallet aprueba la acción real. Estado: ${
-                    walletStatus === 'connected' ? 'conectada' : 'pendiente'
-                  }. DUST: ${
-                    dustBalance === null
-                      ? 'saldo no disponible'
-                      : `${dustBalance.toString()} disponible`
-                  }.`}
+                ? locale === 'es'
+                  ? 'El navegador prueba localmente y el relay atómico aporta DUST y envía sin recibir tu elección ni tu credencial.'
+                  : 'The browser proves locally; the atomic relay supplies DUST and submits without receiving your choice or credential.'
+                : locale === 'es'
+                  ? `La wallet aprueba la acción real. Estado: ${walletStatus === 'connected' ? 'conectada' : 'pendiente'}. DUST: ${dustBalance === null ? 'saldo no disponible' : `${dustBalance.toString()} disponible`}.`
+                  : `The wallet approves the real action. Status: ${walletStatus === 'connected' ? 'connected' : 'pending'}. DUST: ${dustBalance === null ? 'balance unavailable' : `${dustBalance.toString()} available`}.`}
             </p>
           </div>
           {CHAIN_RUNTIME_ENABLED && !RELAYER_MODE ? <WalletWidget /> : null}
@@ -2006,19 +2657,30 @@ function VoteFlow({
             <div className="verify-result missing">
               <Info size={20} />
               <div>
-                <strong>{APP_NETWORK_LABEL} todavía no puede enviar</strong>
+                <strong>
+                  {locale === 'es'
+                    ? `${networkLabel(locale)} todavía no puede enviar`
+                    : `${networkLabel(locale)} cannot submit yet`}
+                </strong>
                 <p>{previewError}</p>
               </div>
             </div>
           ) : null}
           {!CHAIN_RUNTIME_ENABLED ? (
             <p className="flow-hint">
-              Este comprobante será simulado y se guardará localmente. La prueba real requiere una
-              red compatible, contrato desplegado y wallet aprobando la transacción.
+              {locale === 'es'
+                ? 'Este comprobante será simulado y se guardará localmente. La prueba real requiere una red compatible, contrato desplegado y wallet aprobando la transacción.'
+                : 'This receipt will be simulated and saved locally. A real proof requires a compatible network, deployed contract, and wallet approval.'}
             </p>
           ) : null}
           <button type="button" className="primary-button yellow" onClick={onConfirm}>
-            {actionMode === 'live' ? 'Confirmar acción real' : 'Crear comprobante simulado'}{' '}
+            {actionMode === 'live'
+              ? locale === 'es'
+                ? 'Confirmar acción real'
+                : 'Confirm real action'
+              : locale === 'es'
+                ? 'Crear comprobante simulado'
+                : 'Create simulated receipt'}{' '}
             <ArrowRight size={20} />
           </button>
         </section>
@@ -2028,12 +2690,16 @@ function VoteFlow({
           <div className="processing-spinner">
             <ChartBar size={34} />
           </div>
-          <p className="eyebrow">Procesando</p>
-          <h1>Preparando tu comprobante</h1>
+          <p className="eyebrow">{locale === 'es' ? 'Procesando' : 'Processing'}</p>
+          <h1>{locale === 'es' ? 'Preparando tu comprobante' : 'Preparing your receipt'}</h1>
           <p>
             {RELAYER_MODE
-              ? 'La prueba se crea localmente; el relay reserva DUST, envía una vez y espera confirmación del indexer.'
-              : 'El flujo reúne prueba, balanceo DUST/NIGHT, aprobación del wallet y confirmación canónica.'}
+              ? locale === 'es'
+                ? 'La prueba se crea localmente; el relay reserva DUST, envía una vez y espera confirmación del indexer.'
+                : 'The proof is created locally; the relay reserves DUST, submits once, and waits for indexer confirmation.'
+              : locale === 'es'
+                ? 'El flujo reúne prueba, balanceo DUST/NIGHT, aprobación del wallet y confirmación canónica.'
+                : 'The flow combines proof, DUST/NIGHT balancing, wallet approval, and canonical confirmation.'}
           </p>
           <div className="processing-track">
             <span />
@@ -2045,31 +2711,51 @@ function VoteFlow({
           <div className="success-symbol">
             <Check size={34} />
           </div>
-          <p className="eyebrow">Compromiso registrado</p>
-          <h1>Gracias por participar</h1>
-          <p>Guardá este identificador para verificar el resultado.</p>
+          <p className="eyebrow">
+            {locale === 'es' ? 'Compromiso registrado' : 'Commitment recorded'}
+          </p>
+          <h1>{locale === 'es' ? 'Gracias por participar' : 'Thank you for participating'}</h1>
+          <p>
+            {locale === 'es'
+              ? 'Guardá este identificador para verificar el resultado.'
+              : 'Save this identifier to verify the result.'}
+          </p>
           <div className="receipt-box">
             <span>
-              {receipt?.status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante simulado'}{' '}
-              · {receipt?.network ?? APP_NETWORK_LABEL}
+              {receipt?.status === 'confirmed'
+                ? locale === 'es'
+                  ? 'Comprobante confirmado'
+                  : 'Receipt confirmed'
+                : locale === 'es'
+                  ? 'Comprobante simulado'
+                  : 'Simulated receipt'}{' '}
+              · {receipt?.network ?? networkLabel(locale)}
             </span>
             <div className="receipt-box-id">
-              <strong>{receipt?.id ?? 'Disponible en Verificá'}</strong>
-              {receipt ? <CopyReceiptButton receiptId={receipt.id} /> : null}
+              <strong>
+                {receipt?.id ??
+                  (locale === 'es' ? 'Disponible en Verificá' : 'Available in Verify')}
+              </strong>
+              {receipt ? <CopyReceiptButton receiptId={receipt.id} locale={locale} /> : null}
             </div>
             <small>
               {receipt?.status === 'confirmed'
-                ? `Confirmado en ${receipt.network}.`
-                : 'No representa una transacción ni una prueba de voto real.'}
+                ? locale === 'es'
+                  ? `Confirmado en ${receipt.network}.`
+                  : `Confirmed on ${receipt.network}.`
+                : locale === 'es'
+                  ? 'No representa una transacción ni una prueba de voto real.'
+                  : 'This is not a transaction or a real vote proof.'}
             </small>
           </div>
           {receipt?.explorerUrl ? (
             <a className="text-link" href={receipt.explorerUrl} target="_blank" rel="noreferrer">
-              Abrir transacción en explorer <ArrowRight size={16} />
+              {locale === 'es' ? 'Abrir transacción en explorer' : 'Open transaction in explorer'}{' '}
+              <ArrowRight size={16} />
             </a>
           ) : null}
           <button type="button" className="primary-button blue" onClick={onViewReceipt}>
-            Ver mi comprobante <ArrowRight size={20} />
+            {locale === 'es' ? 'Ver mi comprobante' : 'View my receipt'} <ArrowRight size={20} />
           </button>
         </section>
       ) : null}
@@ -2079,12 +2765,13 @@ function VoteFlow({
 
 function CivicApp() {
   const initialOnboardingRequired = shouldShowFirstRunOnboarding();
+  // Spanish is the product's default; an explicit persisted choice still wins.
+  const [locale, setLocale] = useState<CicoLocale>(() => detectLocale('es-AR'));
   const [tab, setTab] = useState<Tab>('votes');
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
   const [onboardingRequired, setOnboardingRequired] = useState(initialOnboardingRequired);
   const [policyDetailId, setPolicyDetailId] = useState<string | null>(null);
-  const [dniResult, setDniResult] = useState<DniVerificationResult | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
   // Runtime modes intentionally start without a fixture ID. The v2 catalog below
   // selects the first configured referendum once it has been parsed.
@@ -2096,6 +2783,17 @@ function CivicApp() {
   const [passportError, setPassportError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [receiptToastVisible, setReceiptToastVisible] = useState(false);
+  const changeLocale = (nextLocale: CicoLocale) => {
+    setLocale(nextLocale);
+    persistLocale(nextLocale);
+  };
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.title =
+      locale === 'es'
+        ? 'Referéndum Cívico · Voto verificable'
+        : 'Civic Referendum · Verifiable vote';
+  }, [locale]);
   const closeOnboarding = () => {
     window.sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1');
     setOnboardingRequired(false);
@@ -2298,8 +2996,12 @@ function CivicApp() {
     setChoice(null);
     setReceipt(null);
     setPreviewError(null);
-    setDniResult(null);
-    setFlowStage(credential ? 'choose' : 'verify');
+    if (credential) {
+      setFlowStage('choose');
+    } else {
+      // Eligibility is a Passport-v2 credential journey. Never fall back to a legacy document reader.
+      setPassportJourneyOpen(true);
+    }
   };
 
   const confirmVote = async () => {
@@ -2407,9 +3109,9 @@ function CivicApp() {
 
   const currentTabContent =
     tab === 'understand' ? (
-      <UnderstandView polls={polls} onOpenPolicy={setPolicyDetailId} />
+      <UnderstandView polls={polls} onOpenPolicy={setPolicyDetailId} locale={locale} />
     ) : tab === 'verify' ? (
-      <VerifyView receipts={receipts} />
+      <VerifyView receipts={receipts} locale={locale} />
     ) : tab === 'profile' ? (
       <ProfileView
         polls={polls}
@@ -2419,6 +3121,7 @@ function CivicApp() {
         walletStatus={walletStatus}
         onConnectPassport={() => void connectPassport()}
         onReplayOnboarding={replayOnboarding}
+        locale={locale}
       />
     ) : (
       <VotesView
@@ -2428,6 +3131,7 @@ function CivicApp() {
         onStartVote={startVote}
         onOpenPolicy={setPolicyDetailId}
         onOpenPassportJourney={() => setPassportJourneyOpen(true)}
+        locale={locale}
       />
     );
   const selectedPolicy = policyDetailId
@@ -2448,6 +3152,8 @@ function CivicApp() {
             passportError={passportError}
             onConnectPassport={() => void connectPassport()}
             onDismissPassportError={() => setPassportError(null)}
+            locale={locale}
+            onLocaleChange={changeLocale}
           />
           <div className="mode-strip">
             <div className="mode-copy">
@@ -2484,6 +3190,8 @@ function CivicApp() {
           dismissible={!onboardingRequired}
           onCredentialReady={(nextCredential) => setCredential(nextCredential)}
           onPassportConnected={setPassportSession}
+          initialLocale={locale}
+          onLocaleChange={changeLocale}
           passportPort={passportSessionPort}
           previewPorts={passportJourneyPorts}
         />
@@ -2528,11 +3236,7 @@ function CivicApp() {
               receipt={receipt}
               previewReady={previewReadiness.state === 'ready'}
               dustBalance={dustBalance}
-              dniResult={dniResult}
-              onDniVerified={(result) => {
-                setDniResult(result);
-                setFlowStage('eligible');
-              }}
+              locale={locale}
             />
           );
         })()
@@ -2543,6 +3247,7 @@ function CivicApp() {
           onStartVote={startVote}
           credential={credential}
           onOpenPassportJourney={() => setPassportJourneyOpen(true)}
+          locale={locale}
         />
       ) : (
         currentTabContent
@@ -2554,6 +3259,7 @@ function CivicApp() {
             setPassportJourneyOpen(false);
             navigate(nextTab);
           }}
+          locale={locale}
         />
       ) : null}
       {receipt && receiptToastVisible ? (
