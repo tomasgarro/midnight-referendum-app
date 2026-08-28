@@ -22,7 +22,7 @@ matrix](https://github.com/midnightntwrk/midnight-sdk/blob/main/COMPATIBILITY.md
 | On-chain runtime | `3.0.0` | Direct root pin; must resolve to one shared WASM module |
 | Midnight.js | `4.1.1` family | All `midnight-js-*` packages stay lockstep |
 | DApp Connector API | `4.0.1` | Root/UI dependency; discovery accepts only valid semver on the v4 line, validates the connected network, sanitizes wallet metadata, and presents a choice when multiple compatible connectors are injected |
-| Midnight Passport SDK | Planning/spec; reduced beta described in the official repo | Not a runtime dependency yet; integrate through `PassportSessionPort` until the official protocol/connect packages are published and stable |
+| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | Integrated through `PassportSessionPort`; responses are origin/nonce/request/network validated and no profile field becomes eligibility authority |
 | Compact toolchain | CLI/compiler `0.31.1`, language `0.23` | Generated assets must be rebuilt with this line |
 | Node.js | `22.22.0` | `.nvmrc` source of truth; run in Linux/WSL2 |
 
@@ -67,9 +67,11 @@ proving, so it must not be replaced by a public or third-party endpoint.
 6. The ignored `managed/` and `ui/public/managed/` assets are generated from
    the checked-in Compact sources. A fresh clone cannot run contract tests or a
    production build until the Linux Compact compiler has regenerated them.
-7. The local Passport walkthrough is synthetic. Passport's currently wired
-   profile/session surface is kept separate from the Undeployed chain wallet;
-   it is not presented as a real Passport civic credential.
+7. Undeployed uses the real official Passport session/profile flow when the
+   configured origin accepts the CICO origin. A returned official account is
+   labelled with its actual network and is never presented as deployed on the
+   local Undeployed chain. If Passport is unavailable, the capability is
+   unavailable; it does not fall back to a synthetic account.
 
 ## Passport integration boundary
 
@@ -81,12 +83,12 @@ external signing, proving, and fee-sponsorship services.
 
 For this app, that means:
 
-- Wave 1 integrates only a live profile/session capability when the Passport
-  origin is available.
+- The product integrates only the official profile/session/account capabilities
+  that the Passport origin actually returns and validates.
 - The synthetic eligibility credential remains an explicit fixture, never a
   Passport claim.
-- The local Undeployed referendum wallet and Passport identity session are
-  separate providers.
+- The local Undeployed referendum action authority and Passport identity
+  session are separate providers.
 - Gero PassKey/passkey is the preferred future seedless wallet direction, but
   Wave 1 stays provider-neutral and does not claim a Gero integration.
 - Current public Gero material confirms PassKey authentication (Face ID, Touch
@@ -101,9 +103,9 @@ For this app, that means:
   cross-contract calls, but upgrading this compatibility line is outside Wave
   1 and requires an explicit security and migration review. Passport, evidence,
   and credential orchestration therefore remain off-chain here.
-- A future official SDK adapter must be added behind the existing
-  `PassportSessionPort`; it must not bypass the consent, origin, capability,
-  and truth-label checks already covered by the UI tests.
+- A future official SDK adapter may replace the PWA protocol adapter behind
+  `PassportSessionPort`; it must preserve the consent, origin, nonce, request,
+  network, capability, and truth-label checks covered by tests.
 
 ## Commands
 

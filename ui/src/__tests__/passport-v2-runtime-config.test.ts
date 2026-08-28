@@ -12,7 +12,7 @@ const env = {
   VITE_CICO_CREDENTIAL_EPOCH: '7',
   VITE_CICO_CREDENTIAL_TTL_MS: '86400000',
   VITE_RARIMO_UNIQUENESS_TIMESTAMP_UPPER_BOUND: '1800000000',
-  VITE_CICO_REGISTRY_ADDRESS: 'registry-address',
+  VITE_CICO_REGISTRY_ADDRESS: `0x${'04'.repeat(32)}`,
   VITE_CICO_REGISTRY_ID_HEX: '01'.repeat(32),
   VITE_CICO_ISSUER_ID_HEX: issuerHex,
   VITE_CICO_FROZEN_ROOT_FIELD: '42',
@@ -40,15 +40,61 @@ describe('Passport v2 runtime config', () => {
   it('parses the frozen registry and referendum catalog without private keys', () => {
     const parsed = parsePassportV2RuntimeConfig(env);
     expect(parsed).toMatchObject({
+      network: 'preview',
       apiUrl: 'https://cico-api.example',
       issuerId,
       credentialEpoch: 7,
-      registry: { registryContractAddress: 'registry-address', credentialEpoch: 7n },
+      registry: { registryContractAddress: `0x${'04'.repeat(32)}`, credentialEpoch: 7n },
     });
     expect(parsed?.referenda[0]).toMatchObject({
       referendumId: 'tierras-rurales:world',
       config: { countryPolicyEnabled: false, minimumAssurance: 2n, network: 'preview' },
     });
+  });
+
+  it('uses the same v2 catalog on the local Undeployed network', () => {
+    const parsed = parsePassportV2RuntimeConfig({
+      ...env,
+      VITE_MIDNIGHT_NETWORK: 'undeployed',
+      VITE_PASSPORT_V2_API_URL: 'http://localhost:8791',
+    });
+    expect(parsed).toMatchObject({
+      network: 'undeployed',
+      referenda: [{ config: { network: 'undeployed' } }],
+    });
+  });
+
+  it('accepts optional catalog lifecycle metadata and rejects a partial interval', () => {
+    const parsed = parsePassportV2RuntimeConfig({
+      ...env,
+      VITE_CICO_REFERENDA_JSON: JSON.stringify([
+        {
+          ...JSON.parse(env.VITE_CICO_REFERENDA_JSON)[0],
+          opened: '8 de agosto de 2026',
+          deadline: '30 de agosto de 2026',
+          opensAt: '2026-08-08T00:00:00Z',
+          closesAt: '2026-08-30T23:59:59Z',
+          eligible: '12.345',
+          participation: 'Estado publicado',
+        },
+      ]),
+    });
+    expect(parsed?.referenda[0]).toMatchObject({
+      opened: '8 de agosto de 2026',
+      deadline: '30 de agosto de 2026',
+      opensAt: '2026-08-08T00:00:00Z',
+      closesAt: '2026-08-30T23:59:59Z',
+      eligible: '12.345',
+      participation: 'Estado publicado',
+    });
+    expect(() =>
+      parsePassportV2RuntimeConfig({
+        ...env,
+        VITE_CICO_REFERENDA_JSON: JSON.stringify([
+          { ...JSON.parse(env.VITE_CICO_REFERENDA_JSON)[0], opensAt: '2026-08-08T00:00:00Z' },
+        ]),
+      }),
+    ).toThrow('both opensAt and closesAt');
   });
 
   it('fails closed for partial config, mainnet, or an issuer mismatch', () => {
@@ -57,7 +103,7 @@ describe('Passport v2 runtime config', () => {
     ).toThrow('VITE_CICO_ISSUER_ID');
     expect(() =>
       parsePassportV2RuntimeConfig({ ...env, VITE_MIDNIGHT_NETWORK: 'mainnet' }),
-    ).toThrow('Preview');
+    ).toThrow('Preview or Undeployed');
     expect(() =>
       parsePassportV2RuntimeConfig({ ...env, VITE_CICO_ISSUER_ID_HEX: 'ff'.repeat(32) }),
     ).toThrow('does not match');

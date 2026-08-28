@@ -6,9 +6,11 @@ process with the proof-free Rarimo HTTP gateway, claim-bound authorization,
 durable replay/issuance journals, a dedicated Midnight issuer wallet, and the
 canonical registry executor. A pinned/running self-hosted verificator, funded
 issuer wallet, deployed open registry and physical NFC transcript are still
-external deployment dependencies. This is not evidence that pilot hardening is complete. The current
-relayer exposes separate `/balance` and `/submit` operations and has one queued
-wallet; it **must not** be exposed to the public Internet in its current form.
+external deployment dependencies. This is not evidence that pilot hardening is complete. The active
+v2 relay exposes one capability-gated, idempotent `/v2/actions` job boundary and
+publishes a receipt only after independent indexer observation. The legacy
+`/balance` and `/submit` routes remain compatibility-only and **must not** be
+published as the citizen action API.
 
 This plan implements ADR-001 through ADR-006:
 
@@ -121,8 +123,9 @@ SSH by key and operator IP/VPN where possible.
 5. The browser treats all pre-indexer outcomes as pending and creates a receipt
    only after canonical indexer confirmation.
 
-This is intentionally different from the present relay API. It is the required
-ADR-003 migration, not something that can be achieved with a reverse proxy.
+This is the implemented v2 relay contract. A hosted pilot still requires
+PostgreSQL, TLS, service isolation, funded DUST, and a fresh restart/concurrency
+transcript; a reverse proxy alone does not satisfy those gates.
 
 ### Later: hardened program topology
 

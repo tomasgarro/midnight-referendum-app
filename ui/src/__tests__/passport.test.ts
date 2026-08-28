@@ -71,6 +71,7 @@ describe('PassportIdentityBridge', () => {
     const query = new URL(opened).searchParams;
     const requestId = query.get('passportRequestId');
     const nonce = query.get('passportNonce');
+    expect(query.get('passportNetwork')).toBe('preview');
     expect(requestId).not.toBeNull();
     expect(nonce).not.toBeNull();
     if (!requestId || !nonce) {
@@ -89,12 +90,13 @@ describe('PassportIdentityBridge', () => {
       new MessageEvent('message', { origin: ORIGIN, source: popup, data: ready }),
     );
     const request = postMessage.mock.calls.at(-1)?.[0] as
-      | { requestId: string; nonce: string; fields: string[] }
+      | { requestId: string; nonce: string; network: string; fields: string[] }
       | undefined;
     expect(request).toBeDefined();
     if (!request) throw new Error('Passport profile request was not posted');
     expect(request.requestId).toBe(requestId);
     expect(request.nonce).toBe(nonce);
+    expect(request.network).toBe('preview');
     expect(request.fields).toEqual(['displayName']);
     window.dispatchEvent(
       new MessageEvent('message', {
@@ -149,6 +151,158 @@ describe('PassportIdentityBridge', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('fails closed when Passport announces a different network', async () => {
+    const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
+    let opened = '';
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      timeoutMs: 200,
+      openPassport: (url) => {
+        opened = url;
+        return popup;
+      },
+    });
+    const pending = bridge.connect(['displayName']);
+    const query = new URL(opened).searchParams;
+    const requestId = query.get('passportRequestId');
+    const nonce = query.get('passportNonce');
+    if (!requestId || !nonce) throw new Error('Passport request parameters were not created');
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.ready',
+          requestId,
+          nonce,
+          network: 'devnet',
+        },
+      }),
+    );
+    await expect(pending).rejects.toMatchObject({ code: 'wrong_network' });
+  });
+
+  it('rejects a malformed ready message from the trusted Passport popup', async () => {
+    const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
+    let opened = '';
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      timeoutMs: 200,
+      openPassport: (url) => {
+        opened = url;
+        return popup;
+      },
+    });
+    const pending = bridge.connect(['displayName']);
+    const query = new URL(opened).searchParams;
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.ready',
+          requestId: query.get('passportRequestId'),
+          nonce: query.get('passportNonce'),
+          unexpected: true,
+        },
+      }),
+    );
+    await expect(pending).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  it('rejects a matching-origin response with an unknown field', async () => {
+    const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
+    let opened = '';
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      timeoutMs: 200,
+      openPassport: (url) => {
+        opened = url;
+        return popup;
+      },
+    });
+    const pending = bridge.connect(['displayName']);
+    const query = new URL(opened).searchParams;
+    const requestId = query.get('passportRequestId');
+    const nonce = query.get('passportNonce');
+    if (!requestId || !nonce) throw new Error('Passport request parameters were not created');
+    const ready = {
+      protocol: PASSPORT_PROFILE_PROTOCOL,
+      type: 'passport.profile.ready',
+      requestId,
+      nonce,
+      network: 'preview',
+    };
+    window.dispatchEvent(
+      new MessageEvent('message', { origin: ORIGIN, source: popup, data: ready }),
+    );
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.response',
+          requestId,
+          nonce,
+          approved: true,
+          profile: { displayName: 'Bubbles', unexpected: 'reject-me' },
+        },
+      }),
+    );
+    await expect(pending).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  it('fails closed when a response network changes after a valid ready', async () => {
+    const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
+    let opened = '';
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      timeoutMs: 200,
+      openPassport: (url) => {
+        opened = url;
+        return popup;
+      },
+    });
+    const pending = bridge.connect(['displayName']);
+    const query = new URL(opened).searchParams;
+    const requestId = query.get('passportRequestId');
+    const nonce = query.get('passportNonce');
+    if (!requestId || !nonce) throw new Error('Passport request parameters were not created');
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.ready',
+          requestId,
+          nonce,
+          network: 'preview',
+        },
+      }),
+    );
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.response',
+          requestId,
+          nonce,
+          approved: true,
+          network: 'devnet',
+          profile: { displayName: 'Wrong network' },
+        },
+      }),
+    );
+    await expect(pending).rejects.toMatchObject({ code: 'wrong_network' });
   });
 
   it('installs the popup listener before Passport can post ready', async () => {

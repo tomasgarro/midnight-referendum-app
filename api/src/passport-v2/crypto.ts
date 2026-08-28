@@ -39,7 +39,15 @@ export function deriveHolderBinding(voterSecret: Uint8Array, holderBlind: Uint8A
   return persistentCommit(vector2, [padBytes32('cico:holder-bind:v1'), voterSecret], holderBlind);
 }
 
-/** Mirrors CredentialRegistryV1 and referendum-v2 credentialLeaf exactly. */
+/**
+ * Mirrors CredentialRegistryV1 and referendum-v2 credentialLeaf exactly.
+ *
+ * `validFrom` is intentionally not part of the v1 commitment. Existing
+ * CredentialRegistryV1 deployments use this leaf schema and changing it
+ * would require a new registry/circuit version and migration. The issuer
+ * boundary validates the complete validity window; the deployed contract
+ * enforces the committed `validUntil` cutoff during voting.
+ */
 export function deriveCredentialLeaf(input: CredentialLeafInput): Uint8Array {
   return deriveRawCredentialLeaf({
     holderBinding: input.holderBinding,
@@ -96,6 +104,24 @@ export function deriveVoteNullifier(voterSecret: Uint8Array, eventId: Uint8Array
 export function deriveRoleKey(domain: string, secret: Uint8Array): Uint8Array {
   assertBytes32(secret, 'role secret');
   return persistentHash(vector2, [padBytes32(domain), secret]);
+}
+
+/**
+ * Binds a referendum deployment to the exact registry contract address used
+ * by the operator. Compact's referendum ledger stores this public digest
+ * alongside registryId/root; keeping the address out of the circuit state
+ * avoids coupling the vote policy to SDK address wrappers while retaining a
+ * deterministic, domain-separated address binding.
+ */
+export function deriveRegistryContractBinding(registryContractAddress: string): Uint8Array {
+  const normalized = registryContractAddress.trim().replace(/^0x/u, '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/u.test(normalized)) {
+    throw new TypeError('Registry contract address must be exactly 32-byte hexadecimal data');
+  }
+  return persistentHash(vector2, [
+    padBytes32('cico:registry:address:v1'),
+    Uint8Array.from(normalized.match(/.{2}/gu) ?? [], (byte) => Number.parseInt(byte, 16)),
+  ]);
 }
 
 /** Binds a Rarimo proof request to the exact enrollment and public holder commitment. */

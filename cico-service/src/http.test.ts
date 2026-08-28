@@ -95,11 +95,17 @@ function issuer() {
   };
 }
 
-async function start(options?: { gateway?: RarimoVerificationGateway }) {
+async function start(options?: {
+  gateway?: RarimoVerificationGateway;
+  actionCapabilityIssuer?: import('./action-capability-issuer.js').ActionCapabilityIssuer;
+}) {
   const service = createCicoHttpService({
     gateway: options?.gateway ?? gateway(),
     issuer: issuer(),
     allowedOrigins: ['http://localhost:4173'],
+    ...(options?.actionCapabilityIssuer
+      ? { actionCapabilityIssuer: options.actionCapabilityIssuer }
+      : {}),
   });
   servers.push(service);
   await new Promise<void>((resolve) => service.listen(0, '127.0.0.1', resolve));
@@ -232,5 +238,33 @@ describe('CICO HTTP boundary service', () => {
       body: '{}',
     });
     expect(vote.status).toBe(404);
+  });
+
+  it('issues a capability through CICO without returning the credential handle', async () => {
+    const issue = vi.fn().mockResolvedValue('signed-capability');
+    const base = await start({
+      actionCapabilityIssuer: { issue },
+    });
+    const body = {
+      actionId: 'action-1',
+      idempotencyKey: 'idem-1',
+      requestHash: 'ab'.repeat(32),
+      network: 'preview',
+      contractAddress: 'contract-1',
+      circuit: 'castVote',
+      action: 'vote',
+      credentialAuthorization: 'credential:issued-1',
+    };
+    const response = await fetch(`${base}/v1/action-capabilities`, {
+      method: 'POST',
+      headers: browserHeaders,
+      body: JSON.stringify(body),
+    });
+
+    expect(response.status).toBe(201);
+    expect(issue).toHaveBeenCalledWith(body);
+    const payload = await response.json();
+    expect(payload).toEqual({ actionCapability: 'signed-capability' });
+    expect(JSON.stringify(payload)).not.toContain(body.credentialAuthorization);
   });
 });

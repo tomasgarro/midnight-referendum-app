@@ -1,5 +1,9 @@
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
-import type { AppProviders, ReferendumV2Providers } from 'midnight-referendum-api';
+import type {
+  AppProviders,
+  ReferendumV2Providers,
+  WalletlessActionExecutionContext,
+} from 'midnight-referendum-api';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { resolveAppMode } from '@/integration/app-mode';
@@ -11,6 +15,7 @@ interface MidnightProvidersContextValue {
   publicReadReady: boolean;
   publicReadError: string | null;
   referendumV2Providers: ReferendumV2Providers | null;
+  referendumV2ActionContext: WalletlessActionExecutionContext | null;
   isReady: boolean;
   error: string | null;
 }
@@ -24,6 +29,9 @@ const IS_UNDEPLOYED = APP_MODE === 'undeployed';
 const RELAYER_URL = REAL_RUNTIME_ENABLED ? import.meta.env.VITE_RELAYER_URL?.trim() || '' : '';
 const PROOF_SERVER_URL = REAL_RUNTIME_ENABLED
   ? import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || ''
+  : '';
+const CICO_API_URL = REAL_RUNTIME_ENABLED
+  ? import.meta.env.VITE_PASSPORT_V2_API_URL?.trim() || ''
   : '';
 const NETWORK_ID =
   import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || (IS_UNDEPLOYED ? 'undeployed' : 'preview');
@@ -46,6 +54,8 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
   const [referendumV2Providers, setReferendumV2Providers] = useState<ReferendumV2Providers | null>(
     null,
   );
+  const [referendumV2ActionContext, setReferendumV2ActionContext] =
+    useState<WalletlessActionExecutionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,6 +69,7 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
       setPublicDataProvider(null);
       setPublicReadError(null);
       setReferendumV2Providers(null);
+      setReferendumV2ActionContext(null);
       setError(null);
       return;
     }
@@ -83,31 +94,40 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
     // organizer actions and as a fallback when no relayer is configured.
     if (RELAYER_URL) {
       import('midnight-referendum-api')
-        .then(({ createRelayerProviders }) =>
-          createRelayerProviders({
-            relayerUrl: RELAYER_URL,
+        .then(({ createReferendumV2WalletlessProviders, HttpWalletlessActionCapabilityIssuer }) => {
+          if (!PROOF_SERVER_URL || !CICO_API_URL) {
+            throw new Error('El relayer v2 requiere proof server y CICO API configurados');
+          }
+          if (NETWORK_ID !== 'preview' && NETWORK_ID !== 'undeployed') {
+            throw new Error('El relayer v2 solo admite Preview o Undeployed');
+          }
+          return createReferendumV2WalletlessProviders({
+            relayUrl: RELAYER_URL,
             proofServerUri: PROOF_SERVER_URL,
             networkId: NETWORK_ID,
             indexerUri: INDEXER_URL,
             indexerWsUri: INDEXER_WS_URL,
-          }),
-        )
-        .then((p) => {
+            capabilityIssuer: new HttpWalletlessActionCapabilityIssuer({
+              baseUrl: CICO_API_URL,
+            }),
+          });
+        })
+        .then((runtime) => {
           if (!cancelled) {
-            setProviders(p);
-            // The legacy two-step relayer is intentionally not reused for v2.
-            // V2 remains wallet-backed until the atomic proven-transaction job exists.
-            setReferendumV2Providers(null);
+            setProviders(null);
+            setReferendumV2Providers(runtime.providers);
+            setReferendumV2ActionContext(runtime.actionContext);
             setError(null);
           }
         })
         .catch((err) => {
           if (!cancelled) {
             setReferendumV2Providers(null);
+            setReferendumV2ActionContext(null);
             setError(
               err instanceof Error
-                ? `No se pudo contactar el relayer: ${err.message}`
-                : 'No se pudo contactar el relayer',
+                ? `No se pudo contactar el relayer v2: ${err.message}`
+                : 'No se pudo contactar el relayer v2',
             );
           }
         });
@@ -119,6 +139,7 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
     if (status !== 'connected' || !connectedApi) {
       setProviders(null);
       setReferendumV2Providers(null);
+      setReferendumV2ActionContext(null);
       setError(null);
       return;
     }
@@ -138,12 +159,14 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
         if (!cancelled) {
           setProviders(legacy);
           setReferendumV2Providers(referendumV2);
+          setReferendumV2ActionContext(null);
           setError(null);
         }
       })
       .catch((err) => {
         if (!cancelled) {
           setReferendumV2Providers(null);
+          setReferendumV2ActionContext(null);
           setError(err instanceof Error ? err.message : 'Failed to create providers');
         }
       });
@@ -161,7 +184,8 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
         publicReadReady: publicDataProvider !== null,
         publicReadError,
         referendumV2Providers,
-        isReady: providers !== null,
+        referendumV2ActionContext,
+        isReady: referendumV2Providers !== null,
         error,
       }}
     >

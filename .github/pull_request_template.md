@@ -7,9 +7,11 @@
 ### Scope
 
 - [ ] Synthetic public UI preview only (`VITE_APP_MODE=demo`).
+- [ ] Real local v2 slice (`VITE_APP_MODE=undeployed`) with manifest/transcript evidence.
 - [ ] Separately approved Passport/Rarimo enrollment change with evidence.
 - [ ] Separately approved real Midnight Preview vote with reproducible transcript.
-- [ ] Does not deploy, fund, or expose the current legacy relayer.
+- [ ] Legacy `/balance` and `/submit` are not exposed as the v2 action path.
+- [ ] V2 relay accepts only proved, capability-authorized, allowlisted work and confirms through the indexer.
 - [ ] Does not expose raw proof/callback, holder opening, witness, voter secret, or ballot choice.
 
 ### Verification
@@ -18,6 +20,7 @@
 - [ ] `npm run quality`
 - [ ] `npm run build`
 - [ ] `npm test`
+- [ ] `npm run verify:undeployed` (when runtime/operator code changes)
 - [ ] `CI=true npm run test:e2e`
 - [ ] `npm audit --omit=dev`
 - [ ] `git diff --check`
@@ -26,7 +29,8 @@
 ### Environment and privacy
 
 - [ ] Every `VITE_*` value is treated as public and contains no secret.
-- [ ] Contract, CICO, relayer, and remote proof-server values are empty for the synthetic preview.
+- [ ] Contract, CICO, relayer, and remote proof-server values are empty for the synthetic demo.
+- [ ] Demo, undeployed, and Preview evidence are reported separately.
 - [ ] Issuer, organizer, relay, verifier, database, and service-role secrets remain private.
 - [ ] Synthetic copy cannot be mistaken for a credential or confirmed vote.
 

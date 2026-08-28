@@ -3,6 +3,9 @@ import {
   type CivicPassportSession,
   type PassportCapability,
   type PassportCapabilityGrant,
+  type PassportHolderBindingPort,
+  type PassportHolderBindingRequest,
+  type PassportHolderBindingResult,
   type PassportNetwork,
   type PassportSessionPort,
   type PassportSessionRequest,
@@ -10,6 +13,7 @@ import {
 
 type PassportProfileBridgeSession = {
   readonly requestId: string;
+  readonly network?: PassportNetwork;
   readonly displayName?: string;
   readonly passportContract?: { readonly address: string; readonly network: string };
   readonly midnightAddresses?: { readonly unshielded: string };
@@ -18,11 +22,24 @@ type PassportProfileBridgeSession = {
 export type PassportProfileBridgeField = 'displayName' | 'passportContract' | 'midnightAddresses';
 
 export interface PassportProfileBridge {
-  connect(fields?: PassportProfileBridgeField[]): Promise<PassportProfileBridgeSession>;
+  connect(
+    fields?: PassportProfileBridgeField[],
+    network?: PassportNetwork,
+  ): Promise<PassportProfileBridgeSession>;
+}
+
+/**
+ * Optional native Passport capability. The current public profile bridge does
+ * not implement it, so the session adapter returns an explicit unsupported
+ * result instead of treating a Passport profile as holder evidence.
+ */
+export interface PassportHolderBindingBridge {
+  getHolderBinding(request: PassportHolderBindingRequest): Promise<PassportHolderBindingResult>;
 }
 
 export interface MidnightPassportSessionAdapterOptions {
   readonly bridge: PassportProfileBridge;
+  readonly holderBindingBridge?: PassportHolderBindingBridge;
   /** Minimum profile fields CICO is allowed to request after explicit consent. */
   readonly profileFields?: readonly PassportProfileBridgeField[];
   readonly now?: () => Date;
@@ -37,17 +54,21 @@ const SUPPORTED_CAPABILITIES = [
  * Maps Passport's real profile/session bridge into the durable Passport port.
  * It intentionally advertises no credential, witness, or transaction capability.
  */
-export class MidnightPassportSessionAdapter implements PassportSessionPort {
+export class MidnightPassportSessionAdapter
+  implements PassportSessionPort, PassportHolderBindingPort
+{
   readonly adapterName = 'midnight-passport-profile-session';
   readonly supportedCapabilities = SUPPORTED_CAPABILITIES;
 
   private readonly bridge: PassportProfileBridge;
+  private readonly holderBindingBridge?: PassportHolderBindingBridge;
   private readonly profileFields: PassportProfileBridgeField[];
   private readonly now: () => Date;
   private session: CivicPassportSession | null = null;
 
   constructor(options: MidnightPassportSessionAdapterOptions) {
     this.bridge = options.bridge;
+    this.holderBindingBridge = options.holderBindingBridge;
     this.profileFields = [...(options.profileFields ?? ['displayName'])];
     this.now = options.now ?? (() => new Date());
   }
@@ -75,7 +96,11 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
     // call the bridge with an omitted argument here: a bridge is allowed to
     // have a convenient display-profile default, but that default must never
     // turn a session request into an address/profile disclosure.
-    const raw = await this.bridge.connect(profileRequested ? [...this.profileFields] : []);
+    const raw = await this.bridge.connect(
+      profileRequested ? [...this.profileFields] : [],
+      request.network,
+    );
+    assertBridgeNetwork(raw.network, request.network);
     this.session = {
       sessionId: raw.requestId,
       origin: request.origin,
@@ -101,7 +126,7 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
   }
 
   async requestCapability(capability: PassportCapability): Promise<PassportCapabilityGrant> {
-    if (!this.session || this.session.status !== 'connected') {
+    if (this.session?.status !== 'connected') {
       throw new CivicCredentialError(
         'PASSPORT_SESSION_REQUIRED',
         'Connect Midnight Passport before requesting a capability',
@@ -111,6 +136,14 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
       throw new CivicCredentialError(
         'CAPABILITY_UNAVAILABLE',
         `Midnight Passport does not currently expose ${capability} through the profile bridge`,
+      );
+    }
+
+    const current = this.session;
+    if (!current) {
+      throw new CivicCredentialError(
+        'PASSPORT_SESSION_REQUIRED',
+        'Connect Midnight Passport before requesting a capability',
       );
     }
 
@@ -125,14 +158,11 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
         'Midnight Passport no tiene campos de perfil habilitados para esta sesión',
       );
     }
-    const raw = await this.bridge.connect(profileRequested ? [...this.profileFields] : []);
-    const current = this.session;
-    if (!current) {
-      throw new CivicCredentialError(
-        'PASSPORT_SESSION_REQUIRED',
-        'Connect Midnight Passport before requesting a capability',
-      );
-    }
+    const raw = await this.bridge.connect(
+      profileRequested ? [...this.profileFields] : [],
+      current.network,
+    );
+    assertBridgeNetwork(raw.network, current.network);
     this.session = {
       ...current,
       sessionId: raw.requestId,
@@ -160,6 +190,56 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
   async disconnect(): Promise<void> {
     this.session = null;
   }
+
+  async getHolderBinding(
+    request: PassportHolderBindingRequest,
+  ): Promise<PassportHolderBindingResult> {
+    const current = this.session;
+    if (current?.status !== 'connected') {
+      throw new CivicCredentialError(
+        'PASSPORT_SESSION_REQUIRED',
+        'Connect Midnight Passport before requesting a holder binding',
+      );
+    }
+    if (request.session.sessionId !== current.sessionId) {
+      throw new CivicCredentialError(
+        'CONFLICT',
+        'The holder-binding request does not belong to the connected Passport session',
+      );
+    }
+    if (request.network !== current.network) {
+      throw new CivicCredentialError(
+        'CONFLICT',
+        `Passport is connected to ${current.network}, not ${request.network}`,
+      );
+    }
+
+    if (!this.holderBindingBridge) {
+      return {
+        status: 'unsupported',
+        reason:
+          'The current Midnight Passport profile bridge does not expose a verified holder-binding capability.',
+      };
+    }
+
+    const result = await this.holderBindingBridge.getHolderBinding(request);
+    if (result.status === 'unsupported') return { ...result };
+    if (
+      result.network !== request.network ||
+      result.sessionId !== current.sessionId ||
+      !(result.holderBinding instanceof Uint8Array) ||
+      result.holderBinding.length !== 32
+    ) {
+      throw new CivicCredentialError(
+        'INVALID_CREDENTIAL_CLAIMS',
+        'Passport returned an invalid or incorrectly bound holder binding',
+      );
+    }
+    return {
+      ...result,
+      holderBinding: new Uint8Array(result.holderBinding),
+    };
+  }
 }
 
 function cloneSession(session: CivicPassportSession): CivicPassportSession {
@@ -177,4 +257,24 @@ function assertNetwork(network: PassportNetwork): void {
       'CICO Passport is restricted to Preview or local devnet',
     );
   }
+}
+
+function assertBridgeNetwork(actual: PassportNetwork | undefined, expected: PassportNetwork): void {
+  if (actual !== undefined && actual !== expected) {
+    throw new CivicCredentialError(
+      'CONFLICT',
+      `Passport responded for ${actual}, but this app requested ${expected}`,
+    );
+  }
+}
+
+/** Returns the optional native capability without widening PassportSessionPort. */
+export function passportHolderBindingPort(
+  port: PassportSessionPort | undefined,
+): PassportHolderBindingPort | undefined {
+  if (!port) return undefined;
+  const candidate = port as PassportSessionPort & Partial<PassportHolderBindingPort>;
+  return typeof candidate.getHolderBinding === 'function'
+    ? (candidate as PassportSessionPort & PassportHolderBindingPort)
+    : undefined;
 }

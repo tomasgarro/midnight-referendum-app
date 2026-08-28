@@ -7,7 +7,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
-  workers: process.env.CI ? 1 : undefined,
+  // The demo bundle loads the Midnight WASM/runtime graph. Parallel browser
+  // workers can starve the Vite server and make otherwise stable journeys
+  // time out, so the acceptance command is intentionally deterministic.
+  workers: 1,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   timeout: 60_000,
   expect: {

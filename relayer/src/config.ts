@@ -17,6 +17,17 @@ export interface RelayerConfig {
   port: number;
   /** Exact browser origins allowed to call the relayer. Never "*". */
   allowedOrigins: string[];
+  /** Optional service-to-service bearer token; capabilities remain mandatory. */
+  v2AuthToken: string;
+  /** HMAC secret used to validate short-lived one-time action capabilities. */
+  v2CapabilitySecret: string;
+  v2AllowedNetworks: string[];
+  v2AllowedContracts: string[];
+  v2AllowedCircuits: string[];
+  /** Production uses PostgreSQL; file path is for local/test adapter only. */
+  v2DatabaseUrl: string;
+  v2JobStorePath: string;
+  v2ExplorerBaseUrl: string;
 }
 
 function required(name: string): string {
@@ -31,6 +42,13 @@ function required(name: string): string {
 
 function optional(name: string, fallback: string): string {
   return process.env[name]?.trim() || fallback;
+}
+
+function list(name: string, fallback: string): string[] {
+  return optional(name, fallback)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 export function loadConfig(): RelayerConfig {
@@ -59,5 +77,13 @@ export function loadConfig(): RelayerConfig {
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
+    v2AuthToken: optional('RELAYER_V2_AUTH_TOKEN', ''),
+    v2CapabilitySecret: optional('RELAYER_V2_CAPABILITY_SECRET', ''),
+    v2AllowedNetworks: list('RELAYER_V2_ALLOWED_NETWORKS', 'preview'),
+    v2AllowedContracts: list('RELAYER_V2_ALLOWED_CONTRACTS', ''),
+    v2AllowedCircuits: list('RELAYER_V2_ALLOWED_CIRCUITS', 'castVote'),
+    v2DatabaseUrl: optional('RELAYER_V2_DATABASE_URL', ''),
+    v2JobStorePath: optional('RELAYER_V2_JOB_STORE_PATH', '.state/v2-actions.json'),
+    v2ExplorerBaseUrl: optional('RELAYER_EXPLORER_BASE_URL', ''),
   };
 }

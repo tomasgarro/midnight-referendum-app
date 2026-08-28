@@ -1,5 +1,6 @@
 import type { ContractAddress, SigningKey } from '@midnight-ntwrk/compact-runtime';
 import type { PrivateStateProvider } from '@midnight-ntwrk/midnight-js-types';
+import type { CivicCredentialVaultPort, StoredCivicCredential } from './passport-v2/ports.js';
 
 const PRIVATE_STATE_DB = 'midnight-referendum-private-state';
 const PRIVATE_STATE_DB_VERSION = 2;
@@ -295,5 +296,28 @@ export function browserPrivateStateProvider<PSI extends string, PS>(): PrivateSt
     importSigningKeys: async () => {
       throw new Error('Signing key import is not enabled in the browser yet');
     },
+  };
+}
+
+const CIVIC_CREDENTIAL_VAULT_ID = 'cico-civic-credential-v1' as const;
+
+/**
+ * Stores the active civic credential in the same non-extractable AES-GCM
+ * IndexedDB boundary as Compact private state. The caller supplies a public
+ * runtime scope (normally network + issuer + epoch), preventing material from
+ * being silently reused across deployments.
+ */
+export function browserCivicCredentialVault(scope: string): CivicCredentialVaultPort {
+  const normalizedScope = scope.trim();
+  if (!normalizedScope) throw new TypeError('Credential vault scope must not be empty');
+  const provider = browserPrivateStateProvider<
+    typeof CIVIC_CREDENTIAL_VAULT_ID,
+    StoredCivicCredential
+  >();
+  provider.setContractAddress(normalizedScope as ContractAddress);
+  return {
+    load: async () => provider.get(CIVIC_CREDENTIAL_VAULT_ID),
+    save: async (credential) => provider.set(CIVIC_CREDENTIAL_VAULT_ID, credential),
+    clear: async () => provider.remove(CIVIC_CREDENTIAL_VAULT_ID),
   };
 }

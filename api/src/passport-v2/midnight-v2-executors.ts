@@ -25,7 +25,7 @@ import {
   REFERENDUM_V2_PRIVATE_STATE_ID,
   type ReferendumV2PrivateState,
 } from './midnight-v2.js';
-import type { CanonicalReceipt, PassportNetwork, VoteChoice } from './types.js';
+import type { CanonicalReceipt, MidnightRuntimeNetwork, VoteChoice } from './types.js';
 
 type RegistryContract = GeneratedRegistry.Contract<CredentialRegistryV1PrivateState>;
 type ReferendumContract = GeneratedReferendumV2.Contract<ReferendumV2PrivateState>;
@@ -39,7 +39,7 @@ export interface CredentialRegistryV1ExecutorConfig {
   readonly credentialEpoch: bigint;
   /** Public role key derived from the private issuer secret. */
   readonly issuerKey: Uint8Array;
-  readonly network?: PassportNetwork;
+  readonly network?: MidnightRuntimeNetwork;
   readonly explorerBaseUrl?: string;
 }
 
@@ -53,7 +53,7 @@ export interface ReferendumV2ExecutorConfig {
   readonly minimumAssurance: bigint;
   readonly requireAdult: boolean;
   readonly validityReference: bigint;
-  readonly network?: PassportNetwork;
+  readonly network?: MidnightRuntimeNetwork;
   readonly explorerBaseUrl?: string;
 }
 
@@ -117,7 +117,9 @@ function requireRoot(value: MerkleTreeDigest, label: string): MerkleTreeDigest {
   return { field: value.field };
 }
 
-function requireSupportedNetwork(network: PassportNetwork | undefined): 'preview' | 'devnet' {
+function requireSupportedNetwork(
+  network: MidnightRuntimeNetwork | undefined,
+): 'preview' | 'devnet' | 'undeployed' {
   const selected = network ?? 'preview';
   if (selected === 'mainnet') {
     throw new Error('Passport v2 executors are restricted to Preview and local devnet');
@@ -146,6 +148,7 @@ export function referendumV2ConstructorArgs(
   Uint8Array,
   Uint8Array,
   Uint8Array,
+  Uint8Array,
   boolean,
   bigint,
   boolean,
@@ -164,6 +167,10 @@ export function referendumV2ConstructorArgs(
       64,
     ),
     frozenCredentialRoot: requireRoot(config.registry.frozenRoot, 'registry.frozenRoot'),
+    registryContractBinding: requireBytes32(
+      config.registry.registryContractBinding,
+      'registry.registryContractBinding',
+    ),
   };
   assertReferendumRegistryBinding(config.registry, binding);
 
@@ -172,6 +179,7 @@ export function referendumV2ConstructorArgs(
     binding.issuerId,
     binding.credentialEpoch,
     binding.frozenCredentialRoot,
+    binding.registryContractBinding,
     requireBytes32(config.eventId, 'eventId'),
     requireBytes32(config.organizerKey, 'organizerKey'),
     requireBytes32(config.countryPolicy, 'countryPolicy'),
@@ -202,7 +210,7 @@ export function canonicalReceiptFromFinalizedPublic(
   context: {
     readonly action: CanonicalReceipt['action'];
     readonly circuit: string;
-    readonly network: 'preview' | 'devnet';
+    readonly network: 'preview' | 'devnet' | 'undeployed';
     readonly contractAddress: string;
     readonly explorerBaseUrl?: string;
   },

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { PassportSessionPort } from 'midnight-referendum-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PassportJourney } from '../components/passport-v2/PassportJourney';
 
@@ -48,5 +49,45 @@ describe('PassportJourney', () => {
     ).toBeTruthy();
     expect(screen.getByText(/No presentamos una fixture como una credencial real/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Use demo Passport/i })).toBeNull();
+  });
+
+  it('routes undeployed through the official Passport journey instead of synthetic onboarding', async () => {
+    const user = userEvent.setup();
+    const connect = vi.fn().mockResolvedValue({
+      sessionId: 'preview-account',
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      status: 'connected',
+      profile: { displayName: 'Preview account' },
+      capabilities: ['session', 'profile'],
+    });
+    const passportPort = {
+      adapterName: 'test-passport',
+      supportedCapabilities: ['session', 'profile'],
+      connect,
+      getSession: vi.fn(),
+      requestCapability: vi.fn(),
+      disconnect: vi.fn(),
+    } as unknown as PassportSessionPort;
+    render(
+      <PassportJourney
+        mode="undeployed"
+        onClose={vi.fn()}
+        passportPort={passportPort}
+        previewPorts={{ passport: passportPort }}
+      />,
+    );
+
+    expect(screen.getByText('UNDEPLOYED · PASSPORT PREVIEW')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Use demo Passport/i })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
+    expect(await screen.findByRole('heading', { name: 'Sesión Passport conectada' })).toBeTruthy();
+    expect(connect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        network: 'preview',
+        requestedCapabilities: ['session', 'profile'],
+      }),
+    );
+    expect(screen.getByText(/cadena local.*no desplegada/i)).toBeTruthy();
   });
 });

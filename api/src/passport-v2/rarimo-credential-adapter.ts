@@ -10,6 +10,8 @@ import type {
   CivicCredentialPort,
   CivicCredentialPrivateMaterial,
   CivicCredentialPrivateStatePort,
+  CivicCredentialVaultPort,
+  StoredCivicCredential,
 } from './ports.js';
 import type {
   RarimoCountryMapper,
@@ -63,6 +65,8 @@ export interface RarimoCivicCredentialAdapterOptions {
   readonly randomBytes?: (length: number) => Uint8Array;
   readonly enrollmentTtlMs?: number;
   readonly credentialTtlMs?: number;
+  /** Encrypted browser-local persistence; omitted only for ephemeral tests/SSR. */
+  readonly vault?: CivicCredentialVaultPort;
 }
 
 interface RarimoEnrollmentRecord {
@@ -109,9 +113,11 @@ export class RarimoCivicCredentialAdapter
   private readonly randomBytes: (length: number) => Uint8Array;
   private readonly enrollmentTtlMs: number;
   private readonly credentialTtlMs: number;
+  private readonly vault?: CivicCredentialVaultPort;
   private readonly enrollments = new Map<string, RarimoEnrollmentRecord>();
   private readonly statusChecks = new Map<string, Promise<EnrollmentStatusSnapshot>>();
   private activeEnrollmentId: string | null = null;
+  private restoredCredential: StoredCivicCredential | null | undefined;
 
   constructor(options: RarimoCivicCredentialAdapterOptions) {
     if (!options.issuerId.trim()) throw new TypeError('issuerId must not be empty');
@@ -142,6 +148,7 @@ export class RarimoCivicCredentialAdapter
     this.randomBytes = options.randomBytes ?? secureRandomBytes;
     this.enrollmentTtlMs = options.enrollmentTtlMs ?? DEFAULT_ENROLLMENT_TTL_MS;
     this.credentialTtlMs = options.credentialTtlMs ?? DEFAULT_CREDENTIAL_TTL_MS;
+    this.vault = options.vault;
   }
 
   async beginEnrollment(request: CredentialEnrollmentRequest): Promise<CredentialEnrollment> {
@@ -150,7 +157,9 @@ export class RarimoCivicCredentialAdapter
 
     // A new attempt invalidates every old attempt, so an old QR code cannot
     // later become the active credential by racing the new one.
-    if (this.enrollments.size > 0) await this.clearCredential();
+    if (this.enrollments.size > 0 || (await this.loadRestoredCredential())) {
+      await this.clearCredential();
+    }
 
     const created = this.now();
     const expires = new Date(created.getTime() + this.enrollmentTtlMs);
@@ -323,6 +332,7 @@ export class RarimoCivicCredentialAdapter
         ...claims,
       };
       record.proofFingerprint = proofFingerprint;
+      await this.persistIssuedRecord(record);
       record.status = 'issued';
       record.updatedAt = now.toISOString();
       await this.cleanupProviderRecord(record).catch(() => {
@@ -342,7 +352,15 @@ export class RarimoCivicCredentialAdapter
   }
 
   async getCredentialSummary(): Promise<CredentialSummary | null> {
-    if (!this.activeEnrollmentId) return null;
+    if (!this.activeEnrollmentId) {
+      const restored = await this.loadRestoredCredential();
+      if (!restored) return null;
+      if (this.now().getTime() >= Date.parse(restored.summary.validUntil)) {
+        await this.expireRestoredCredential();
+        return { ...restored.summary, status: 'expired' };
+      }
+      return { ...restored.summary };
+    }
     const record = this.enrollments.get(this.activeEnrollmentId);
     if (!record?.summary) return null;
     if (
@@ -357,7 +375,15 @@ export class RarimoCivicCredentialAdapter
   }
 
   async getActionAuthorization(): Promise<CivicActionAuthorization | null> {
-    if (!this.activeEnrollmentId) return null;
+    if (!this.activeEnrollmentId) {
+      const restored = await this.loadRestoredCredential();
+      if (!restored) return null;
+      if (this.now().getTime() >= Date.parse(restored.summary.validUntil)) {
+        await this.expireRestoredCredential();
+        return null;
+      }
+      return { ...restored.authorization };
+    }
     const record = this.enrollments.get(this.activeEnrollmentId);
     if (record?.status !== 'issued' || !record.actionAuthorizationHandle) return null;
     if (record.summary && this.now().getTime() >= Date.parse(record.summary.validUntil)) {
@@ -373,7 +399,15 @@ export class RarimoCivicCredentialAdapter
   }
 
   async getPrivateCredentialMaterial(): Promise<CivicCredentialPrivateMaterial | null> {
-    if (!this.activeEnrollmentId) return null;
+    if (!this.activeEnrollmentId) {
+      const restored = await this.loadRestoredCredential();
+      if (!restored) return null;
+      if (this.now().getTime() >= Date.parse(restored.summary.validUntil)) {
+        await this.expireRestoredCredential();
+        return null;
+      }
+      return copyPrivateMaterial(restored.material);
+    }
     const record = this.enrollments.get(this.activeEnrollmentId);
     if (
       record?.status !== 'issued' ||
@@ -417,6 +451,9 @@ export class RarimoCivicCredentialAdapter
     }
     this.enrollments.clear();
     this.activeEnrollmentId = null;
+    if (this.restoredCredential) zeroizeStoredCredential(this.restoredCredential);
+    this.restoredCredential = null;
+    await this.vault?.clear();
 
     const failedCleanup = cleanupResults.find(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
@@ -428,6 +465,54 @@ export class RarimoCivicCredentialAdapter
         true,
       );
     }
+  }
+
+  private async loadRestoredCredential(): Promise<StoredCivicCredential | null> {
+    if (this.restoredCredential !== undefined) return this.restoredCredential;
+    const stored = await this.vault?.load();
+    this.restoredCredential = stored ? copyStoredCredential(stored) : null;
+    return this.restoredCredential;
+  }
+
+  private async persistIssuedRecord(record: RarimoEnrollmentRecord): Promise<void> {
+    if (
+      !record.summary ||
+      !record.actionAuthorizationHandle ||
+      !record.credentialBlind ||
+      !record.credentialLeaf
+    ) {
+      throw new CivicCredentialError(
+        'ISSUANCE_FAILED',
+        'Issued credential material is incomplete',
+        true,
+      );
+    }
+    const { provider: _provider, status: _status, ...claims } = record.summary;
+    const stored: StoredCivicCredential = {
+      summary: { ...record.summary },
+      authorization: { kind: 'civic-credential', handle: record.actionAuthorizationHandle },
+      material: {
+        voterSecret: new Uint8Array(record.holderSecret),
+        holderBlind: new Uint8Array(record.holderBlind),
+        holderBinding: new Uint8Array(record.holderBinding),
+        credentialBlind: new Uint8Array(record.credentialBlind),
+        credentialLeaf: new Uint8Array(record.credentialLeaf),
+        claims,
+      },
+    };
+    try {
+      await this.vault?.save(stored);
+      if (this.restoredCredential) zeroizeStoredCredential(this.restoredCredential);
+      this.restoredCredential = copyStoredCredential(stored);
+    } finally {
+      zeroizeStoredCredential(stored);
+    }
+  }
+
+  private async expireRestoredCredential(): Promise<void> {
+    if (this.restoredCredential) zeroizeStoredCredential(this.restoredCredential);
+    this.restoredCredential = null;
+    await this.vault?.clear();
   }
 
   private assertPolicyCanBeRequested(policy: CredentialPolicy | undefined): void {
@@ -766,4 +851,35 @@ function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
     difference |= (left[index] ?? 0) ^ (right[index] ?? 0);
   }
   return difference === 0;
+}
+
+function copyPrivateMaterial(
+  material: CivicCredentialPrivateMaterial,
+): CivicCredentialPrivateMaterial {
+  return {
+    voterSecret: new Uint8Array(material.voterSecret),
+    holderBlind: new Uint8Array(material.holderBlind),
+    holderBinding: new Uint8Array(material.holderBinding),
+    credentialBlind: new Uint8Array(material.credentialBlind),
+    credentialLeaf: new Uint8Array(material.credentialLeaf),
+    claims: { ...material.claims },
+  };
+}
+
+function copyStoredCredential(credential: StoredCivicCredential): StoredCivicCredential {
+  return {
+    summary: { ...credential.summary },
+    authorization: { ...credential.authorization },
+    material: copyPrivateMaterial(credential.material),
+  };
+}
+
+function zeroizeStoredCredential(credential: StoredCivicCredential): void {
+  zeroize(
+    credential.material.voterSecret,
+    credential.material.holderBlind,
+    credential.material.holderBinding,
+    credential.material.credentialBlind,
+    credential.material.credentialLeaf,
+  );
 }

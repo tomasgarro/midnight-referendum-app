@@ -48,6 +48,8 @@ export interface CredentialIssuanceStore {
     fingerprintHash: string,
     result: import('midnight-referendum-api').CivicCredentialIssuanceResult,
   ): Promise<void>;
+  /** Public opaque issuance handle lookup used to authorize a short-lived action capability. */
+  hasIssuanceId?(issuanceId: string): Promise<boolean>;
 }
 
 /** Thrown when an immutable local record is reused with different material. */
@@ -211,6 +213,12 @@ export class FileCredentialIssuanceStore implements CredentialIssuanceStore {
       }
       state.issuances[enrollmentKey] = { fingerprintHash, result: canonical };
     });
+  }
+
+  async hasIssuanceId(issuanceId: string): Promise<boolean> {
+    requireNonEmpty(issuanceId, 'issuanceId');
+    const state = await this.store.read();
+    return Object.values(state.issuances).some((record) => record.result.issuanceId === issuanceId);
   }
 }
 
@@ -565,13 +573,30 @@ async function acquireLock(options: ResolvedStoreOptions): Promise<LockHandle> {
         },
       };
     } catch (error) {
-      if (!isAlreadyExists(error)) throw error;
+      if (!isAlreadyExists(error) && !(await isWindowsLockContention(error, options.lockPath))) {
+        throw error;
+      }
       if (await recoverDeadLock(options)) continue;
       if (Date.now() >= deadline) {
         throw new Error(`Timed out waiting for durable store lock ${options.lockPath}`);
       }
       await delay(10);
     }
+  }
+}
+
+async function isWindowsLockContention(error: unknown, lockPath: string): Promise<boolean> {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code !== 'EPERM' && code !== 'EACCES') return false;
+  // Windows may report EPERM while another task is closing or unlinking the
+  // lock, even after the directory permissions have already been validated.
+  if (process.platform === 'win32') return true;
+  try {
+    await stat(lockPath);
+    return true;
+  } catch {
+    return false;
   }
 }
 

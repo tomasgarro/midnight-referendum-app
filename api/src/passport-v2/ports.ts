@@ -9,10 +9,45 @@ import type {
   EnrollmentStatusSnapshot,
   PassportCapability,
   PassportCapabilityGrant,
+  PassportNetwork,
   PassportSession,
   PassportSessionRequest,
   PublicCohortRequest,
 } from './types.js';
+
+/**
+ * Result of asking Passport for a holder binding. This is deliberately a
+ * discriminated result rather than an optional byte array: the application
+ * must be able to tell a verified native binding from a capability that is
+ * not exposed by the current Passport build.
+ */
+export type PassportHolderBindingResult =
+  | {
+      readonly status: 'verified';
+      /** Public commitment only; never a voter secret or credential opening. */
+      readonly holderBinding: Uint8Array;
+      readonly network: Extract<PassportNetwork, 'preview' | 'devnet'>;
+      readonly sessionId: string;
+    }
+  | {
+      readonly status: 'unsupported';
+      readonly reason: string;
+    };
+
+export interface PassportHolderBindingRequest {
+  readonly session: PassportSession;
+  readonly network: Extract<PassportNetwork, 'preview' | 'devnet'>;
+}
+
+/**
+ * Optional Passport-native holder-binding seam. Session/profile remains a
+ * separate capability; unsupported is an honest first-class result while the
+ * official native credential capability is still unavailable.
+ */
+export interface PassportHolderBindingPort {
+  readonly adapterName: string;
+  getHolderBinding(request: PassportHolderBindingRequest): Promise<PassportHolderBindingResult>;
+}
 
 export interface CivicCredentialIssuanceRequest {
   readonly enrollmentId: string;
@@ -53,6 +88,24 @@ export interface CivicCredentialPrivateMaterial {
 /** Private browser bridge between credential enrollment and Compact witnesses. */
 export interface CivicCredentialPrivateStatePort {
   getPrivateCredentialMaterial(): Promise<CivicCredentialPrivateMaterial | null>;
+}
+
+/**
+ * Encrypted browser-vault record for one active issued credential. The vault
+ * is a local persistence boundary; implementations must never send this value
+ * over HTTP or include it in logs, telemetry, or receipts.
+ */
+export interface StoredCivicCredential {
+  readonly summary: CredentialSummary;
+  readonly authorization: CivicActionAuthorization;
+  readonly material: CivicCredentialPrivateMaterial;
+}
+
+/** Durable, encrypted local storage used to survive refresh and browser restart. */
+export interface CivicCredentialVaultPort {
+  load(): Promise<StoredCivicCredential | null>;
+  save(credential: StoredCivicCredential): Promise<void>;
+  clear(): Promise<void>;
 }
 
 /**

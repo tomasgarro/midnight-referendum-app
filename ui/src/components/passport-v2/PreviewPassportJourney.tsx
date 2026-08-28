@@ -16,10 +16,12 @@ import type {
   CredentialEnrollment,
   CredentialSummary,
   EnrollmentStatusSnapshot,
+  PassportHolderBindingResult,
   PassportSessionPort,
 } from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import { passportHolderBindingPort } from '@/integration/passport-session-port';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
 import { EnrollmentHandoff } from './EnrollmentHandoff';
 
@@ -34,8 +36,11 @@ export interface PreviewPassportJourneyPorts {
   readonly runtimeCatalogConfigured?: boolean;
 }
 
+export type PreviewPassportJourneyMode = 'preview' | 'undeployed';
+
 interface PreviewPassportJourneyProps {
   readonly ports: PreviewPassportJourneyPorts;
+  readonly mode?: PreviewPassportJourneyMode;
   readonly onClose: () => void;
   readonly onCredentialReady?: (credential: DemoCredentialSummary) => void;
   readonly onPassportConnected?: (session: CivicPassportSession | null) => void;
@@ -58,6 +63,7 @@ function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary 
 
 export function PreviewPassportJourney({
   ports,
+  mode = 'preview',
   onClose,
   onCredentialReady,
   onPassportConnected,
@@ -70,6 +76,7 @@ export function PreviewPassportJourney({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -111,6 +118,14 @@ export function PreviewPassportJourney({
         requestedCapabilities: ['session', 'profile'],
       });
       setSession(connected);
+      const holderBindingPort = passportHolderBindingPort(ports.passport);
+      if (holderBindingPort) {
+        const result = await holderBindingPort.getHolderBinding({
+          session: connected,
+          network: 'preview',
+        });
+        setHolderBinding(result);
+      }
       onPassportConnected?.(connected);
       setStage('provider');
     });
@@ -188,7 +203,9 @@ export function PreviewPassportJourney({
         <button className="back-button" onClick={onClose} type="button">
           <ArrowLeft size={18} /> Volver a la app
         </button>
-        <span className="passport-demo-label">PREVIEW · CREDENCIAL</span>
+        <span className="passport-demo-label">
+          {mode === 'undeployed' ? 'UNDEPLOYED · PASSPORT PREVIEW' : 'PREVIEW · CREDENCIAL'}
+        </span>
       </div>
 
       <header className="unified-onboarding-header">
@@ -199,9 +216,18 @@ export function PreviewPassportJourney({
         <div className="unified-truth-labels">
           <span className="live">
             <Fingerprint size={14} /> PASSPORT EN VIVO
+            {mode === 'undeployed' ? ' · CUENTA PREVIEW' : ''}
           </span>
           <span>
-            <ShieldCheck size={14} /> CREDENCIAL VERIFICADA
+            {mode === 'undeployed' ? (
+              <>
+                <Info size={14} /> CADENA LOCAL · NO DESPLEGADA
+              </>
+            ) : (
+              <>
+                <ShieldCheck size={14} /> CREDENCIAL VERIFICADA
+              </>
+            )}
           </span>
         </div>
       </header>
@@ -257,6 +283,13 @@ export function PreviewPassportJourney({
             Passport establece la sesión y el consentimiento de perfil. No comparte tu respuesta ni
             se usa como sustituto de una credencial de nacionalidad.
           </p>
+          {mode === 'undeployed' ? (
+            <PrivacyNotice>
+              Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra
+              superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una
+              cuenta local.
+            </PrivacyNotice>
+          ) : null}
           <PrivacyNotice>
             Solicitamos únicamente sesión y perfil visible. No pedimos wallet, voto, witnesses ni
             autorización de transacción.
@@ -293,6 +326,28 @@ export function PreviewPassportJourney({
               <dd>{session?.capabilities.join(', ')}</dd>
             </div>
           </dl>
+          {mode === 'undeployed' ? (
+            <div className="passport-notice info" role="status">
+              <Info size={18} />
+              <p>
+                Cuenta Passport: <strong>{session?.network ?? 'preview'}</strong>. Cadena de la
+                aplicación: <strong>local no desplegada</strong>. Estas redes no se mezclan.
+              </p>
+            </div>
+          ) : null}
+          {holderBinding ? (
+            <div
+              className={`passport-notice ${holderBinding.status === 'verified' ? 'success' : 'info'}`}
+              role="status"
+            >
+              {holderBinding.status === 'verified' ? <Check size={18} /> : <Info size={18} />}
+              <p>
+                {holderBinding.status === 'verified'
+                  ? 'Holder binding verificado para esta sesión Passport. El binding no se muestra ni se trata como un claim.'
+                  : 'Esta versión de Passport no expone un holder binding verificado. La sesión no se presenta como una credencial.'}
+              </p>
+            </div>
+          ) : null}
           {ports.credential ? (
             <>
               <PrivacyNotice>

@@ -1,3 +1,4 @@
+export * from './action-capability-issuer.js';
 export * from './config.js';
 export * from './credential-epoch-coordinator.js';
 export * from './credential-issuer-service.js';

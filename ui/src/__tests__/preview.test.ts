@@ -18,7 +18,7 @@ describe('Preview readiness', () => {
   it('requires a deployed contract before wallet approval', () => {
     const readiness = getPreviewReadiness({ ...base, contractAddress: null });
     expect(readiness.state).toBe('blocked');
-    expect(readiness.message).toContain('VITE_MIDNIGHT_CONTRACT_ADDRESS');
+    expect(readiness.message).toContain('catálogo v2');
   });
 
   it('reports wallet and provider prerequisites separately', () => {

@@ -5,6 +5,10 @@ import {
   ShieldedEncryptionPublicKey,
 } from '@midnight-ntwrk/wallet-sdk-address-format';
 import { loadConfig, type RelayerConfig } from './config.js';
+import { handleV2Route } from './v2-http.js';
+import { MidnightIndexerReceiptResolver } from './v2-indexer.js';
+import { createConfiguredV2Store } from './v2-runtime.js';
+import { V2ActionService } from './v2-service.js';
 import {
   balanceAndFinalize,
   deserializeFinalized,
@@ -82,7 +86,10 @@ function applyCors(
   if (!origin) return true;
   if (!config.allowedOrigins.includes(origin)) return false;
   response.setHeader('access-control-allow-origin', origin);
-  response.setHeader('access-control-allow-headers', 'content-type');
+  response.setHeader(
+    'access-control-allow-headers',
+    'content-type, authorization, idempotency-key, x-request-hash, x-action-capability',
+  );
   response.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
   response.setHeader('vary', 'origin');
   return true;
@@ -146,6 +153,55 @@ export async function startServer(): Promise<void> {
     error: (error: unknown) => console.error('[relayer] state stream error:', error),
   });
 
+  let v2Service: V2ActionService | null = null;
+  let closeV2Store: (() => Promise<void>) | undefined;
+  if (config.v2CapabilitySecret) {
+    try {
+      const configured = await createConfiguredV2Store(config);
+      closeV2Store = configured.close;
+      v2Service = new V2ActionService({
+        store: configured.store,
+        executor: {
+          balanceAndFinalize: async (tx) =>
+            serializeFinalized(
+              await enqueue(() => balanceAndFinalize(wallet, deserializeUnbound(tx))),
+            ),
+          submit: (tx) => enqueue(() => wallet.facade.submitTransaction(deserializeFinalized(tx))),
+          transactionId: (tx) => {
+            try {
+              return deserializeFinalized(tx).identifiers()[0];
+            } catch {
+              return undefined;
+            }
+          },
+        },
+        receiptResolver: new MidnightIndexerReceiptResolver({
+          indexerHttpUrl: config.indexerHttpUrl,
+          explorerBaseUrl: config.v2ExplorerBaseUrl,
+        }),
+        allowedNetworks: config.v2AllowedNetworks,
+        allowedContracts: config.v2AllowedContracts,
+        allowedCircuits: config.v2AllowedCircuits,
+        validateTransaction: (tx) => {
+          deserializeUnbound(tx);
+        },
+        capabilitySecret: config.v2CapabilitySecret,
+      });
+      await v2Service.start();
+      console.log(`[relayer] v2 enabled with ${configured.durableKind} action store`);
+    } catch (error) {
+      console.error('[relayer] v2 store failed to start:', (error as Error).message);
+      await wallet.stop().catch(() => undefined);
+      await closeV2Store?.().catch(() => undefined);
+      process.exitCode = 1;
+      return;
+    }
+  } else {
+    console.log(
+      '[relayer] v2 action routes disabled: RELAYER_V2_CAPABILITY_SECRET is not configured',
+    );
+  }
+
   const server = createServer((request, response) => {
     void (async () => {
       if (!applyCors(config, request, response)) {
@@ -160,6 +216,15 @@ export async function startServer(): Promise<void> {
 
       const url = new URL(request.url ?? '/', 'http://localhost');
       try {
+        if (
+          await handleV2Route(request, response, url, {
+            service: v2Service,
+            capabilitySecret: config.v2CapabilitySecret,
+            serviceAuthToken: config.v2AuthToken,
+          })
+        ) {
+          return;
+        }
         if (request.method === 'GET' && url.pathname === '/health') {
           const state = latest;
           if (!state) {

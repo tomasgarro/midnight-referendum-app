@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   deriveBallotCommitment,
   deriveRawCredentialLeaf,
+  deriveRegistryContractBinding,
   deriveVoteNullifier,
 } from '../api/src/passport-v2/crypto.js';
 import {
@@ -226,6 +227,7 @@ function setupReferendum(
     registry.claims.issuerId,
     registry.claims.epoch,
     options.root ?? root,
+    deriveRegistryContractBinding(dummyContractAddress()),
     eventId,
     roleKey('cico:referendum-v2:organizer:', organizerSecret),
     options.country ?? registry.claims.country,
@@ -284,9 +286,44 @@ describe('CredentialRegistryV1', () => {
       expect(Buffer.from(credentialLeaf(variant)).toString('hex')).not.toBe(baseline);
     }
   });
+
+  it('rejects freezing a historic root after enrollment changes', () => {
+    const { contract, context } = setupRegistry();
+    const emptyRoot = registryLedger(context.currentQueryContext.state).credentials.root();
+    const issued = contract.impureCircuits.addCredential(context);
+    const currentRoot = registryLedger(issued.context.currentQueryContext.state).credentials.root();
+
+    expect(currentRoot.field).not.toBe(emptyRoot.field);
+    expect(() => contract.impureCircuits.freeze(issued.context, emptyRoot)).toThrow(
+      'Invalid registry root',
+    );
+    const frozen = contract.impureCircuits.freeze(issued.context, currentRoot);
+    expect(registryLedger(frozen.context.currentQueryContext.state).frozenRoot.field).toBe(
+      currentRoot.field,
+    );
+  });
+
+  it('requires the issuer authority for both mutation circuits', () => {
+    const { contract, context, privateState } = setupRegistry();
+    privateState.issuerSecret = bytes(99);
+    expect(() => contract.impureCircuits.addCredential(context)).toThrow(
+      'Registry authorization failed',
+    );
+  });
 });
 
 describe('ReferendumV2 credential policy', () => {
+  it('retains the deterministic registry contract binding in public state', () => {
+    const item = setupReferendum();
+    const state = referendumLedger(item.context.currentQueryContext.state);
+    expect(state.registryContractBinding).toEqual(
+      deriveRegistryContractBinding(dummyContractAddress()),
+    );
+    expect(state.registryContractBinding).not.toEqual(
+      deriveRegistryContractBinding('11'.repeat(32)),
+    );
+  });
+
   it('casts privately, rejects replay, and binds nullifiers to the referendum', () => {
     const first = setupReferendum({ eventId: bytes(41) });
     const firstVote = first.contract.impureCircuits.castVote(first.context);
@@ -343,5 +380,63 @@ describe('ReferendumV2 credential policy', () => {
         'Credential policy not satisfied',
       );
     }
+  });
+
+  it('counts accepted commitments and keeps closed/phase transitions consistent', () => {
+    const item = setupReferendum();
+    const committed = item.contract.impureCircuits.castVote(item.context);
+    const committedState = referendumLedger(committed.context.currentQueryContext.state);
+    expect(committedState.issuedVotes).toBe(1n);
+    expect(committedState.closed).toBe(false);
+    expect(committedState.phase).toBe(0);
+
+    const closed = item.contract.impureCircuits.closeVote(committed.context);
+    const closedState = referendumLedger(closed.context.currentQueryContext.state);
+    expect(closedState.issuedVotes).toBe(1n);
+    expect(closedState.closed).toBe(true);
+    expect(closedState.phase).toBe(1);
+    expect(() => item.contract.impureCircuits.castVote(closed.context)).toThrow(
+      'Voting is not in the commit phase',
+    );
+    expect(() => item.contract.impureCircuits.closeVote(closed.context)).toThrow(
+      'The referendum is not in the commit phase',
+    );
+
+    const commitment = deriveBallotCommitment(item.eventId, 'YES', item.privateState.voteSalt);
+    item.privateState.revealPath = closedState.ballotCommitments.findPathForLeaf(commitment);
+    if (!item.privateState.revealPath) throw new Error('ballot commitment path was not inserted');
+    const revealed = item.contract.impureCircuits.revealVote(
+      closed.context,
+      Choice.YES,
+      item.privateState.voteSalt,
+    );
+    const revealedState = referendumLedger(revealed.context.currentQueryContext.state);
+    expect(revealedState.closed).toBe(true);
+    expect(revealedState.phase).toBe(1);
+    expect(revealedState.tally.lookup(Choice.YES)).toBe(1n);
+
+    const finalized = item.contract.impureCircuits.finalizeVote(revealed.context);
+    const finalizedState = referendumLedger(finalized.context.currentQueryContext.state);
+    expect(finalizedState.closed).toBe(true);
+    expect(finalizedState.phase).toBe(2);
+    expect(() =>
+      item.contract.impureCircuits.revealVote(
+        finalized.context,
+        Choice.YES,
+        item.privateState.voteSalt,
+      ),
+    ).toThrow('Voting is not in the reveal phase');
+  });
+
+  it('rejects an unauthorized organizer before changing phase', () => {
+    const item = setupReferendum({
+      mutatePrivateState: (state) => (state.organizerSecret = bytes(101)),
+    });
+    expect(() => item.contract.impureCircuits.closeVote(item.context)).toThrow(
+      'Organizer authorization failed',
+    );
+    const state = referendumLedger(item.context.currentQueryContext.state);
+    expect(state.phase).toBe(0);
+    expect(state.closed).toBe(false);
   });
 });

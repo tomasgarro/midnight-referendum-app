@@ -1,3 +1,4 @@
+import type { PassportHolderBindingResult } from 'midnight-referendum-api';
 import { describe, expect, it, vi } from 'vitest';
 import {
   MidnightPassportSessionAdapter,
@@ -153,5 +154,86 @@ describe('MidnightPassportSessionAdapter', () => {
       code: 'CAPABILITY_UNAVAILABLE',
     });
     expect(bridge.lastFieldsArgument).toEqual([]);
+  });
+
+  it('returns an explicit unsupported result when Passport has no native binding seam', async () => {
+    const adapter = new MidnightPassportSessionAdapter({ bridge: new FakeProfileBridge() });
+    const session = await adapter.connect({
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      requestedCapabilities: ['session'],
+    });
+
+    await expect(adapter.getHolderBinding({ session, network: 'preview' })).resolves.toEqual({
+      status: 'unsupported',
+      reason: expect.stringContaining('does not expose'),
+    });
+  });
+
+  it('validates and defensively copies a verified holder binding', async () => {
+    const binding = new Uint8Array(32).fill(7);
+    const holderBindingBridge = {
+      getHolderBinding: vi.fn(
+        async (): Promise<PassportHolderBindingResult> => ({
+          status: 'verified',
+          holderBinding: binding,
+          network: 'preview',
+          sessionId: 'passport-request-id',
+        }),
+      ),
+    };
+    const adapter = new MidnightPassportSessionAdapter({
+      bridge: new FakeProfileBridge(),
+      holderBindingBridge,
+    });
+    const session = await adapter.connect({
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      requestedCapabilities: ['session'],
+    });
+
+    const result = await adapter.getHolderBinding({ session, network: 'preview' });
+    expect(result).toMatchObject({
+      status: 'verified',
+      network: 'preview',
+      sessionId: session.sessionId,
+    });
+    if (result.status !== 'verified') throw new Error('Expected a verified binding');
+    expect(result.holderBinding).toEqual(binding);
+    result.holderBinding[0] = 99;
+    expect(binding[0]).toBe(7);
+    expect(holderBindingBridge.getHolderBinding).toHaveBeenCalledWith({
+      session,
+      network: 'preview',
+    });
+  });
+
+  it('rejects bindings for another session, network, or invalid byte length', async () => {
+    const adapter = new MidnightPassportSessionAdapter({
+      bridge: new FakeProfileBridge(),
+      holderBindingBridge: {
+        getHolderBinding: async (): Promise<PassportHolderBindingResult> => ({
+          status: 'verified',
+          holderBinding: new Uint8Array(31),
+          network: 'preview',
+          sessionId: 'passport-request-id',
+        }),
+      },
+    });
+    const session = await adapter.connect({
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      requestedCapabilities: ['session'],
+    });
+
+    await expect(
+      adapter.getHolderBinding({ session: { ...session, sessionId: 'other' }, network: 'preview' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(adapter.getHolderBinding({ session, network: 'devnet' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    await expect(adapter.getHolderBinding({ session, network: 'preview' })).rejects.toMatchObject({
+      code: 'INVALID_CREDENTIAL_CLAIMS',
+    });
   });
 });

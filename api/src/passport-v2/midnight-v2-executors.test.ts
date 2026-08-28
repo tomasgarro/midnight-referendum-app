@@ -1,5 +1,6 @@
 import { type FinalizedTxData, SucceedEntirely } from '@midnight-ntwrk/midnight-js-types';
 import { describe, expect, it } from 'vitest';
+import { deriveRegistryContractBinding } from './crypto.js';
 import type {
   CredentialRegistryV1PrivateState,
   FrozenCredentialRegistryReference,
@@ -52,7 +53,8 @@ const registryConfig = {
 };
 
 const frozenRegistry: FrozenCredentialRegistryReference = {
-  registryContractAddress: 'registry-address',
+  registryContractAddress: 'ab'.repeat(32),
+  registryContractBinding: deriveRegistryContractBinding('ab'.repeat(32)),
   registryId: new Uint8Array(32).fill(1),
   issuerId: new Uint8Array(32).fill(2),
   credentialEpoch: 7n,
@@ -147,6 +149,7 @@ describe('Midnight v2 executors', () => {
       frozenRegistry.issuerId,
       frozenRegistry.credentialEpoch,
       frozenRegistry.frozenRoot,
+      frozenRegistry.registryContractBinding,
       referendumConfig.eventId,
       referendumConfig.organizerKey,
       referendumConfig.countryPolicy,
