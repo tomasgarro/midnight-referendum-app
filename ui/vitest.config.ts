@@ -7,6 +7,12 @@ const configDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Tests must remain deterministic even when ui/.env is configured for the
+    // local Undeployed chain. Runtime mode is exercised by the dev server.
+    'import.meta.env.MODE': JSON.stringify('test'),
+    'import.meta.env.VITE_APP_MODE': JSON.stringify('demo'),
+  },
   test: {
     environment: 'jsdom',
     globals: true,

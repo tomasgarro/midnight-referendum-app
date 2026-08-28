@@ -1,57 +1,52 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PassportJourney } from '../components/passport-v2/PassportJourney';
 
 describe('PassportJourney', () => {
-  it('completes the deterministic Passport-first demo journey', async () => {
-    const user = userEvent.setup();
-    render(<PassportJourney mode="demo" onClose={vi.fn()} />);
-
-    expect(screen.getByRole('heading', { name: 'Conectá Midnight Passport' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Dar consentimiento de demo/i }));
-    expect(screen.getByRole('heading', { name: 'Qué hace cada pieza' })).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: /Continuar al enrolamiento local/i }));
-    expect(screen.getByRole('heading', { name: 'Enrolá una credencial de prueba' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Ejecutar fixture local/i }));
-    expect(screen.getByRole('heading', { name: 'Credencial lista para la demo' })).toBeTruthy();
-    expect(screen.getByText('SYNTHETIC DEMO CREDENTIAL')).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: /Elegir alcance/i }));
-    expect(
-      screen.getByRole('heading', { name: '¿En qué espacio querés participar?' }),
-    ).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Mi país · Argentina/i }));
-    expect(screen.getByRole('heading', { name: 'Elegí tu respuesta' })).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: /^Sí/ }));
-    await user.click(screen.getByRole('button', { name: /Revisar compromiso/i }));
-    expect(screen.getByRole('heading', { name: 'Revisá antes de probar' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Preparar prueba local/i }));
-    expect(screen.getByRole('heading', { name: 'Generando prueba local' })).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: /Enviar prueba al relayer demo/i }));
-    expect(screen.getByRole('heading', { name: 'Relayer autorizado' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Esperar confirmación del indexer/i }));
-    expect(screen.getByRole('heading', { name: 'Confirmando en el indexer' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Ver comprobante confirmado/i }));
-
-    expect(
-      screen.getByRole('heading', { name: 'Tu comprobante no revela tu elección' }),
-    ).toBeTruthy();
-    expect(screen.getByText('demo-tx-cico-2026-0001')).toBeTruthy();
-    expect(screen.getByText('Tu elección y su relación con tu identidad.')).toBeTruthy();
-    expect(screen.queryByText('Tu respuesta')).toBeNull();
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
-  it('does not pretend that a Preview credential is already available', () => {
+  it('ends the deterministic demo journey after credential success', async () => {
+    const user = userEvent.setup();
+    const onCredentialReady = vi.fn();
+    const onClose = vi.fn();
+    render(<PassportJourney mode="demo" onClose={onClose} onCredentialReady={onCredentialReady} />);
+
+    expect(screen.getByRole('heading', { name: 'A clearer way to participate' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Get started/i }));
+    expect(
+      screen.getByRole('heading', { name: 'Three separate things, one simple experience' }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Continue/i }));
+    await user.click(screen.getByRole('button', { name: /Use demo Passport/i }));
+    expect(screen.getByRole('heading', { name: 'This is what Passport shared' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Continue/i }));
+    expect(screen.getByRole('heading', { name: 'Prepare a credential, not a vote' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Prepare credential/i }));
+    await user.click(screen.getByRole('button', { name: /Use this country/i }));
+
+    expect(screen.getByRole('heading', { name: 'Your credential is ready' })).toBeTruthy();
+    expect(screen.getAllByText('SYNTHETIC CREDENTIAL').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Choose your scope|Elegí un espacio/i)).toBeNull();
+    expect(screen.queryByText(/Generate local proof|Generando prueba/i)).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Go to civic dashboard/i }));
+    expect(onCredentialReady).toHaveBeenCalledWith(
+      expect.objectContaining({ country: 'AR', ageClass: '18+' }),
+    );
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Preview honest when the live credential ports are not configured', () => {
     render(<PassportJourney mode="preview" onClose={vi.fn()} />);
 
     expect(
-      screen.getByRole('heading', { name: 'Passport todavía no emite credenciales aquí' }),
+      screen.getByRole('heading', { name: 'La credencial Passport todavía no está conectada' }),
     ).toBeTruthy();
-    expect(screen.getByText(/Rarimo permanece como un adaptador temporal/i)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Dar consentimiento de demo/i })).toBeNull();
+    expect(screen.getByText(/No presentamos una fixture como una credencial real/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Use demo Passport/i })).toBeNull();
   });
 });

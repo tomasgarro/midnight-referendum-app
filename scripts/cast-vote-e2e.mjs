@@ -1,7 +1,7 @@
 /**
- * Casts a real castVote transaction on Midnight Preview, end to end, without a
- * browser: it proves the circuit against the local proof server and lets the
- * funded relayer balance DUST and submit. This is the headless twin of what the
+ * Casts a real castVote transaction on Midnight Preview or local Undeployed,
+ * end to end, without a browser: it proves the circuit against the local proof
+ * server and lets the funded relayer balance DUST and submit. This is the headless twin of what the
  * UI does, and it is the script used to produce the recorded demo tx.
  *
  * Usage (from the repository root, inside WSL/Linux, with the relayer running):
@@ -111,7 +111,10 @@ const executor = api.createReferendumExecutor(providers, {
   organizerSecret,
   eventId: new Uint8Array(createHash('sha256').update('referendum:event:v1').digest()),
   explorerBaseUrl:
-    process.env.MIDNIGHT_EXPLORER_BASE_URL ?? 'https://explorer.preview.midnight.network/tx',
+    process.env.MIDNIGHT_EXPLORER_BASE_URL ??
+    (config.networkId === 'undeployed'
+      ? undefined
+      : 'https://explorer.preview.midnight.network/tx'),
 });
 
 await executor.join(contractAddress, {

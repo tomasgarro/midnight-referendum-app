@@ -26,16 +26,39 @@ function localProfileId(): string {
   }
 }
 
+function sessionIdentity(session: PassportSession | CivicPassportSession): string {
+  return 'sessionId' in session
+    ? (session.accountAddress ?? session.sessionId)
+    : (session.passportContract?.address ?? session.requestId);
+}
+
 /**
  * Creates a display identifier only. It is not used for eligibility,
  * commitments, nullifiers, or any Compact private input.
  */
 export function deriveProfileId(session: PassportSession | CivicPassportSession | null): string {
-  const address = session
-    ? 'sessionId' in session
-      ? session.accountAddress
-      : session.passportContract?.address
-    : undefined;
-  if (!address) return localProfileId();
-  return `passport-${shortHash(`referendum-civico:profile:v1:${address}`)}`;
+  const identity = session ? sessionIdentity(session) : undefined;
+  if (!identity) return localProfileId();
+  return `passport-${shortHash(`referendum-civico:profile:v1:${identity}`)}`;
+}
+
+/**
+ * Derive the private storage partition independently from the display id.
+ * Web Crypto keeps the Passport account out of browser storage and makes the
+ * partition unsuitable for reversing into the original account value.
+ */
+export async function deriveReceiptProfileKey(
+  session: PassportSession | CivicPassportSession | null,
+): Promise<string> {
+  if (!session) return '';
+  const identity = sessionIdentity(session);
+  const material = new TextEncoder().encode(`referendum-civico:receipt:v2:${identity}`);
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const digest = await crypto.subtle.digest('SHA-256', material);
+    const hex = Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, '0'),
+    ).join('');
+    return `passport-${hex}`;
+  }
+  return `passport-${shortHash(`referendum-civico:receipt:v2:${identity}`)}`;
 }

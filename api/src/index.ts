@@ -295,7 +295,7 @@ function createCompiledReferendum(_privateState: PrivateState) {
   return (CompiledContract.withCompiledFileAssets as any)(compiled, 'managed/referendum');
 }
 
-function receiptFrom(value: any, explorerBaseUrl: string): TransactionReceipt {
+function receiptFrom(value: any, explorerBaseUrl?: string): TransactionReceipt {
   const data = value.public ?? value;
   const txHash = String(data.txHash ?? data.txId);
   return {
@@ -305,7 +305,7 @@ function receiptFrom(value: any, explorerBaseUrl: string): TransactionReceipt {
     blockHash: String(data.blockHash),
     blockTimestamp: Number(data.blockTimestamp),
     status: String(data.status),
-    explorerUrl: `${explorerBaseUrl.replace(/\/$/, '')}/${txHash}`,
+    ...(explorerBaseUrl ? { explorerUrl: `${explorerBaseUrl.replace(/\/$/, '')}/${txHash}` } : {}),
   };
 }
 
@@ -314,7 +314,7 @@ export function createReferendumExecutor(
   providers: AppProviders,
   config: ReferendumConfig,
 ): ReferendumExecutor {
-  const explorerBaseUrl = config.explorerBaseUrl ?? 'https://explorer.preview.midnight.network/tx';
+  const explorerBaseUrl = config.explorerBaseUrl;
   let contract: any;
   const call = async (circuit: string, ...args: unknown[]) => {
     if (!contract) throw new Error('The referendum contract is not joined');

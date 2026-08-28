@@ -79,6 +79,9 @@ jobs:
           VITE_CICO_REFERENDA_JSON: '[]'
           VITE_PASSPORT_ORIGIN: ${{ vars.VITE_PASSPORT_ORIGIN || 'https://midnightpassport.com' }}
 
+      - name: Scan public showcase bundle
+        run: npm run verify:showcase
+
       - name: Deploy exact prebuilt artifact
         id: deploy
         run: |

@@ -8,10 +8,12 @@ vi.mock('midnight-referendum-api', () => ({
 }));
 
 function TestConsumer() {
-  const { isReady, error } = useMidnightProviders();
+  const { isReady, publicReadReady, publicReadError, error } = useMidnightProviders();
   return (
     <div>
       <span data-testid="ready">{isReady ? 'yes' : 'no'}</span>
+      <span data-testid="public-ready">{publicReadReady ? 'yes' : 'no'}</span>
+      <span data-testid="public-error">{publicReadError ?? 'none'}</span>
       <span data-testid="error">{error ?? 'none'}</span>
     </div>
   );
@@ -28,6 +30,8 @@ describe('MidnightProvidersProvider', () => {
     );
 
     expect(screen.getByTestId('ready').textContent).toBe('no');
+    expect(screen.getByTestId('public-ready').textContent).toBe('no');
+    expect(screen.getByTestId('public-error').textContent).toBe('none');
     expect(screen.getByTestId('error').textContent).toBe('none');
   });
 });

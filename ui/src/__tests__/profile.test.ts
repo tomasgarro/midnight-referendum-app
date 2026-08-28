@@ -22,4 +22,26 @@ describe('profile identity', () => {
     expect(deriveProfileId(null)).toBe(deriveProfileId(null));
     expect(deriveProfileId(null)).toMatch(/^local-/);
   });
+
+  it('separates Passport account-scoped receipt profiles without exposing the account', () => {
+    const base = {
+      origin: 'https://midnightpassport.com',
+      network: 'preview' as const,
+      status: 'connected' as const,
+      capabilities: ['session', 'profile'] as const,
+    };
+    const first = deriveProfileId({
+      ...base,
+      sessionId: 'same-session-shape',
+      accountAddress: 'mn_account_first_private_value',
+    });
+    const second = deriveProfileId({
+      ...base,
+      sessionId: 'same-session-shape',
+      accountAddress: 'mn_account_second_private_value',
+    });
+    expect(first).not.toBe(second);
+    expect(first).not.toContain('mn_account_first_private_value');
+    expect(second).not.toContain('mn_account_second_private_value');
+  });
 });

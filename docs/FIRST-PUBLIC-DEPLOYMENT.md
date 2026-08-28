@@ -108,6 +108,7 @@ CI=true npm run test:e2e
 npm audit --omit=dev
 git diff --check
 test -s ui/dist/index.html
+npm run verify:showcase
 node -e "JSON.parse(require('fs').readFileSync('vercel.json', 'utf8'))"
 ```
 

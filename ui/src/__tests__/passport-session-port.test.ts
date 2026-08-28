@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   MidnightPassportSessionAdapter,
   type PassportProfileBridge,
@@ -88,7 +88,9 @@ describe('MidnightPassportSessionAdapter', () => {
       network: 'preview',
       requestedCapabilities: ['session'],
     });
-    expect(bridge.lastFieldsArgument).toBeUndefined();
+    expect(bridge.lastFieldsArgument).toEqual([]);
+    expect((await adapter.getSession())?.profile).toBeUndefined();
+    expect((await adapter.getSession())?.accountAddress).toBeUndefined();
     await expect(adapter.requestCapability('profile')).resolves.toEqual({
       capability: 'profile',
       scope: 'http://localhost:4173',
@@ -99,5 +101,57 @@ describe('MidnightPassportSessionAdapter', () => {
     });
     await adapter.disconnect();
     await expect(adapter.getSession()).resolves.toBeNull();
+  });
+
+  it('requires a fresh Passport consent handshake for capability escalation', async () => {
+    const bridge = new FakeProfileBridge();
+    const adapter = new MidnightPassportSessionAdapter({ bridge });
+    await adapter.connect({
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      requestedCapabilities: ['session'],
+    });
+
+    expect(bridge.lastFieldsArgument).toEqual([]);
+    const grant = await adapter.requestCapability('profile');
+    expect(grant.capability).toBe('profile');
+    expect(bridge.lastFieldsArgument).toEqual(['displayName']);
+    expect((await adapter.getSession())?.capabilities).toEqual(['session', 'profile']);
+  });
+
+  it('does not manufacture a grant when Passport rejects escalation', async () => {
+    const bridge = new FakeProfileBridge();
+    const connect = vi
+      .spyOn(bridge, 'connect')
+      .mockResolvedValueOnce({
+        requestId: 'initial-request',
+        displayName: 'Initial',
+        passportContract: { address: 'initial-contract', network: 'preview' },
+        midnightAddresses: { unshielded: 'initial-address' },
+      })
+      .mockRejectedValueOnce(new Error('consent denied'));
+    const adapter = new MidnightPassportSessionAdapter({ bridge });
+    await adapter.connect({
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      requestedCapabilities: ['session'],
+    });
+    await expect(adapter.requestCapability('profile')).rejects.toThrow('consent denied');
+    expect((await adapter.getSession())?.capabilities).toEqual(['session']);
+    expect(connect).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when profile escalation has no requested fields', async () => {
+    const bridge = new FakeProfileBridge();
+    const adapter = new MidnightPassportSessionAdapter({ bridge, profileFields: [] });
+    await adapter.connect({
+      origin: 'http://localhost:4173',
+      network: 'preview',
+      requestedCapabilities: ['session'],
+    });
+    await expect(adapter.requestCapability('profile')).rejects.toMatchObject({
+      code: 'CAPABILITY_UNAVAILABLE',
+    });
+    expect(bridge.lastFieldsArgument).toEqual([]);
   });
 });

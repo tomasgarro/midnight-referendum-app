@@ -290,13 +290,21 @@ class EmbeddedHandshakeWatcher {
   }
 }
 
-const watchers = new Map<string, EmbeddedHandshakeWatcher>();
+// A single origin can be used by more than one embedded app window. Keep the
+// handshake pair scoped to both origin and source window so one frame cannot
+// consume another frame's nonce.
+const watchers = new Map<string, Map<Window, EmbeddedHandshakeWatcher>>();
 
 function embeddedWatcher(origin: string, sourceWindow: Window): EmbeddedHandshakeWatcher {
-  let watcher = watchers.get(origin);
+  let byWindow = watchers.get(origin);
+  if (!byWindow) {
+    byWindow = new Map<Window, EmbeddedHandshakeWatcher>();
+    watchers.set(origin, byWindow);
+  }
+  let watcher = byWindow.get(sourceWindow);
   if (!watcher) {
     watcher = new EmbeddedHandshakeWatcher(origin, sourceWindow);
-    watchers.set(origin, watcher);
+    byWindow.set(sourceWindow, watcher);
   }
   return watcher;
 }
@@ -322,7 +330,9 @@ export function startPassportHandshakeWatch(
 
 /** Test seam: drops cached embedded watchers between cases. */
 export function resetPassportHandshakeWatch(): void {
-  for (const watcher of watchers.values()) watcher.dispose();
+  for (const byWindow of watchers.values()) {
+    for (const watcher of byWindow.values()) watcher.dispose();
+  }
   watchers.clear();
 }
 
@@ -355,15 +365,19 @@ export class PassportIdentityBridge {
     return isPassportEmbedded(this.sourceWindow, this.origin);
   }
 
-  async connect(
-    fields: PassportProfileField[] = ['displayName', 'passportContract', 'midnightAddresses'],
-  ): Promise<PassportSession> {
+  async connect(fields?: PassportProfileField[]): Promise<PassportSession> {
     const relyingPartyError = getPassportOriginError(this.sourceWindow);
     if (relyingPartyError) {
       throw new PassportBridgeError(relyingPartyError, 'invalid_relying_party_origin');
     }
-    const requestedFields = [...new Set(fields)].filter(isField);
-    if (requestedFields.length === 0) {
+    // Keep the convenience default minimal. An explicit empty list is valid
+    // for a session-only handshake; it must not be confused with an invalid
+    // list containing only unknown field names.
+    const requestedFields =
+      fields === undefined
+        ? (['displayName'] satisfies PassportProfileField[])
+        : [...new Set(fields)].filter(isField);
+    if (fields !== undefined && fields.length > 0 && requestedFields.length === 0) {
       throw new PassportBridgeError(
         'Passport profile requires at least one field',
         'invalid_configuration',
@@ -443,30 +457,34 @@ export class PassportIdentityBridge {
       passportRequestId: pair.requestId,
       passportNonce: pair.nonce,
     });
-    const popup = this.openPassport(`${this.origin}/?${query.toString()}`, PASSPORT_WINDOW_NAME);
-    if (!popup) {
-      return Promise.reject(
-        new PassportBridgeError(
-          'El navegador bloqueó la ventana de Passport. Permití las ventanas emergentes y probá otra vez.',
-          'unavailable',
-        ),
-      );
-    }
-
     return new Promise<PassportSession>((resolve, reject) => {
       let settled = false;
+      let popup: Window | null = null;
+      let timeout: number | undefined;
+      let closedPoll: number | undefined;
+      let earlyReady: { source: MessageEvent['source']; data: ProfileReady } | null = null;
       const finish = (error?: Error, session?: PassportSession) => {
         if (settled) return;
         settled = true;
         this.sourceWindow.removeEventListener('message', onMessage);
-        window.clearTimeout(timeout);
-        window.clearInterval(closedPoll);
+        if (timeout !== undefined) window.clearTimeout(timeout);
+        if (closedPoll !== undefined) window.clearInterval(closedPoll);
         if (error) reject(error);
         else resolve(session!);
       };
 
       const onMessage = (event: MessageEvent) => {
-        if (event.origin !== this.origin || event.source !== popup) return;
+        if (event.origin !== this.origin) return;
+        // open() can synchronously trigger a ready event in a test seam or a
+        // same-process popup. Hold it until open() returns and its Window
+        // object can be checked against event.source.
+        if (!popup) {
+          if (isReady(event.data)) {
+            earlyReady = { source: event.source, data: event.data };
+          }
+          return;
+        }
+        if (event.source !== popup) return;
 
         if (isReady(event.data)) {
           if (event.data.requestId !== pair.requestId || event.data.nonce !== pair.nonce) return;
@@ -484,10 +502,35 @@ export class PassportIdentityBridge {
         finish(undefined, this.session(pair, response));
       };
 
+      // Install the listener before opening Passport. The popup can post its
+      // ready message immediately after navigation, before open() returns to
+      // the caller's event loop.
+      this.sourceWindow.addEventListener('message', onMessage);
+      try {
+        popup = this.openPassport(`${this.origin}/?${query.toString()}`, PASSPORT_WINDOW_NAME);
+      } catch {
+        finish(
+          new PassportBridgeError(
+            'No se pudo abrir Passport. Permití las ventanas emergentes y probá otra vez.',
+            'unavailable',
+          ),
+        );
+        return;
+      }
+      if (!popup) {
+        finish(
+          new PassportBridgeError(
+            'El navegador bloqueó la ventana de Passport. Permití las ventanas emergentes y probá otra vez.',
+            'unavailable',
+          ),
+        );
+        return;
+      }
+
       // A user who closes the Passport window is not a timeout; say so at once
       // rather than leaving the flow spinning for the full budget.
-      const closedPoll = window.setInterval(() => {
-        if (popup.closed) {
+      closedPoll = window.setInterval(() => {
+        if (popup?.closed) {
           finish(
             new PassportBridgeError(
               'La ventana de Passport se cerró antes de aprobar el perfil.',
@@ -497,7 +540,7 @@ export class PassportIdentityBridge {
         }
       }, POPUP_POLL_MS);
 
-      const timeout = window.setTimeout(() => {
+      timeout = window.setTimeout(() => {
         finish(
           new PassportBridgeError(
             'Passport no respondió a tiempo. Volvé a abrir Passport e intentá de nuevo.',
@@ -506,7 +549,17 @@ export class PassportIdentityBridge {
         );
       }, this.timeoutMs);
 
-      this.sourceWindow.addEventListener('message', onMessage);
+      const pendingReady = earlyReady as {
+        source: MessageEvent['source'];
+        data: ProfileReady;
+      } | null;
+      if (pendingReady?.source === popup) {
+        const ready = pendingReady.data;
+        if (ready.requestId === pair.requestId && ready.nonce === pair.nonce) {
+          popup.postMessage(profileRequest(pair, fields), this.origin);
+        }
+        earlyReady = null;
+      }
     });
   }
 }
