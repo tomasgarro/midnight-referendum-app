@@ -30,7 +30,7 @@ export default defineConfig({
   webServer: externalBaseUrl
     ? undefined
     : {
-        command: 'npm run dev -- --host localhost --port 4173 --strictPort',
+        command: 'npm run dev -- --mode demo --host localhost --port 4173 --strictPort',
         url: 'http://localhost:4173',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

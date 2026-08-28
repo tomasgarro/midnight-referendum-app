@@ -16,9 +16,12 @@ function passportPort(connect = vi.fn()) {
 }
 
 describe('Passport-first public showcase', () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
 
-  it('connects live Passport using only session/profile and keeps later steps explicit', async () => {
+  it('connects live Passport without contacting a wallet or entering the vote flow', async () => {
     const user = userEvent.setup();
     const connect = vi.fn().mockResolvedValue({
       sessionId: 'passport-request-1',
@@ -28,45 +31,56 @@ describe('Passport-first public showcase', () => {
       profile: { displayName: 'alice.night' },
       capabilities: ['session', 'profile'],
     });
+    const onCredentialReady = vi.fn();
     render(
-      <PassportJourney mode="showcase" passportPort={passportPort(connect)} onClose={vi.fn()} />,
+      <PassportJourney
+        mode="showcase"
+        passportPort={passportPort(connect)}
+        onClose={vi.fn()}
+        onCredentialReady={onCredentialReady}
+      />,
     );
 
-    expect(screen.getByText('LIVE PASSPORT')).toBeTruthy();
-    expect(screen.getByText('SYNTHETIC CREDENTIAL')).toBeTruthy();
-    expect(screen.getByText('SIMULATED VOTE')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Begin privacy walkthrough/i }));
-    await user.click(screen.getByRole('button', { name: /^Connect Passport/i }));
-
+    expect(screen.getByText(/LIVE PASSPORT · PROVIDER-OWNED/i)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Get started/i }));
+    await user.click(screen.getByRole('button', { name: /Continue/i }));
+    await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
     expect(connect).toHaveBeenCalledWith(
       expect.objectContaining({ requestedCapabilities: ['session', 'profile'] }),
     );
     expect(await screen.findByText('alice.night')).toBeTruthy();
-    expect(screen.queryByText(/midnight-display-address/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Continue/i }));
+    await user.click(screen.getByRole('button', { name: /Prepare credential/i }));
+    expect(
+      screen.getByRole('heading', { name: 'The credential is not connected yet' }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/SYNTHETIC CREDENTIAL/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Explore World/i }));
+    expect(onCredentialReady).not.toHaveBeenCalled();
   });
 
-  it('offers a retryable failure and an honest non-session fallback', async () => {
+  it('offers a retryable live Passport failure without bypassing the session gate', async () => {
     const user = userEvent.setup();
     const connect = vi.fn().mockRejectedValue(new Error('Popup closed'));
     render(
       <PassportJourney mode="showcase" passportPort={passportPort(connect)} onClose={vi.fn()} />,
     );
-    await user.click(screen.getByRole('button', { name: /Begin privacy walkthrough/i }));
-    await user.click(screen.getByRole('button', { name: /^Connect Passport/i }));
+    await user.click(screen.getByRole('button', { name: /Get started/i }));
+    await user.click(screen.getByRole('button', { name: /Continue/i }));
+    await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
     expect((await screen.findByRole('alert')).textContent).toContain('Popup closed');
-    await user.click(screen.getByRole('button', { name: /Continue without a Passport session/i }));
-    expect(screen.getByText('Exploring anonymously')).toBeTruthy();
-    expect(screen.queryByText('LIVE PASSPORT', { selector: 'small' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Explore without connecting/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Continue with Midnight Passport' })).toBeTruthy();
   });
 
-  it('keeps the critical journey bilingual through the persistent language switch', async () => {
+  it('keeps the onboarding bilingual through the language switch', async () => {
     const user = userEvent.setup();
     render(<PassportJourney mode="showcase" passportPort={passportPort()} onClose={vi.fn()} />);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'es');
-    expect(
-      screen.getByRole('heading', { name: 'Sabé qué está activo antes de empezar' }),
-    ).toBeTruthy();
-    expect(screen.getByText('PASSPORT EN VIVO')).toBeTruthy();
+
+    expect(screen.getByRole('heading', { name: 'Una forma más clara de participar' })).toBeTruthy();
+    expect(screen.getByText(/PASSPORT EN VIVO · PROVEEDOR RESPONSABLE/i)).toBeTruthy();
     expect(window.localStorage.getItem('cico-locale')).toBe('es');
+    expect(screen.getByRole('list', { name: 'Tu primer recorrido' })).toBeTruthy();
   });
 });

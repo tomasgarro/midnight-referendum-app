@@ -63,6 +63,7 @@ const api = await import('../api/dist/index.js');
 
 const config = loadConfig();
 const relayerUrl = `http://${config.host}:${config.port}`;
+const isUndeployed = config.networkId === 'undeployed';
 console.log(`network: ${config.networkId}`);
 
 // Talk to the running relayer rather than starting a second wallet on the same
@@ -110,7 +111,8 @@ const executor = api.createReferendumExecutor(providers, {
   organizerSecret,
   eventId: new Uint8Array(createHash('sha256').update('referendum:event:v1').digest()),
   explorerBaseUrl:
-    process.env.MIDNIGHT_EXPLORER_BASE_URL ?? 'https://explorer.preview.midnight.network/tx',
+    process.env.MIDNIGHT_EXPLORER_BASE_URL ??
+    (isUndeployed ? undefined : 'https://explorer.preview.midnight.network/tx'),
 });
 
 const envPath = resolve(ROOT, 'ui/.env');
@@ -142,14 +144,27 @@ if (issueCommitment) {
   }
 
   console.log(`\ncontract address: ${address}`);
-  const nextEnv = currentEnv.includes('VITE_MIDNIGHT_CONTRACT_ADDRESS=')
+  let nextEnv = currentEnv.includes('VITE_MIDNIGHT_CONTRACT_ADDRESS=')
     ? currentEnv.replace(
         /^VITE_MIDNIGHT_CONTRACT_ADDRESS=.*$/m,
         `VITE_MIDNIGHT_CONTRACT_ADDRESS=${address}`,
       )
     : `${currentEnv.trimEnd()}\nVITE_MIDNIGHT_CONTRACT_ADDRESS=${address}\n`;
+  if (isUndeployed) {
+    nextEnv = upsertEnv(nextEnv, 'VITE_APP_MODE', 'undeployed');
+    nextEnv = upsertEnv(nextEnv, 'VITE_MIDNIGHT_NETWORK', 'undeployed');
+  }
   writeFileSync(envPath, nextEnv);
   console.log(`written to ui/.env`);
-  console.log('\nnext: set VITE_APP_MODE=preview in ui/.env and restart the dev server.');
+  console.log(
+    `\nnext: restart the dev server with VITE_APP_MODE=${isUndeployed ? 'undeployed' : 'preview'}.`,
+  );
 }
 process.exit(0);
+
+function upsertEnv(source, key, value) {
+  const line = `${key}=${value}`;
+  return new RegExp(`^${key}=.*$`, 'm').test(source)
+    ? source.replace(new RegExp(`^${key}=.*$`, 'm'), line)
+    : `${source.trimEnd()}\n${line}\n`;
+}

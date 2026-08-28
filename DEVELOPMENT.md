@@ -3,15 +3,14 @@
 This repository is the public code boundary. Keep Obsidian notes, recordings,
 credentials, and other private material in the parent vault.
 
-## The one checkout
+## The working checkout
 
-The working copy lives at `~/src/referendum` inside WSL. There is no second
-copy: work was previously split across a `/mnt/c` checkout and a separate clone
-pointing at a different git remote, and edits were lost between them. Both old
-directories now carry a `MOVED.md`.
+Keep one Linux-native clone as the authoritative build checkout inside WSL2.
+The Windows checkout can be used for the browser and editor, but Node,
+npm, Compact, tests, and builds must use the Linux-native clone.
 
-Staying on ext4 rather than `/mnt/c` is not cosmetic — the UI test suite runs
-in about 7 seconds here and took over 7 minutes on the Windows filesystem.
+Staying on ext4 rather than `/mnt/c` is important: the UI test suite is much
+faster there and avoids native-module and file-lock issues.
 
 ## Running it locally
 
@@ -19,13 +18,41 @@ Everything runs on `localhost`; there is no hosted deployment. Passport
 passkeys and `getUserMedia` both accept `http://localhost`, so no HTTPS or
 tunnel is needed.
 
-Three processes:
+Local-first Undeployed stack:
 
 ```bash
-docker start referendum-proof-server   # published on 127.0.0.1:6300, image 8.1.0
+npm run devnet:up                       # node 9944, indexer 8088, proof 6300
+npm run devnet:ps
+npm run dev:undeployed
+```
+
+See [the local compatibility matrix](docs/COMPATIBILITY-MATRIX.md) for the
+pinned image/package versions and health checks. If a compatible proof server
+is already healthy on port `6300`, `devnet:up` reuses it and starts the node and
+indexer only.
+
+The existing Preview-oriented three-process path remains available for the
+relayer pilot:
+
+```bash
 npm run relayer                        # sponsored fee payer, 127.0.0.1:8790
 npm run dev -- --host localhost --port 4173 --strictPort
 ```
+
+For a local sponsored transaction path, copy
+`relayer/.env.undeployed.example` to `relayer/.env.undeployed`, fill only the
+local `RELAYER_SEED`, then use these commands:
+
+```bash
+npm run relayer:address:undeployed
+npm run relayer:undeployed
+npm run deploy:undeployed
+```
+
+The relayer must receive local NIGHT and register DUST before deployment. Use
+the official [midnight-local-dev funding
+tool](https://github.com/midnightntwrk/midnight-local-dev) to fund the
+printed Undeployed address; do not use a Preview faucet or a Preview wallet.
 
 The proof server must be **published** to the host. A container started with
 `--expose` alone is unreachable from both the browser and the relayer, and
@@ -43,7 +70,7 @@ compiler available to the same environment that builds the app.
 Use Ubuntu on WSL2:
 
 ```bash
-cd "/mnt/c/Users/tomas/Desktop/Midnight/BS AS Hackathon/12 Project"
+cd ~/src/referendum
 source ~/.nvm/nvm.sh 2>/dev/null || true
 nvm install
 nvm use
@@ -112,8 +139,10 @@ cp ui/.env.example ui/.env
 
 Use `VITE_APP_MODE=preview` only after setting a deployed contract address and
 connecting a Preview-compatible DApp Connector wallet. The default mode is the
-wallet-less, read-only demo. It never creates a simulated receipt; only a
-canonical Preview confirmation is written to the local profile history.
+wallet-less demo. It may save an explicitly simulated, Passport-scoped local
+receipt after demo completion; it never represents that receipt as a canonical
+chain confirmation. Only a canonical Preview confirmation is marked confirmed
+in local profile history.
 
 ## Run and test
 
@@ -133,6 +162,13 @@ Run the deterministic demo checks:
 ```bash
 npm run verify:linux
 ```
+
+If Vitest stops before collecting tests when this repository is opened under
+`/mnt/c`, do not mix the Windows `node_modules` tree with Linux Node. Use a
+Linux-native WSL checkout (for example under `~/src`), install dependencies
+there with Node 22, and rerun the same command. The product code is unchanged;
+the cross-filesystem runner symptom is an open verification gate until that
+native checkout completes cleanly.
 
 Run the full Preview-oriented checks after installing `compactc`:
 

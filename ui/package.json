@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.dev.config.ts --configLoader runner",
     "build": "tsc -b && vite build --configLoader runner",
-    "preview": "vite preview",
+    "preview": "vite preview --config vite.config.ts --configLoader runner",
     "test": "vitest run --configLoader runner",
     "test:watch": "vitest",
     "sync:contract": "node ../scripts/sync-contract-assets.mjs"

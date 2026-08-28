@@ -1,4 +1,5 @@
 export type PreviewReadinessState = 'demo' | 'blocked' | 'loading' | 'ready';
+export type PublicReadinessState = 'demo' | 'blocked' | 'loading' | 'ready';
 
 export interface PreviewReadiness {
   state: PreviewReadinessState;
@@ -6,14 +7,94 @@ export interface PreviewReadiness {
   message: string;
 }
 
+export interface PublicReadiness {
+  state: PublicReadinessState;
+  label: string;
+  message: string;
+}
+
 export interface PreviewReadinessInput {
-  appMode: 'demo' | 'preview';
+  appMode: 'demo' | 'preview' | 'undeployed';
   contractAddress: string | null;
   walletConnected: boolean;
   providersReady: boolean;
   providersError?: string | null;
   /** Sponsored-relayer path: the citizen needs no wallet at all. */
   relayerMode?: boolean;
+  /** A configured v2 catalog changes the action contract: no legacy fallback. */
+  v2RuntimeConfigured?: boolean;
+  /** True only after a provider-backed credential has been issued and verified. */
+  credentialVerified?: boolean;
+}
+
+export interface PublicReadinessInput {
+  appMode: 'demo' | 'preview' | 'undeployed';
+  contractAddress: string | null;
+  publicProviderReady: boolean;
+  publicProviderError?: string | null;
+}
+
+export interface RuntimeReferendumIdentity {
+  readonly referendumId: string;
+}
+
+/**
+ * Runtime catalogs may namespace a product poll (`poll:world`) while the UI
+ * keeps the stable product ID (`poll`). Prefix matching is accepted only when
+ * it is unambiguous; an ambiguous catalog fails closed.
+ */
+export function findRuntimeReferendum<T extends RuntimeReferendumIdentity>(
+  referenda: readonly T[],
+  pollId: string,
+): T | null {
+  const exact = referenda.filter((entry) => entry.referendumId === pollId);
+  if (exact.length === 1) return exact[0] ?? null;
+  if (exact.length > 1) return null;
+  const namespaced = referenda.filter((entry) => entry.referendumId.startsWith(`${pollId}:`));
+  return namespaced.length === 1 ? (namespaced[0] ?? null) : null;
+}
+
+export type PassportV2ActionRoute =
+  | { readonly mode: 'legacy' }
+  | { readonly mode: 'v2'; readonly referendumId: string }
+  | { readonly mode: 'blocked'; readonly message: string };
+
+export interface PassportV2ActionRouteInput {
+  readonly runtimeConfigured: boolean;
+  readonly runtimeError?: string | null;
+  readonly credentialVerified: boolean;
+  readonly actionPortAvailable: boolean;
+  readonly referendumId: string | null;
+}
+
+/**
+ * Selects the only permitted action boundary. An enabled-but-incomplete v2
+ * runtime can never fall through to the legacy executor.
+ */
+export function resolvePassportV2ActionRoute(
+  input: PassportV2ActionRouteInput,
+): PassportV2ActionRoute {
+  if (!input.runtimeConfigured && !input.runtimeError) return { mode: 'legacy' };
+  if (input.runtimeError) {
+    return {
+      mode: 'blocked',
+      message: `La configuración Passport v2 es inválida; el voto fue bloqueado: ${input.runtimeError}`,
+    };
+  }
+  if (!input.credentialVerified) {
+    return {
+      mode: 'blocked',
+      message: 'La acción v2 requiere una credencial Passport verificada; no se usará una fixture.',
+    };
+  }
+  if (!input.actionPortAvailable || !input.referendumId) {
+    return {
+      mode: 'blocked',
+      message:
+        'La consulta no tiene una configuración v2 completa para esta red; el voto fue bloqueado.',
+    };
+  }
+  return { mode: 'v2', referendumId: input.referendumId };
 }
 
 /**
@@ -31,12 +112,33 @@ export function getPreviewReadiness(input: PreviewReadinessInput): PreviewReadin
     };
   }
 
+  const networkLabel = input.appMode === 'undeployed' ? 'Undeployed local' : 'Preview';
+
   if (!input.contractAddress) {
     return {
       state: 'blocked',
-      label: 'Preview requiere contrato',
+      label: `${networkLabel} requiere contrato`,
+      message: `${networkLabel} no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS con un contrato desplegado en esta red.`,
+    };
+  }
+
+  // Provider failures are more actionable than the wallet state. In
+  // particular, do not make a disconnected wallet look like the cause when
+  // the configured network/indexer is already unavailable.
+  if (input.providersError) {
+    return {
+      state: 'blocked',
+      label: `${networkLabel} no disponible`,
+      message: `No se pudieron preparar los proveedores de Midnight: ${input.providersError}`,
+    };
+  }
+
+  if (input.v2RuntimeConfigured && !input.credentialVerified) {
+    return {
+      state: 'blocked',
+      label: `${networkLabel} requiere credencial`,
       message:
-        'Preview no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS con un contrato desplegado.',
+        'La acción v2 requiere una credencial Passport verificada. No se usará una fixture ni el flujo de voto legado como alternativa.',
     };
   }
 
@@ -46,31 +148,64 @@ export function getPreviewReadiness(input: PreviewReadinessInput): PreviewReadin
   if (!input.relayerMode && !input.walletConnected) {
     return {
       state: 'blocked',
-      label: 'Preview requiere wallet',
-      message: 'Conectá un wallet DApp Connector para aprobar y balancear la transacción.',
-    };
-  }
-
-  if (input.providersError) {
-    return {
-      state: 'blocked',
-      label: 'Preview no disponible',
-      message: `No se pudieron preparar los proveedores de Midnight: ${input.providersError}`,
+      label: `${networkLabel} requiere wallet`,
+      message: `Conectá un wallet DApp Connector en ${networkLabel} para aprobar y balancear la transacción.`,
     };
   }
 
   if (!input.providersReady) {
     return {
       state: 'loading',
-      label: 'Preparando Preview',
-      message:
-        'La wallet está conectada, pero los proveedores de Midnight todavía se están preparando.',
+      label: `Preparando ${networkLabel}`,
+      message: `La wallet está conectada, pero los proveedores de ${networkLabel} todavía se están preparando.`,
     };
   }
 
   return {
     state: 'ready',
-    label: 'Preview listo',
-    message: 'Preview está listo para preparar una transacción real.',
+    label: `${networkLabel} listo`,
+    message: `${networkLabel} está listo para preparar una transacción real.`,
+  };
+}
+
+/**
+ * Public contract state is a read concern, not a wallet concern. A public
+ * indexer provider can be ready while action providers are still blocked.
+ */
+export function getPublicReadiness(input: PublicReadinessInput): PublicReadiness {
+  if (input.appMode === 'demo') {
+    return {
+      state: 'demo',
+      label: 'Solo lectura local',
+      message: 'El modo demo no consulta una red ni presenta estado canónico.',
+    };
+  }
+
+  const networkLabel = input.appMode === 'undeployed' ? 'Undeployed local' : 'Preview';
+  if (!input.contractAddress) {
+    return {
+      state: 'blocked',
+      label: `${networkLabel} requiere contrato`,
+      message: `${networkLabel} no está configurado: definí VITE_MIDNIGHT_CONTRACT_ADDRESS para leer el estado público.`,
+    };
+  }
+  if (input.publicProviderError) {
+    return {
+      state: 'blocked',
+      label: `${networkLabel} no disponible`,
+      message: `No se pudo leer el estado público de ${networkLabel}: ${input.publicProviderError}`,
+    };
+  }
+  if (!input.publicProviderReady) {
+    return {
+      state: 'loading',
+      label: `Preparando lectura de ${networkLabel}`,
+      message: `El indexer de ${networkLabel} todavía se está preparando.`,
+    };
+  }
+  return {
+    state: 'ready',
+    label: `Lectura ${networkLabel} lista`,
+    message: `El estado público de ${networkLabel} se puede consultar sin conectar una wallet.`,
   };
 }

@@ -64,18 +64,31 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
       );
     }
 
-    const raw = request.requestedCapabilities.includes('profile')
-      ? await this.bridge.connect([...this.profileFields])
-      : await this.bridge.connect();
+    const profileRequested = request.requestedCapabilities.includes('profile');
+    if (profileRequested && this.profileFields.length === 0) {
+      throw new CivicCredentialError(
+        'CAPABILITY_UNAVAILABLE',
+        'Midnight Passport no tiene campos de perfil habilitados para esta sesión',
+      );
+    }
+    // An explicit empty field list is the session-only C23 handshake. Do not
+    // call the bridge with an omitted argument here: a bridge is allowed to
+    // have a convenient display-profile default, but that default must never
+    // turn a session request into an address/profile disclosure.
+    const raw = await this.bridge.connect(profileRequested ? [...this.profileFields] : []);
     this.session = {
       sessionId: raw.requestId,
       origin: request.origin,
       network: request.network,
       status: 'connected',
-      ...(raw.displayName ? { profile: { displayName: raw.displayName } } : {}),
-      ...(this.profileFields.includes('midnightAddresses') && raw.midnightAddresses?.unshielded
+      ...(profileRequested && raw.displayName ? { profile: { displayName: raw.displayName } } : {}),
+      ...(profileRequested &&
+      this.profileFields.includes('midnightAddresses') &&
+      raw.midnightAddresses?.unshielded
         ? { accountAddress: raw.midnightAddresses.unshielded }
-        : this.profileFields.includes('passportContract') && raw.passportContract?.address
+        : profileRequested &&
+            this.profileFields.includes('passportContract') &&
+            raw.passportContract?.address
           ? { accountAddress: raw.passportContract.address }
           : {}),
       capabilities: [...request.requestedCapabilities],
@@ -100,6 +113,43 @@ export class MidnightPassportSessionAdapter implements PassportSessionPort {
         `Midnight Passport does not currently expose ${capability} through the profile bridge`,
       );
     }
+
+    // A capability grant is an authorization event, not a local type check.
+    // Re-run the Passport bridge so escalation always has a fresh consent
+    // handshake. If Passport rejects or returns no result, the previous
+    // session remains unchanged and no grant is manufactured.
+    const profileRequested = capability === 'profile';
+    if (profileRequested && this.profileFields.length === 0) {
+      throw new CivicCredentialError(
+        'CAPABILITY_UNAVAILABLE',
+        'Midnight Passport no tiene campos de perfil habilitados para esta sesión',
+      );
+    }
+    const raw = await this.bridge.connect(profileRequested ? [...this.profileFields] : []);
+    const current = this.session;
+    if (!current) {
+      throw new CivicCredentialError(
+        'PASSPORT_SESSION_REQUIRED',
+        'Connect Midnight Passport before requesting a capability',
+      );
+    }
+    this.session = {
+      ...current,
+      sessionId: raw.requestId,
+      ...(profileRequested && raw.displayName ? { profile: { displayName: raw.displayName } } : {}),
+      ...(profileRequested &&
+      this.profileFields.includes('midnightAddresses') &&
+      raw.midnightAddresses?.unshielded
+        ? { accountAddress: raw.midnightAddresses.unshielded }
+        : profileRequested &&
+            this.profileFields.includes('passportContract') &&
+            raw.passportContract?.address
+          ? { accountAddress: raw.passportContract.address }
+          : {}),
+      capabilities: current.capabilities.includes(capability)
+        ? [...current.capabilities]
+        : [...current.capabilities, capability],
+    };
     return {
       capability,
       scope: this.session.origin,

@@ -85,7 +85,7 @@ export interface TransactionReceipt {
   blockHash: string;
   blockTimestamp: number;
   status: string;
-  explorerUrl: string;
+  explorerUrl?: string;
 }
 
 export interface ReferendumExecutor {

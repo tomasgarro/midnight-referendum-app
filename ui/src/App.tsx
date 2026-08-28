@@ -30,13 +30,21 @@ import type {
   PrivateState,
   VoteReveal,
 } from 'midnight-referendum-api';
-import { MidnightCivicActionAdapter, RarimoCivicCredentialAdapter } from 'midnight-referendum-api';
+import {
+  MidnightCivicActionAdapter,
+  RarimoCivicCredentialAdapter,
+  watchReferendumState,
+} from 'midnight-referendum-api';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { DniVerification, type DniVerificationResult } from '@/components/dni-verification';
 import { PassportJourney } from '@/components/passport-v2/PassportJourney';
-import { useReferendumState } from '@/hooks/use-contract-state';
+import type { PreviewPassportJourneyPorts } from '@/components/passport-v2/PreviewPassportJourney';
+import { WalletWidget } from '@/components/wallet-widget';
 import { useWallet } from '@/hooks/use-wallet';
-import { parseAppMode } from '@/integration/app-mode';
+import { resolveAppMode } from '@/integration/app-mode';
+import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import type { ActionMode, ConsultationArea } from '@/integration/civic-state';
+import { ASSIGNED_COUNTRIES, countryName as getCountryName } from '@/integration/country-catalog';
 import { PassportIdentityBridge } from '@/integration/passport';
 import { MidnightPassportSessionAdapter } from '@/integration/passport-session-port';
 import {
@@ -44,9 +52,20 @@ import {
   HttpRarimoVerificationGateway,
 } from '@/integration/passport-v2-http-ports';
 import { parsePassportV2RuntimeConfig } from '@/integration/passport-v2-runtime-config';
-import { getPreviewReadiness } from '@/integration/preview';
-import { deriveProfileId } from '@/integration/profile';
+import { countOpenPolls, getPollAvailability } from '@/integration/poll-lifecycle';
+import {
+  findRuntimeReferendum,
+  getPreviewReadiness,
+  getPublicReadiness,
+  resolvePassportV2ActionRoute,
+} from '@/integration/preview';
+import { deriveProfileId, deriveReceiptProfileKey } from '@/integration/profile';
 import { rarimoIsoCountryMapper } from '@/integration/rarimo-country-mapper';
+import {
+  loadPassportReceipts,
+  type PassportReceiptRecord,
+  savePassportReceipt,
+} from '@/integration/receipt-store';
 import {
   MidnightProvidersProvider,
   RELAYER_MODE,
@@ -72,6 +91,8 @@ interface Poll {
   question: string;
   deadline: string;
   opened: string;
+  opensAt: string;
+  closesAt: string;
   eligible: string;
   participation: string;
   whyNow: string;
@@ -84,21 +105,30 @@ interface Poll {
   sources: Array<{ label: string; href: string; detail: string }>;
 }
 
-interface VoteReceipt {
-  id: string;
-  pollId?: string;
-  createdAt: string;
-  status: 'preview-confirmed';
-  explorerUrl?: string;
-}
+type VoteReceipt = PassportReceiptRecord;
 
-const APP_MODE = parseAppMode(import.meta.env.VITE_APP_MODE);
+const APP_MODE = resolveAppMode(import.meta.env.MODE, import.meta.env.VITE_APP_MODE);
+// Undeployed is an educational/synthetic lane until a valid v2 catalog is
+// supplied. It must never silently send the legacy referendum transaction.
+const CHAIN_RUNTIME_ENABLED = APP_MODE === 'preview';
+const APP_NETWORK_LABEL =
+  APP_MODE === 'undeployed'
+    ? 'Undeployed local'
+    : APP_MODE === 'preview'
+      ? 'Preview'
+      : 'Demo local';
 const CONTRACT_ADDRESS = import.meta.env.VITE_MIDNIGHT_CONTRACT_ADDRESS?.trim() || null;
 const PASSPORT_ORIGIN =
   import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com';
 const EXPLORER_BASE_URL =
   import.meta.env.VITE_MIDNIGHT_EXPLORER_BASE_URL?.trim() ||
   'https://explorer.preview.midnight.network/tx';
+const ONBOARDING_SESSION_KEY = 'cico-wave1-onboarding-complete';
+
+function shouldShowFirstRunOnboarding(): boolean {
+  if (typeof window === 'undefined') return true;
+  return window.sessionStorage.getItem(ONBOARDING_SESSION_KEY) !== '1';
+}
 
 const POLLS: Poll[] = [
   {
@@ -110,6 +140,8 @@ const POLLS: Poll[] = [
       '¿Debería Argentina mantener un régimen nacional de límites y controles sobre la titularidad y posesión extranjera de tierras rurales, con revisión pública periódica?',
     opened: '8 de agosto de 2026',
     deadline: '16 de agosto de 2026',
+    opensAt: '2026-08-08T00:00:00-03:00',
+    closesAt: '2026-08-16T23:59:59-03:00',
     eligible: '143.820',
     participation: '8.914 participaciones de demo',
     whyNow:
@@ -156,6 +188,8 @@ const POLLS: Poll[] = [
       '¿Debería Argentina reformar el régimen de distribución de recursos entre la Nación, las provincias y la Ciudad Autónoma de Buenos Aires para hacerlo más transparente, previsible y revisable?',
     opened: '8 de agosto de 2026',
     deadline: '23 de agosto de 2026',
+    opensAt: '2026-08-08T00:00:00-03:00',
+    closesAt: '2026-08-23T23:59:59-03:00',
     eligible: '126.540',
     participation: '6.382 participaciones de demo',
     whyNow:
@@ -202,6 +236,8 @@ const POLLS: Poll[] = [
       '¿Debería Argentina modificar el marco laboral vigente para priorizar la formalización y la creación de empleo, manteniendo garantías laborales explícitas y evaluación pública de impacto?',
     opened: '8 de agosto de 2026',
     deadline: '30 de agosto de 2026',
+    opensAt: '2026-08-08T00:00:00-03:00',
+    closesAt: '2026-08-30T23:59:59-03:00',
     eligible: '119.760',
     participation: '5.107 participaciones de demo',
     whyNow:
@@ -248,6 +284,8 @@ const POLLS: Poll[] = [
       '¿Debería Argentina reformar el sistema previsional para mejorar simultáneamente su sostenibilidad financiera, la cobertura y la suficiencia de las prestaciones, protegiendo a quienes no completan aportes?',
     opened: '8 de agosto de 2026',
     deadline: '6 de septiembre de 2026',
+    opensAt: '2026-08-08T00:00:00-03:00',
+    closesAt: '2026-09-06T23:59:59-03:00',
     eligible: '132.900',
     participation: '4.618 participaciones de demo',
     whyNow:
@@ -293,6 +331,8 @@ const POLLS: Poll[] = [
       '¿Debería Argentina priorizar una transición energética con mayor participación renovable, expansión de redes y protección focalizada para usuarios vulnerables?',
     opened: '8 de agosto de 2026',
     deadline: '13 de septiembre de 2026',
+    opensAt: '2026-08-08T00:00:00-03:00',
+    closesAt: '2026-09-13T23:59:59-03:00',
     eligible: '138.260',
     participation: '7.246 participaciones de demo',
     whyNow:
@@ -331,7 +371,28 @@ const POLLS: Poll[] = [
     ],
   },
 ];
-const DEFAULT_POLL = POLLS[0]!;
+function requireDefaultPoll(polls: readonly Poll[]): Poll {
+  const poll = polls.at(0);
+  if (!poll) throw new Error('At least one civic consultation must be configured.');
+  return poll;
+}
+
+const DEFAULT_POLL = requireDefaultPoll(POLLS);
+const COUNTRY_POLL_IDS = new Set(['tierras-rurales']);
+const COUNTRY_POLL_COUNTRIES = new Map([['tierras-rurales', 'AR']]);
+const DASHBOARD_COUNTRIES = ASSIGNED_COUNTRIES.map((country) => ({
+  code: country.alpha2,
+  name: getCountryName(country.alpha2, 'es'),
+  numeric: country.numeric,
+}));
+
+function isCountryPoll(poll: Poll): boolean {
+  return COUNTRY_POLL_IDS.has(poll.id);
+}
+
+function isCountryPollForCountry(poll: Poll, countryCode: string): boolean {
+  return COUNTRY_POLL_COUNTRIES.get(poll.id) === countryCode;
+}
 
 async function copyReceiptId(value: string): Promise<void> {
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -392,13 +453,11 @@ function Header({
   onConnectPassport: () => void;
   onDismissPassportError: () => void;
 }) {
-  const { status, shieldedAddress, connect, disconnect } = useWallet();
-  const { isReady } = useMidnightProviders();
   return (
     <header className="site-header">
       <div className="brand-lockup">
-        <span className="flag-mark" role="img" aria-label="Argentina">
-          <span />
+        <span className="brand-mark" aria-hidden="true">
+          <Globe size={24} weight="duotone" />
         </span>
         <div>
           <p className="brand-name">Referéndum Cívico</p>
@@ -416,26 +475,6 @@ function Header({
           <Fingerprint size={14} weight="bold" />{' '}
           <span>{passportSession?.profile?.displayName ?? 'Passport'}</span>
         </button>
-        {status === 'connected' && shieldedAddress ? (
-          <button
-            type="button"
-            className="wallet-chip connected"
-            onClick={disconnect}
-            title="Desconectar wallet"
-            aria-label="Desconectar wallet"
-          >
-            <span className="network-dot" /> <span>{isReady ? 'Preview' : 'Wallet'}</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="wallet-chip"
-            onClick={connect}
-            aria-label="Conectar wallet"
-          >
-            <Wallet size={14} weight="bold" /> <span>Wallet</span>
-          </button>
-        )}
         {passportError ? (
           <div className="wallet-status-popover" role="alert">
             <button
@@ -506,9 +545,53 @@ const PHASE_COPY = {
   FINALIZED: { label: 'Resultado final', note: 'El recuento está cerrado y publicado.' },
 } as const;
 
+interface PublicReferendumState {
+  state: import('midnight-referendum-api').ContractState | null;
+  error: string | null;
+  loading: boolean;
+}
+
 /** Live aggregates read from the contract. Never a hardcoded number. */
+function usePublicReferendumState(): PublicReferendumState {
+  const { publicDataProvider, publicReadError } = useMidnightProviders();
+  const [state, setState] = useState<import('midnight-referendum-api').ContractState | null>(null);
+  const [error, setError] = useState<string | null>(publicReadError);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!publicDataProvider || !CONTRACT_ADDRESS) {
+      setState(null);
+      setLoading(false);
+      setError(publicReadError);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(publicReadError);
+    const subscription = watchReferendumState({ publicDataProvider }, CONTRACT_ADDRESS).subscribe({
+      next: (next) => {
+        if (cancelled) return;
+        setState(next);
+        setError(null);
+        setLoading(false);
+      },
+      error: (reason: unknown) => {
+        if (cancelled) return;
+        setError(reason instanceof Error ? reason.message : 'No se pudo leer el estado público');
+        setLoading(false);
+      },
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [publicDataProvider, publicReadError]);
+
+  return { state, error, loading };
+}
+
 function ResultsPanel() {
-  const { state, error } = useReferendumState();
+  const { state, error, loading } = usePublicReferendumState();
 
   if (error) {
     return (
@@ -520,6 +603,7 @@ function ResultsPanel() {
       </section>
     );
   }
+  if (loading && !state) return <CommitPhasePanel />;
   if (!state) return <CommitPhasePanel />;
 
   const phase = PHASE_COPY[state.phase];
@@ -600,110 +684,235 @@ function CommitPhasePanel() {
 }
 
 function VotesView({
+  credential,
   onStartVote,
   onOpenPolicy,
   onOpenPassportJourney,
 }: {
+  credential: DemoCredentialSummary | null;
   onStartVote: (pollId: string) => void;
   onOpenPolicy: (pollId: string) => void;
   onOpenPassportJourney: () => void;
 }) {
-  const [selectedId, setSelectedId] = useState(DEFAULT_POLL.id);
-  const selectedPoll = POLLS.find((poll) => poll.id === selectedId) ?? DEFAULT_POLL;
-  const { state: chainState } = useReferendumState();
-  const eligibleLabel = chainState ? chainState.issuedVoters.toString() : '—';
+  const [area, setArea] = useState<ConsultationArea>('world');
+  const [selectedCountry, setSelectedCountry] = useState(credential?.country ?? 'AR');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [now, setNow] = useState(() => new Date());
+  const selectedCountryName =
+    DASHBOARD_COUNTRIES.find((country) => country.code === selectedCountry)?.name ??
+    selectedCountry;
+  const filteredCountries = countrySearch.trim()
+    ? DASHBOARD_COUNTRIES.filter((country) =>
+        `${country.name} ${country.code} ${country.numeric}`
+          .toLocaleLowerCase()
+          .includes(countrySearch.trim().toLocaleLowerCase()),
+      )
+    : DASHBOARD_COUNTRIES;
+  useEffect(() => {
+    if (credential?.country) setSelectedCountry(credential.country);
+  }, [credential?.country]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const visiblePolls =
+    area === 'world'
+      ? POLLS.filter((poll) => !isCountryPoll(poll))
+      : selectedCountry === credential?.country
+        ? POLLS.filter((poll) => isCountryPollForCountry(poll, selectedCountry))
+        : [];
+  const openPollCount = countOpenPolls(visiblePolls, now);
   return (
-    <main className="page-content">
+    <main className="page-content civic-dashboard">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Participación ciudadana</p>
-          <h1>Votaciones en curso</h1>
+          <p className="eyebrow">Tu panel cívico</p>
+          <h1>Consultas para vos</h1>
         </div>
         <span className="open-count">
           <span className="status-dot" />
-          {POLLS.length} abiertas
+          {openPollCount} disponibles
         </span>
       </div>
-      <section className="passport-entry-card" aria-labelledby="passport-entry-title">
-        <div className="passport-entry-icon">
-          <Fingerprint size={24} />
-        </div>
-        <div>
-          <p className="eyebrow">Pasaporte primero · demo local</p>
-          <h2 id="passport-entry-title">Probá el recorrido completo de Passport</h2>
-          <p>
-            Consentimiento → evidencia temporal → credencial sintética → alcance → voto privado →
-            comprobante sin elección.
-          </p>
-          <button className="passport-entry-button" onClick={onOpenPassportJourney} type="button">
-            Abrir recorrido Passport v2 <ArrowRight size={17} />
-          </button>
-        </div>
-      </section>
-      <article className="poll-detail">
-        <div className="poll-meta">
-          <StatusPill>Votación abierta</StatusPill>
-          <span>Desde el {selectedPoll.opened}</span>
-        </div>
-        <h2>{selectedPoll.title}</h2>
-        <p className="poll-description">{selectedPoll.description}</p>
-        <button type="button" className="text-link" onClick={() => onOpenPolicy(selectedPoll.id)}>
-          <Info size={18} /> Leé la propuesta completa <ArrowRight size={16} />
-        </button>
-        <div className="poll-stats">
-          <div>
-            <Calendar size={20} />
-            <span>
-              Cierre de la votación<strong>{selectedPoll.deadline}</strong>
-            </span>
+      {credential ? (
+        <section className="credential-status-card" aria-label="Estado de tu credencial">
+          <span className="credential-status-icon">
+            <ShieldCheck size={22} />
+          </span>
+          <span>
+            <strong>Credencial lista</strong>
+            <small>
+              {getCountryName(credential.country, 'es')} ({credential.country}) ·{' '}
+              {credential.ageClass} · solo para elegibilidad
+            </small>
+          </span>
+          <span className="synthetic-badge">
+            {credential.kind === 'synthetic-demo-credential' ? 'SINTÉTICA' : 'VERIFICADA'}
+          </span>
+        </section>
+      ) : (
+        <section
+          className="passport-entry-card dashboard-onboarding-card"
+          aria-labelledby="passport-entry-title"
+        >
+          <div className="passport-entry-icon">
+            <Fingerprint size={24} />
           </div>
           <div>
-            <Users size={20} />
-            <span>
-              Personas habilitadas<strong>{eligibleLabel}</strong>
-            </span>
+            <p className="eyebrow">Empezá por tu identidad</p>
+            <h2 id="passport-entry-title">Prepará tu credencial para explorar</h2>
+            <p>
+              Conectá Passport, revisá la evidencia y después elegí qué consulta querés conocer. No
+              necesitás wallet para este recorrido.
+            </p>
+            <button className="passport-entry-button" onClick={onOpenPassportJourney} type="button">
+              Preparar mi credencial <ArrowRight size={17} />
+            </button>
           </div>
-        </div>
-        <p className="demo-stat">
-          <Info size={14} /> {selectedPoll.participation}. Cifra simulada para este prototipo.
-        </p>
+        </section>
+      )}
+
+      <div className="dashboard-area-tabs" role="tablist" aria-label="Espacio de participación">
         <button
           type="button"
-          className="primary-button yellow"
-          onClick={() => onStartVote(selectedPoll.id)}
+          role="tab"
+          aria-selected={area === 'world'}
+          className={area === 'world' ? 'active' : ''}
+          onClick={() => setArea('world')}
         >
-          <Stamp size={22} /> Votá ahora
+          <Globe size={18} /> World
         </button>
-      </article>
-      <ResultsPanel />
-      <section className="project-section" aria-labelledby="projects-title">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">Biblioteca de políticas</p>
-            <h2 id="projects-title">Conocé cada propuesta</h2>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={area === 'countries'}
+          className={area === 'countries' ? 'active' : ''}
+          onClick={() => setArea('countries')}
+        >
+          <IdentificationCard size={18} /> Countries
+        </button>
+      </div>
+
+      {area === 'countries' ? (
+        <section className="country-selector-card" aria-labelledby="country-selector-title">
+          <div className="section-title-row">
+            <div>
+              <p className="eyebrow">Consultas por país</p>
+              <h2 id="country-selector-title">Elegí un país</h2>
+            </div>
+            <Globe size={22} />
           </div>
-          <Globe size={22} />
-        </div>
-        <div className="project-list">
-          {POLLS.map((poll) => (
-            <button
-              type="button"
-              key={poll.id}
-              className={`project-row ${poll.id === selectedId ? 'selected' : ''}`}
-              onClick={() => setSelectedId(poll.id)}
-            >
-              <span className="project-row-icon">
-                <BookOpen size={20} />
-              </span>
-              <span className="project-row-copy">
-                <strong>{poll.title}</strong>
-                <small>Cierra el {poll.deadline}</small>
-              </span>
-              <ArrowRight size={18} />
-            </button>
-          ))}
-        </div>
-      </section>
+          <label htmlFor="country-selector">País</label>
+          <input
+            id="country-search"
+            className="country-search-input"
+            type="search"
+            value={countrySearch}
+            onChange={(event) => setCountrySearch(event.target.value)}
+            placeholder="Buscar por nombre o código"
+            aria-label="Buscar un país"
+          />
+          <select
+            id="country-selector"
+            value={selectedCountry}
+            onChange={(event) => setSelectedCountry(event.target.value)}
+          >
+            {filteredCountries.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+          <p className="country-selector-help">
+            {credential
+              ? `Tu credencial prueba ${getCountryName(credential.country, 'es')}; solo ese espacio está desbloqueado.`
+              : 'Completá el recorrido Passport para desbloquear tu espacio.'}
+          </p>
+        </section>
+      ) : (
+        <section className="dashboard-intro-card">
+          <div>
+            <p className="eyebrow">World</p>
+            <h2>Ideas que cualquier credencial válida puede explorar</h2>
+          </div>
+          <p>
+            Leé el contexto antes de decidir. La wallet solo aparece si después elegís realizar una
+            acción real.
+          </p>
+        </section>
+      )}
+
+      {area === 'countries' && selectedCountry !== credential?.country ? (
+        <section className="locked-country-card" role="status">
+          <Lock size={24} />
+          <div>
+            <strong>{selectedCountryName} todavía está bloqueado</strong>
+            <p>
+              Tu credencial no prueba elegibilidad para este espacio. No se habilita por elegirlo en
+              el selector.
+            </p>
+          </div>
+        </section>
+      ) : visiblePolls.length ? (
+        <section className="dashboard-consultations" aria-labelledby="consultations-title">
+          <div className="section-title-row">
+            <div>
+              <p className="eyebrow">
+                {area === 'world' ? 'Consultas globales' : selectedCountryName}
+              </p>
+              <h2 id="consultations-title">Conocé antes de participar</h2>
+            </div>
+            <BookOpen size={22} />
+          </div>
+          <div className="dashboard-poll-list">
+            {visiblePolls.map((poll) => (
+              <article className="dashboard-poll-card" key={poll.id}>
+                <div className="poll-meta">
+                  <StatusPill>
+                    {getPollAvailability(poll, now).isOpen
+                      ? 'Votación abierta'
+                      : 'Votación cerrada'}
+                  </StatusPill>
+                  <span>Cierra el {poll.deadline}</span>
+                </div>
+                <h3>{poll.title}</h3>
+                <p>{poll.description}</p>
+                <div className="poll-card-actions">
+                  <button type="button" className="text-link" onClick={() => onOpenPolicy(poll.id)}>
+                    Leer propuesta <ArrowRight size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-button yellow"
+                    disabled={!getPollAvailability(poll, now).isOpen}
+                    onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
+                  >
+                    <Stamp size={19} />{' '}
+                    {getPollAvailability(poll, now).isOpen
+                      ? credential
+                        ? 'Votá ahora'
+                        : 'Preparar credencial'
+                      : 'Votación cerrada'}
+                  </button>
+                </div>
+                <p className="demo-stat">
+                  <Info size={14} /> {poll.participation}. Cifra simulada para este prototipo.
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="dashboard-empty-card">
+          <Lock size={24} />
+          <div>
+            <strong>No hay consultas disponibles en este espacio</strong>
+            <p>Volvé a World o elegí el país desbloqueado por tu credencial.</p>
+          </div>
+        </section>
+      )}
+
+      {area === 'world' ? <ResultsPanel /> : null}
     </main>
   );
 }
@@ -712,18 +921,27 @@ function PolicyDetailView({
   poll,
   onBack,
   onStartVote,
+  credential,
+  onOpenPassportJourney,
 }: {
   poll: Poll;
   onBack: () => void;
   onStartVote: (pollId: string) => void;
+  credential: DemoCredentialSummary | null;
+  onOpenPassportJourney: () => void;
 }) {
+  const consultationCountry = COUNTRY_POLL_COUNTRIES.get(poll.id);
+  const pollAvailability = getPollAvailability(poll);
+  const consultationCountryName = consultationCountry
+    ? getCountryName(consultationCountry, 'es')
+    : null;
   return (
     <main className="page-content policy-page">
       <button type="button" className="back-button" onClick={onBack}>
         <ArrowLeft size={18} /> Volver a votaciones
       </button>
       <div className="policy-status">
-        <StatusPill>Consulta ciudadana independiente</StatusPill>
+        <StatusPill>{pollAvailability.isOpen ? 'Votación abierta' : 'Votación cerrada'}</StatusPill>
         <span>Actualizado: 8 de agosto de 2026</span>
       </div>
       <section className="policy-hero">
@@ -827,8 +1045,13 @@ function PolicyDetailView({
       <section className="policy-section eligibility-card">
         <p className="eyebrow">Reglas de esta demo</p>
         <p>
-          Podés recorrer la verificación si sos ciudadano/a argentino/a, tenés 16 años o más y un
-          DNI para escanear. Son requisitos de experiencia del prototipo, no un padrón oficial.
+          La credencial Passport prueba una regla de elegibilidad sin exponer tu documento. En esta
+          experiencia la credencial de fixture representa la nacionalidad elegida y clase de edad
+          18+.
+          {consultationCountryName
+            ? ` Esta consulta está configurada para ${consultationCountryName}.`
+            : ''}{' '}
+          No es un padrón oficial.
         </p>
       </section>
 
@@ -857,8 +1080,18 @@ function PolicyDetailView({
         <Info size={16} /> * Las personas habilitadas y la participación son cifras simuladas. Esta
         consulta no es un referéndum oficial ni tiene efecto legal.
       </p>
-      <button type="button" className="primary-button yellow" onClick={() => onStartVote(poll.id)}>
-        <Stamp size={22} /> Votar esta consulta
+      <button
+        type="button"
+        className="primary-button yellow"
+        disabled={!pollAvailability.isOpen}
+        onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
+      >
+        <Stamp size={22} />{' '}
+        {pollAvailability.isOpen
+          ? credential
+            ? 'Votar esta consulta'
+            : 'Preparar mi credencial'
+          : 'Votación cerrada'}
       </button>
     </main>
   );
@@ -1179,7 +1412,7 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
         </div>
         <p className="eyebrow">Transparencia pública</p>
         <h1>Verificá un comprobante</h1>
-        <p>Buscá el identificador para consultar si fue confirmado en Preview.</p>
+        <p>Buscá el identificador para consultar si fue confirmado en {APP_NETWORK_LABEL}.</p>
       </section>
       <form
         className="verify-form"
@@ -1209,10 +1442,14 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
         <section className="verify-result success" aria-live="polite">
           <CheckCircle size={28} />
           <div>
-            <strong>Comprobante confirmado</strong>
+            <strong>
+              {matched.status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante simulado'}
+            </strong>
             <p>
-              La opción permanece privada durante la etapa de commit. El registro está confirmado en
-              Preview.
+              La opción permanece privada.{' '}
+              {matched.status === 'confirmed'
+                ? `El registro está confirmado en ${matched.network}.`
+                : 'Este registro local no representa una transacción ni una prueba de voto real.'}
             </p>
             <div className="receipt-actions">
               <code>{matched.id}</code>
@@ -1242,7 +1479,7 @@ function VerifyView({ receipts }: { receipts: VoteReceipt[] }) {
             <Check size={18} /> Que el comprobante existe.
           </li>
           <li>
-            <Check size={18} /> Que tiene estado confirmado.
+            <Check size={18} /> Que tiene estado confirmado o simulado.
           </li>
           <li>
             <Check size={18} /> Que no necesitás compartir tus datos personales otra vez.
@@ -1259,12 +1496,14 @@ function ProfileView({
   receipts,
   walletStatus,
   onConnectPassport,
+  onReplayOnboarding,
 }: {
   passportSession: CivicPassportSession | null;
   profileId: string;
   receipts: VoteReceipt[];
   walletStatus: string;
   onConnectPassport: () => void;
+  onReplayOnboarding: () => void;
 }) {
   return (
     <main className="page-content">
@@ -1309,11 +1548,27 @@ function ProfileView({
           </span>
         </div>
       </section>
+      <section className="profile-card profile-help-card" aria-labelledby="profile-help-title">
+        <div className="profile-card-heading">
+          <div>
+            <p className="eyebrow">Ayuda</p>
+            <h2 id="profile-help-title">Revisar cómo funciona</h2>
+          </div>
+          <Info size={24} />
+        </div>
+        <p>
+          Volvé a la explicación de Passport, credenciales y acciones sin cambiar tu identidad ni
+          conectar una wallet.
+        </p>
+        <button type="button" className="secondary-button" onClick={onReplayOnboarding}>
+          Revisar el recorrido <ArrowRight size={18} />
+        </button>
+      </section>
       <section className="profile-history" aria-labelledby="profile-history-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Actividad confirmada</p>
-            <h2 id="profile-history-title">Mis comprobantes Preview</h2>
+            <p className="eyebrow">Actividad local</p>
+            <h2 id="profile-history-title">Mis comprobantes {APP_NETWORK_LABEL}</h2>
           </div>
           <span className="profile-count">{receipts.length}</span>
         </div>
@@ -1329,8 +1584,10 @@ function ProfileView({
                       : 'Consulta ciudadana'}
                   </strong>
                   <small>
-                    {new Date(receipt.createdAt).toLocaleDateString('es-AR')} · Confirmado en
-                    Preview
+                    {new Date(receipt.createdAt).toLocaleDateString('es-AR')} ·{' '}
+                    {receipt.status === 'confirmed'
+                      ? `Confirmado en ${receipt.network}`
+                      : `Simulado en ${receipt.network}`}
                   </small>
                 </div>
                 <div className="profile-receipt-actions">
@@ -1413,6 +1670,7 @@ function VoteFlow({
   walletStatus,
   passportSession,
   onConnectPassport,
+  credentialCountry,
   previewError,
   receipt,
   previewReady,
@@ -1431,6 +1689,7 @@ function VoteFlow({
   walletStatus: string;
   passportSession: CivicPassportSession | null;
   onConnectPassport: () => void;
+  credentialCountry: string | null;
   previewError: string | null;
   receipt: VoteReceipt | null;
   previewReady: boolean;
@@ -1440,6 +1699,7 @@ function VoteFlow({
   onDniVerified: (result: DniVerificationResult) => void;
 }) {
   const poll = POLLS.find((item) => item.id === pollId) ?? DEFAULT_POLL;
+  const actionMode: ActionMode = CHAIN_RUNTIME_ENABLED ? 'live' : 'simulated';
   const activeStep = stage === 'verify' || stage === 'document' || stage === 'eligible' ? 2 : 3;
   return (
     <main className="page-content flow-page">
@@ -1456,8 +1716,8 @@ function VoteFlow({
           <h1>Antes de votar</h1>
           <h2>Conectá Midnight Passport (opcional)</h2>
           <p>
-            Passport aporta onboarding y un perfil visible. No firma el voto: la wallet Lace aprueba
-            la transacción y el secreto anónimo permanece separado.
+            Passport aporta onboarding y un perfil visible. No firma el voto: una wallet compatible
+            aprueba la transacción y el secreto anónimo permanece separado.
           </p>
           {passportSession ? (
             <div className="data-summary">
@@ -1478,21 +1738,21 @@ function VoteFlow({
           )}
           <div className="flow-requirements">
             <strong>Reglas de esta demo</strong>
-            <span>Ciudadanía argentina · 16+ · DNI verificable</span>
-          </div>
-          <div className="trust-line">
-            <ShieldCheck size={20} />
-            <span>Una persona, un voto.</span>
+            <span>
+              {credentialCountry
+                ? `${getCountryName(credentialCountry, 'es')} · 16+ · DNI verificable`
+                : 'Credencial compatible · 16+ · evidencia verificable'}
+            </span>
           </div>
           <button
             type="button"
             className="primary-button yellow"
-            disabled={APP_MODE === 'preview' && !previewReady}
+            disabled={actionMode === 'live' && !previewReady}
             onClick={() => onStage('document')}
           >
             Validar elegibilidad <ArrowRight size={20} />
           </button>
-          {APP_MODE !== 'preview' ? (
+          {actionMode === 'simulated' ? (
             <p className="flow-hint">
               Modo local: podés recorrer la interfaz, pero no se crea ningún comprobante.
             </p>
@@ -1613,36 +1873,34 @@ function VoteFlow({
           <div className="review-notice">
             <Info size={20} />
             <p>
-              Passport: {passportSession ? 'conectado (opcional)' : 'no conectado (opcional)'}.
-              Aprobación de Lace: {walletStatus === 'connected' ? 'lista' : 'pendiente'}. DUST:{' '}
+              Passport gestiona la identidad y la credencial; no firma el voto. La wallet solo se
+              solicita para una acción real. Estado de aprobación:{' '}
+              {walletStatus === 'connected' ? 'wallet conectada' : 'wallet pendiente'}. DUST:{' '}
               {dustBalance === null
                 ? 'saldo no disponible'
                 : `${dustBalance.toString()} disponible`}
               .
             </p>
           </div>
+          {CHAIN_RUNTIME_ENABLED ? <WalletWidget /> : null}
           {previewError ? (
             <div className="verify-result missing">
               <Info size={20} />
               <div>
-                <strong>Preview todavía no puede enviar</strong>
+                <strong>{APP_NETWORK_LABEL} todavía no puede enviar</strong>
                 <p>{previewError}</p>
               </div>
             </div>
           ) : null}
-          {APP_MODE !== 'preview' ? (
+          {!CHAIN_RUNTIME_ENABLED ? (
             <p className="flow-hint">
-              Solo Preview puede crear un comprobante. Conectá Lace y configurá un contrato
-              desplegado.
+              Este comprobante será simulado y se guardará localmente. La prueba real requiere una
+              red compatible, contrato desplegado y wallet aprobando la transacción.
             </p>
           ) : null}
-          <button
-            type="button"
-            className="primary-button yellow"
-            disabled={APP_MODE !== 'preview'}
-            onClick={onConfirm}
-          >
-            Confirmar compromiso en Preview <ArrowRight size={20} />
+          <button type="button" className="primary-button yellow" onClick={onConfirm}>
+            {actionMode === 'live' ? 'Confirmar acción real' : 'Crear comprobante simulado'}{' '}
+            <ArrowRight size={20} />
           </button>
         </section>
       ) : null}
@@ -1671,12 +1929,19 @@ function VoteFlow({
           <h1>Gracias por participar</h1>
           <p>Guardá este identificador para verificar el resultado.</p>
           <div className="receipt-box">
-            <span>Comprobante Preview</span>
+            <span>
+              {receipt?.status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante simulado'}{' '}
+              · {receipt?.network ?? APP_NETWORK_LABEL}
+            </span>
             <div className="receipt-box-id">
               <strong>{receipt?.id ?? 'Disponible en Verificá'}</strong>
               {receipt ? <CopyReceiptButton receiptId={receipt.id} /> : null}
             </div>
-            <small>Confirmado en Preview.</small>
+            <small>
+              {receipt?.status === 'confirmed'
+                ? `Confirmado en ${receipt.network}.`
+                : 'No representa una transacción ni una prueba de voto real.'}
+            </small>
           </div>
           {receipt?.explorerUrl ? (
             <a className="text-link" href={receipt.explorerUrl} target="_blank" rel="noreferrer">
@@ -1693,15 +1958,18 @@ function VoteFlow({
 }
 
 function CivicApp() {
+  const initialOnboardingRequired = shouldShowFirstRunOnboarding();
   const [tab, setTab] = useState<Tab>('votes');
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
-  const [passportJourneyOpen, setPassportJourneyOpen] = useState(false);
+  const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
+  const [onboardingRequired, setOnboardingRequired] = useState(initialOnboardingRequired);
   const [policyDetailId, setPolicyDetailId] = useState<string | null>(null);
   const [dniResult, setDniResult] = useState<DniVerificationResult | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [activePollId, setActivePollId] = useState(DEFAULT_POLL.id);
   const [receipt, setReceipt] = useState<VoteReceipt | null>(null);
   const [receipts, setReceipts] = useState<VoteReceipt[]>([]);
+  const [credential, setCredential] = useState<DemoCredentialSummary | null>(null);
   const [passportSession, setPassportSession] = useState<CivicPassportSession | null>(null);
   const [passportError, setPassportError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -1710,9 +1978,22 @@ function CivicApp() {
     attestation: EligibilityAttestation;
     voterSecret: Uint8Array;
   } | null>(null);
+  const closeOnboarding = () => {
+    window.sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1');
+    setOnboardingRequired(false);
+    setPassportJourneyOpen(false);
+    setTab('votes');
+  };
+  const replayOnboarding = () => {
+    setFlowStage(null);
+    setPolicyDetailId(null);
+    setPassportJourneyOpen(true);
+  };
   const { status: walletStatus, dustBalance } = useWallet();
   const {
     providers,
+    publicReadReady,
+    publicReadError,
     referendumV2Providers,
     isReady,
     error: providersError,
@@ -1740,11 +2021,11 @@ function CivicApp() {
         error:
           runtimeError instanceof Error
             ? runtimeError.message
-            : 'La configuración Passport v2 no es válida.',
+            : 'La configuración de Passport no es válida.',
       };
     }
   }, []);
-  const passportJourneyPorts = useMemo(() => {
+  const passportJourneyPorts = useMemo<PreviewPassportJourneyPorts>(() => {
     const base = { passport: passportSessionPort };
     if (passportV2Runtime.error) {
       return {
@@ -1754,16 +2035,6 @@ function CivicApp() {
       };
     }
     if (!passportV2Runtime.config) return { ...base, runtimeCatalogConfigured: false };
-    if (!referendumV2Providers) {
-      return {
-        ...base,
-        referenda: passportV2Runtime.config.referenda,
-        runtimeCatalogConfigured: true,
-        configurationError: RELAYER_MODE
-          ? 'Passport v2 está configurado, pero el relayer atómico v2 todavía no está habilitado. Usá una wallet Preview para el piloto local.'
-          : 'Conectá una wallet Midnight Preview para habilitar la prueba v2 en el navegador.',
-      };
-    }
     const gateway = new HttpRarimoVerificationGateway({
       baseUrl: passportV2Runtime.config.apiUrl,
     });
@@ -1780,28 +2051,55 @@ function CivicApp() {
       uniquenessTimestampUpperBoundUnixSeconds:
         passportV2Runtime.config.uniquenessTimestampUpperBoundUnixSeconds,
     });
-    const actions = new MidnightCivicActionAdapter({
-      providers: referendumV2Providers,
-      credential,
-      referenda: passportV2Runtime.config.referenda,
-    });
+    const actions = referendumV2Providers
+      ? new MidnightCivicActionAdapter({
+          providers: referendumV2Providers,
+          credential,
+          referenda: passportV2Runtime.config.referenda,
+        })
+      : undefined;
     return {
       ...base,
       credential,
-      actions,
+      ...(actions ? { actions } : {}),
       referenda: passportV2Runtime.config.referenda,
       runtimeCatalogConfigured: true,
     };
   }, [passportSessionPort, passportV2Runtime, referendumV2Providers]);
   const profileId = useMemo(() => deriveProfileId(passportSession), [passportSession]);
   const previewReadiness = getPreviewReadiness({
-    appMode: APP_MODE === 'preview' ? 'preview' : 'demo',
+    appMode: APP_MODE === 'preview' ? 'preview' : APP_MODE === 'undeployed' ? 'undeployed' : 'demo',
     contractAddress: CONTRACT_ADDRESS,
     walletConnected: walletStatus === 'connected',
-    providersReady: isReady,
-    providersError,
+    providersReady: isReady && (!passportV2Runtime.config || referendumV2Providers !== null),
+    providersError: providersError ?? passportV2Runtime.error,
     relayerMode: RELAYER_MODE,
+    v2RuntimeConfigured: passportV2Runtime.config !== null || passportV2Runtime.error !== null,
+    credentialVerified: credential?.kind === 'verified-credential',
   });
+  const publicReadiness = getPublicReadiness({
+    appMode: APP_MODE === 'preview' ? 'preview' : APP_MODE === 'undeployed' ? 'undeployed' : 'demo',
+    contractAddress: CONTRACT_ADDRESS,
+    publicProviderReady: publicReadReady,
+    publicProviderError: publicReadError,
+  });
+  useEffect(() => {
+    let active = true;
+    if (!passportSession) {
+      setReceipts([]);
+      return () => {
+        active = false;
+      };
+    }
+    void deriveReceiptProfileKey(passportSession).then((receiptProfileKey) =>
+      loadPassportReceipts(receiptProfileKey).then((stored) => {
+        if (active) setReceipts(stored);
+      }),
+    );
+    return () => {
+      active = false;
+    };
+  }, [passportSession]);
   useEffect(() => {
     if (!receipt) {
       setReceiptToastVisible(false);
@@ -1813,7 +2111,7 @@ function CivicApp() {
   }, [receipt]);
   const connectPassport = async () => {
     setPassportError(null);
-    if (APP_MODE === 'demo') {
+    if (APP_MODE === 'demo' || APP_MODE === 'undeployed') {
       setPassportSession({
         sessionId: 'local-demo-session',
         origin: window.location.origin,
@@ -1837,14 +2135,22 @@ function CivicApp() {
   };
 
   const startVote = async (pollId: string) => {
+    const poll = POLLS.find((item) => item.id === pollId);
+    if (!poll || !getPollAvailability(poll).isOpen) {
+      setPreviewError('Esta votación está cerrada y no acepta nuevas participaciones.');
+      return;
+    }
     setActivePollId(pollId);
     setPolicyDetailId(null);
     setChoice(null);
     setReceipt(null);
     setPreviewError(null);
     setDniResult(null);
-    setFlowStage('verify');
-    if (APP_MODE === 'preview') {
+    setFlowStage(credential ? 'choose' : 'verify');
+    // The fixture eligibility provider belongs only to the legacy Preview
+    // compatibility lane. A configured v2 runtime must obtain authorization
+    // from the verified credential and never fall through to fixture voting.
+    if (CHAIN_RUNTIME_ENABLED && !passportV2Runtime.config && !passportV2Runtime.error) {
       try {
         const { createFixtureEligibilityProvider, PRIVATE_STATE_ID } = await import(
           'midnight-referendum-api'
@@ -1866,22 +2172,87 @@ function CivicApp() {
   };
 
   const confirmVote = async () => {
-    if (APP_MODE === 'preview') {
+    if (CHAIN_RUNTIME_ENABLED) {
       if (previewReadiness.state !== 'ready') {
         setPreviewError(previewReadiness.message);
         return;
       }
-      if (!providers || !CONTRACT_ADDRESS) {
-        setPreviewError('Preview no está listo para enviar.');
+      const poll = POLLS.find((item) => item.id === activePollId);
+      if (!poll || !getPollAvailability(poll).isOpen) {
+        setPreviewError('Esta votación está cerrada y no acepta nuevas participaciones.');
         return;
       }
-      if (!eligibility || !choice) {
-        setPreviewError('Completá la validación de elegibilidad antes de firmar.');
+      if (!choice) {
+        setPreviewError('Elegí una respuesta antes de firmar.');
         return;
       }
       setPreviewError(null);
       setFlowStage('processing');
       try {
+        if (passportV2Runtime.error) {
+          throw new Error(
+            `La configuración Passport v2 es inválida; el voto fue bloqueado: ${passportV2Runtime.error}`,
+          );
+        }
+        if (passportV2Runtime.config) {
+          const referendum = findRuntimeReferendum(
+            passportV2Runtime.config.referenda,
+            activePollId,
+          );
+          const actionPort = passportJourneyPorts.actions;
+          const credentialPort = passportJourneyPorts.credential;
+          const route = resolvePassportV2ActionRoute({
+            runtimeConfigured: true,
+            credentialVerified: credential?.kind === 'verified-credential',
+            actionPortAvailable: Boolean(actionPort && credentialPort),
+            referendumId: referendum?.referendumId ?? null,
+          });
+          if (route.mode === 'blocked') throw new Error(route.message);
+          if (route.mode !== 'v2' || !actionPort || !credentialPort) {
+            throw new Error('La acción v2 no está disponible; el voto fue bloqueado.');
+          }
+          const authorization = await credentialPort.getActionAuthorization();
+          if (!authorization) {
+            throw new Error(
+              'La credencial Passport no tiene autorización vigente para una acción cívica.',
+            );
+          }
+          const confirmed = await actionPort.castVote({
+            referendumId: route.referendumId,
+            choice,
+            authorization,
+          });
+          const nextReceipt: VoteReceipt = {
+            id: confirmed.transactionId,
+            pollId: activePollId,
+            createdAt: new Date().toISOString(),
+            status: 'confirmed',
+            network: confirmed.network,
+            explorerUrl: confirmed.explorerUrl,
+          };
+          if (passportSession) {
+            const receiptProfileKey = await deriveReceiptProfileKey(passportSession);
+            await savePassportReceipt(receiptProfileKey, nextReceipt);
+          }
+          setReceipts((previous) => [
+            nextReceipt,
+            ...previous.filter((item) => item.id !== nextReceipt.id),
+          ]);
+          setReceipt(nextReceipt);
+          setFlowStage('receipt');
+          return;
+        }
+
+        if (!providers || !CONTRACT_ADDRESS) {
+          setPreviewError(`${APP_NETWORK_LABEL} no está listo para enviar.`);
+          setFlowStage('review');
+          return;
+        }
+        if (!eligibility) {
+          setPreviewError('Completá la validación de elegibilidad antes de firmar.');
+          setFlowStage('review');
+          return;
+        }
         const { createReferendumExecutor, findEligibilityPath } = await import(
           'midnight-referendum-api'
         );
@@ -1909,23 +2280,46 @@ function CivicApp() {
           id: confirmed.txId,
           pollId: activePollId,
           createdAt: new Date().toISOString(),
-          status: 'preview-confirmed',
+          status: 'confirmed',
+          network: APP_NETWORK_LABEL,
           explorerUrl: confirmed.explorerUrl,
         };
-        const nextReceipts = [nextReceipt, ...receipts];
-        setReceipts(nextReceipts);
+        if (passportSession) {
+          const receiptProfileKey = await deriveReceiptProfileKey(passportSession);
+          await savePassportReceipt(receiptProfileKey, nextReceipt);
+        }
+        setReceipts((previous) => [
+          nextReceipt,
+          ...previous.filter((item) => item.id !== nextReceipt.id),
+        ]);
         setReceipt(nextReceipt);
         setFlowStage('receipt');
       } catch (error) {
-        setPreviewError(error instanceof Error ? error.message : 'Preview transaction failed');
+        setPreviewError(
+          error instanceof Error ? error.message : `Falló la transacción en ${APP_NETWORK_LABEL}`,
+        );
         setFlowStage('review');
       }
       return;
     }
-    setPreviewError(
-      'Modo local solo lectura: no crea comprobantes. Configurá VITE_APP_MODE=preview, un contrato desplegado y una wallet Lace Preview.',
-    );
-    setFlowStage('review');
+    const nextReceipt: VoteReceipt = {
+      id: 'demo-tx-cico-2026-0001',
+      pollId: activePollId,
+      createdAt: new Date().toISOString(),
+      status: 'simulated',
+      network: 'local-demo',
+    };
+    if (passportSession) {
+      const receiptProfileKey = await deriveReceiptProfileKey(passportSession);
+      await savePassportReceipt(receiptProfileKey, nextReceipt);
+    }
+    setReceipts((previous) => [
+      nextReceipt,
+      ...previous.filter((item) => item.id !== nextReceipt.id),
+    ]);
+    setReceipt(nextReceipt);
+    setPreviewError(null);
+    setFlowStage('receipt');
   };
 
   const currentTabContent =
@@ -1940,9 +2334,11 @@ function CivicApp() {
         receipts={receipts}
         walletStatus={walletStatus}
         onConnectPassport={() => void connectPassport()}
+        onReplayOnboarding={replayOnboarding}
       />
     ) : (
       <VotesView
+        credential={credential}
         onStartVote={startVote}
         onOpenPolicy={setPolicyDetailId}
         onOpenPassportJourney={() => setPassportJourneyOpen(true)}
@@ -1959,40 +2355,49 @@ function CivicApp() {
   };
   return (
     <div className="app-shell">
-      <Header
-        passportSession={passportSession}
-        passportError={passportError}
-        onConnectPassport={() => void connectPassport()}
-        onDismissPassportError={() => setPassportError(null)}
-      />
-      <div className="mode-strip">
-        <div className="mode-copy">
-          <span>
-            <span className="status-dot" />
-            {previewReadiness.label}
-          </span>
-          <span className="mode-help">
-            {passportSession
-              ? 'Passport conectado · wallet separado'
-              : APP_MODE === 'preview'
-                ? 'Wallet DApp Connector para votar'
-                : APP_MODE === 'showcase'
-                  ? 'Passport en vivo · credencial y voto simulados'
-                  : 'Solo lectura, sin transacciones'}
-          </span>
-        </div>
-        <details className="mode-details">
-          <summary aria-label="Qué significa este estado">
-            <Info size={14} />
-            <span>Info</span>
-          </summary>
-          <p>{previewReadiness.message}</p>
-        </details>
-      </div>
+      {!passportJourneyOpen ? (
+        <>
+          <Header
+            passportSession={passportSession}
+            passportError={passportError}
+            onConnectPassport={() => void connectPassport()}
+            onDismissPassportError={() => setPassportError(null)}
+          />
+          <div className="mode-strip">
+            <div className="mode-copy">
+              <span>
+                <span className="status-dot" />
+                {publicReadiness.label}
+              </span>
+              <span className="mode-help">
+                {passportSession
+                  ? 'Passport conectado · acción real separada'
+                  : APP_MODE === 'showcase'
+                    ? 'Passport en vivo · credencial pendiente'
+                    : APP_MODE === 'undeployed'
+                      ? 'Recorrido sintético local · acción real deshabilitada'
+                      : 'Recorrido educativo · wallet solo para una acción real'}
+              </span>
+            </div>
+            <details className="mode-details">
+              <summary aria-label="Qué significa este estado">
+                <Info size={14} />
+                <span>Info</span>
+              </summary>
+              <p>
+                {publicReadiness.message} {previewReadiness.message}
+              </p>
+            </details>
+          </div>
+        </>
+      ) : null}
       {passportJourneyOpen ? (
         <PassportJourney
           mode={APP_MODE}
-          onClose={() => setPassportJourneyOpen(false)}
+          onClose={closeOnboarding}
+          dismissible={!onboardingRequired}
+          onCredentialReady={(nextCredential) => setCredential(nextCredential)}
+          onPassportConnected={setPassportSession}
           passportPort={passportSessionPort}
           previewPorts={passportJourneyPorts}
         />
@@ -2011,6 +2416,7 @@ function CivicApp() {
           walletStatus={walletStatus}
           passportSession={passportSession}
           onConnectPassport={() => void connectPassport()}
+          credentialCountry={credential?.country ?? null}
           previewError={previewError}
           receipt={receipt}
           previewReady={previewReadiness.state === 'ready'}
@@ -2027,17 +2433,21 @@ function CivicApp() {
           poll={selectedPolicy}
           onBack={() => setPolicyDetailId(null)}
           onStartVote={startVote}
+          credential={credential}
+          onOpenPassportJourney={() => setPassportJourneyOpen(true)}
         />
       ) : (
         currentTabContent
       )}
-      <BottomNav
-        tab={tab}
-        onChange={(nextTab) => {
-          setPassportJourneyOpen(false);
-          navigate(nextTab);
-        }}
-      />
+      {!passportJourneyOpen && !flowStage && !selectedPolicy ? (
+        <BottomNav
+          tab={tab}
+          onChange={(nextTab) => {
+            setPassportJourneyOpen(false);
+            navigate(nextTab);
+          }}
+        />
+      ) : null}
       {receipt && receiptToastVisible ? (
         <div className="receipt-toast" role="status">
           <button
@@ -2067,7 +2477,7 @@ function CivicApp() {
 
 export function App() {
   return (
-    <WalletProvider runtimeEnabled={APP_MODE === 'preview'}>
+    <WalletProvider runtimeEnabled={CHAIN_RUNTIME_ENABLED}>
       <MidnightProvidersProvider>
         <CivicApp />
       </MidnightProvidersProvider>

@@ -27,7 +27,11 @@ The V1 registry lifecycle is intentionally staged: participants enroll while an 
 
 The official Midnight Passport SDK currently describes itself as planning/spec work with a reduced beta defined. CICO therefore integrates its available profile bridge through `PassportSessionPort` and keeps nationality, age, private-witness and contract-action capabilities behind replaceable ports rather than claiming Passport exposes them today. See [the product roadmap](docs/ROADMAP.md), [deployment gates](docs/DEPLOYMENT.md), and [ADR-001](docs/adr/ADR-001-passport-first-boundaries.md).
 
-The August–November 2026 execution cadence, weekly Buildathon outcomes, product-design research, and submission evidence are tracked in the [Buildathon roadmap](docs/BUILDATHON-ROADMAP.md).
+The August–November 2026 execution cadence, weekly Buildathon outcomes, product-design research, and submission evidence are tracked in the [Buildathon roadmap](docs/BUILDATHON-ROADMAP.md). The active Wave 1 checklist is in the [Wave 1 execution plan](docs/WAVE-1-EXECUTION-PLAN.md), and the operator-facing Vercel credential guide is in [VERCEL-SETUP.md](docs/VERCEL-SETUP.md).
+
+The current release handoff is captured in the [Wave 1 submission checklist](docs/WAVE-1-SUBMISSION-CHECKLIST.md), including verified evidence and the remaining external gates.
+
+The local-first Undeployed network is pinned in the [compatibility matrix](docs/COMPATIBILITY-MATRIX.md). It runs the current Midnight node, indexer, and proof server in Docker on loopback ports before any hosted deployment work.
 
 Everything under **Live on Midnight Preview** later in this README is v1 evidence. Those transaction IDs do not prove that Passport-v2 enrollment, `CredentialRegistryV1`, `ReferendumV2`, or the new browser journey have run live.
 
@@ -107,7 +111,7 @@ bridge, and a transaction bridge whose only intent kind is
 shielded transfers, or batching."* **Passport cannot sign a Compact circuit
 call.**
 
-The alternative would be making every citizen install Lace and hold DUST, which
+The alternative would be making every citizen install a wallet and hold DUST, which
 defeats the point. So we took the third path: the referendum contract
 authorises `castVote` on **anonymous Merkle membership plus a proposal-scoped
 nullifier**, and never on the submitter's identity
@@ -138,7 +142,7 @@ power over it.
 **Infrastructure**
 - Sponsored relayer that balances and submits on the citizen's behalf.
 - Deploy and eligibility-issuance scripts for Midnight Preview.
-- Origin-pinned, nonce-bound Passport bridge matching the published protocol.
+- Origin-pinned, nonce-bound interim Passport profile bridge behind a replaceable port; the official C23 connector remains a future integration gate.
 
 ## Tools
 
@@ -151,7 +155,7 @@ power over it.
 | Identity | Midnight Passport profile bridge (`org.midnight.passport.profile/v1`) |
 | Document scan | PDF417 via native `BarcodeDetector`, ZXing fallback |
 | Private state | WebCrypto AES-GCM + IndexedDB |
-| Testing | Vitest, Compact simulator — 62 tests |
+| Testing | Vitest, Compact simulator, Playwright |
 | Network | Midnight Preview |
 
 ## Getting started
@@ -164,7 +168,8 @@ must not be.
 - Ubuntu on WSL2, Node 22.22.0 (via `nvm` and the repo `.nvmrc`), npm 10
 - Compact CLI 0.5.1 / compiler 0.31.1
 - Docker, for the proof server
-- For real transactions: a Preview-funded seed for the relayer
+- For real Preview transactions: a Preview-funded seed for the relayer
+- For local Undeployed transactions: a local relayer seed and local NIGHT/DUST
 
 Everything is served over `http://localhost`, which both Passport passkeys and
 the camera API accept. No HTTPS, tunnel, or hosting account is needed.
@@ -179,9 +184,31 @@ bash scripts/setup-linux.sh
 npm run dev -- --host localhost --port 4173 --strictPort
 ```
 
-Open <http://localhost:4173>. You can walk the whole interface, scan a DNI (or
-use the clearly-labelled demo document), and read the explainer. Local mode is
-deliberately read-only: **it never fabricates a receipt.**
+Open <http://localhost:4173>. You can walk the whole interface and read the
+privacy, Passport, evidence, dashboard, and consultation flows. The demo may
+save an explicitly labelled simulated receipt in the encrypted,
+Passport-scoped local vault; it never fabricates a canonical chain receipt.
+
+### Local Undeployed chain — real local transactions
+
+Wave 1 now includes a pinned local Midnight stack. It runs the node, indexer,
+and Proof Server on loopback and uses the `undeployed` network ID:
+
+```bash
+npm run devnet:up
+cp relayer/.env.undeployed.example relayer/.env.undeployed
+# Fill RELAYER_SEED with a 32-byte local-only seed.
+npm run relayer:address:undeployed
+npm run relayer:undeployed
+npm run deploy:undeployed
+npm run dev:undeployed
+```
+
+The relayer address must be funded with local NIGHT and have DUST registered
+before deployment. See [the compatibility matrix](docs/COMPATIBILITY-MATRIX.md)
+and the official [midnight-local-dev funding tool](https://github.com/midnightntwrk/midnight-local-dev).
+This path is for local development only; Passport remains a synthetic fixture
+until a real credential verifier is connected.
 
 ### Real votes on Preview
 
@@ -257,7 +284,7 @@ treats `localhost` as a secure origin and rejects `127.0.0.1` outright.
 ### Verify
 
 ```bash
-npm test        # 62 tests: 3 contract simulator, 1 api, 58 ui
+npm test        # aggregate contract, API, CICO, and UI checks
 ```
 
 ## Privacy model
@@ -350,13 +377,15 @@ chain rather than in the simulator. Counting is driven by
       `/balance`, `/submit` — CORS-restricted, input-validated.
 - [x] Compact commit/reveal contract; simulator covers double-vote, replay
       reveal, and organizer-only finalize.
-- [x] Passport profile bridge conformant with the published protocol —
+- [x] Interim Passport profile bridge — origin/source/request/nonce checks,
       embedded-mode handshake adoption, 180 s budget, closed-popup detection.
 - [x] DNI PDF417 parsing, age check, salted uniqueness tag, presence scoring
       (34 unit tests), with a camera-free demo-document path.
 - [x] Live tally read from the contract; no hardcoded figures.
-- [x] Local read-only mode that cannot fabricate a receipt.
-- [x] 62 tests; all three workspaces typecheck.
+- [x] Local demo stores only an explicitly simulated, Passport-scoped receipt;
+      it cannot fabricate a canonical chain receipt.
+- [x] Current active verification: 173 automated tests across the referendum,
+      Passport v2, API, CICO, and UI suites; all relevant workspaces typecheck.
 - [x] **A real `castVote` on Preview**, with double-vote and ineligible-voter
       rejection both observed on chain (see above).
 - [x] **A referendum carried all the way to a result on Preview** — deploy,
@@ -364,16 +393,18 @@ chain rather than in the simulator. Counting is driven by
 
 ### Not yet verified
 
-- [ ] **`castVote` from the browser.** The vote above was proved and submitted
-      from Node against the same providers, relayer, and proof server the UI
-      uses; the browser path shares that code but has not itself put a ballot
-      on chain.
+- [ ] **`castVote` through a browser wallet.** The DApp Connector wallet path
+      still needs a real wallet session; the wallet-less browser path is now
+      covered separately below.
 - [ ] **The camera path against a physical DNI.** Parsing is unit-tested
       against synthetic payloads; live PDF417 decoding has not been run, and
       ZXing thresholds will likely need tuning. Needs a phone on
       `http://localhost:4173`.
-- [ ] **The browser-side relayer path.** `/balance` and `/submit` are proven
-      from Node during deploy, not yet from the browser.
+- [x] **The browser-side relayer path on local Undeployed.** An opt-in
+      Playwright lane now proves browser-side `/keys`, `/balance`, and `/submit`
+      plus a confirmed UI receipt. It requires an ephemeral eligibility
+      commitment issued to the same local contract and is not enabled by the
+      default demo/showcase test runs.
 
 ### The relayer is a single-coin bottleneck
 

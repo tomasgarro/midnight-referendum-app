@@ -113,7 +113,7 @@ describe('Passport v2 catalog and cross-device handoff', () => {
     expect(screen.getByRole('button', { name: /Enlace copiado/i })).toBeTruthy();
   });
 
-  it('uses runtime referendum IDs and honest policy copy instead of a fixed demo poll', async () => {
+  it('keeps referendum configuration out of credential onboarding', async () => {
     const requests: Array<{ referendumId: string }> = [];
     const runtimeEntry = {
       referendumId: 'budget-2030:country',
@@ -131,24 +131,23 @@ describe('Passport v2 catalog and cross-device handoff', () => {
       },
     } as never;
     const user = userEvent.setup();
+    const onCredentialReady = vi.fn();
     render(
       <PassportJourney
         mode="preview"
         onClose={vi.fn()}
+        onCredentialReady={onCredentialReady}
         previewPorts={{ ...ports(requests), referenda: [runtimeEntry] }}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
     await user.click(screen.getByRole('button', { name: /Iniciar verificación documental/i }));
-    await user.click(screen.getByRole('button', { name: /Elegir alcance o consulta/i }));
-    expect(screen.getByRole('heading', { name: 'Elegí una consulta configurada' })).toBeTruthy();
-    expect(screen.getByText(/política de país configurada/i)).toBeTruthy();
-    expect(screen.queryByText(/%/)).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Presupuesto 2030/i }));
-    await user.click(screen.getByRole('button', { name: /^Sí/i }));
-    await user.click(screen.getByRole('button', { name: /Revisar compromiso/i }));
-    await user.click(screen.getByRole('button', { name: /Probar y enviar en Preview/i }));
-    expect(requests).toEqual([{ referendumId: 'budget-2030:country' }]);
+    expect(await screen.findByRole('heading', { name: 'Tu credencial está lista' })).toBeTruthy();
+    expect(screen.queryByText('Presupuesto 2030')).toBeNull();
+    expect(screen.queryByText(/Elegí una consulta|Probar y enviar|política de país/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Ir al panel cívico/i }));
+    expect(onCredentialReady).toHaveBeenCalledWith(expect.objectContaining({ country: 'AR' }));
+    expect(requests).toEqual([]);
   });
 
   it('derives global and country scopes from the configured policy', () => {

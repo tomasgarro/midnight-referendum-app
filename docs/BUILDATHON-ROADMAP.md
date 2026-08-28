@@ -65,6 +65,7 @@ Program references: [Midnight Buildathon overview](https://midnight.network/hack
 | CICO issuer | Preview-only issuer runtime, canonical root checks and epoch coordinator | Implemented locally |
 | Private browser state | Address-scoped AES-GCM IndexedDB state and choice-free receipts | Implemented locally |
 | Public-mode isolation | Demo/showcase cannot activate wallet, relayer, proof, CICO, indexer or real contract ports | Implemented and browser-tested |
+| Seedless onboarding signal | Showcase performs a non-invasive platform-passkey capability check without creating a credential or contacting a wallet | Implemented locally; no vendor integration claim |
 | Vercel release path | Protected-main, pinned Compact/Vercel CLI, strict CSP, local font and exact prebuilt showcase artifact | Implemented; deployment credentials remain an external gate |
 | Physical NFC evidence | Hosted verifier and physical-device transcript | Not yet evidenced |
 | Wallet-less v2 action | Atomic sponsored action job and canonical live receipt | Not implemented |
@@ -116,7 +117,9 @@ deployed Passport journeys before the URL is published.
 
 ### Week 1: live identity
 
-- Use the real Passport profile bridge in the showcase journey.
+- Use the interim Passport profile bridge in the showcase journey, with a
+  controlled-origin E2E fixture until the official `mn-passport-connect` C23
+  package is published and its wire contract is adopted.
 - Support Passport-embedded per-field consent and standalone popup consent.
 - Add retry, denial, popup-blocked, closed, timeout, malformed-response and
   unsupported-context states.

@@ -4,6 +4,7 @@ import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 
 interface ImportMetaEnv {
   readonly VITE_APP_MODE?: string;
+  readonly VITE_MIDNIGHT_PREFERRED_WALLET_RDNS?: string;
   readonly VITE_MIDNIGHT_NETWORK?: string;
   readonly VITE_MIDNIGHT_CONTRACT_ADDRESS?: string;
   readonly VITE_MIDNIGHT_PROOF_SERVER_URL?: string;

@@ -1,9 +1,15 @@
+import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import type { AppProviders, ReferendumV2Providers } from 'midnight-referendum-api';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
+import { resolveAppMode } from '@/integration/app-mode';
 
 interface MidnightProvidersContextValue {
   providers: AppProviders | null;
+  /** Indexer-only provider; available without a wallet for public state. */
+  publicDataProvider: AppProviders['publicDataProvider'] | null;
+  publicReadReady: boolean;
+  publicReadError: string | null;
   referendumV2Providers: ReferendumV2Providers | null;
   isReady: boolean;
   error: string | null;
@@ -11,24 +17,32 @@ interface MidnightProvidersContextValue {
 
 const MidnightProvidersContext = createContext<MidnightProvidersContextValue | null>(null);
 
-const REAL_RUNTIME_ENABLED = import.meta.env.VITE_APP_MODE === 'preview';
+const APP_MODE = resolveAppMode(import.meta.env.MODE, import.meta.env.VITE_APP_MODE);
+const REAL_RUNTIME_ENABLED = APP_MODE === 'preview' || APP_MODE === 'undeployed';
+const IS_UNDEPLOYED = APP_MODE === 'undeployed';
 /** Set to run the wallet-less sponsored-relayer path. */
 const RELAYER_URL = REAL_RUNTIME_ENABLED ? import.meta.env.VITE_RELAYER_URL?.trim() || '' : '';
-const PROOF_SERVER_URL =
-  import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || 'http://localhost:6300';
-const NETWORK_ID = import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || 'preview';
+const PROOF_SERVER_URL = REAL_RUNTIME_ENABLED
+  ? import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || ''
+  : '';
+const NETWORK_ID =
+  import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || (IS_UNDEPLOYED ? 'undeployed' : 'preview');
 const INDEXER_URL =
   import.meta.env.VITE_MIDNIGHT_INDEXER_URL?.trim() ||
-  'https://indexer.preview.midnight.network/api/v4/graphql';
+  (APP_MODE === 'preview' ? 'https://indexer.preview.midnight.network/api/v4/graphql' : '');
 const INDEXER_WS_URL =
   import.meta.env.VITE_MIDNIGHT_INDEXER_WS_URL?.trim() ||
-  'wss://indexer.preview.midnight.network/api/v4/graphql/ws';
+  (APP_MODE === 'preview' ? 'wss://indexer.preview.midnight.network/api/v4/graphql/ws' : '');
 
 export const RELAYER_MODE = RELAYER_URL !== '';
 
 export function MidnightProvidersProvider({ children }: { children: ReactNode }) {
   const { connectedApi, status } = useWallet();
   const [providers, setProviders] = useState<AppProviders | null>(null);
+  const [publicDataProvider, setPublicDataProvider] = useState<
+    AppProviders['publicDataProvider'] | null
+  >(null);
+  const [publicReadError, setPublicReadError] = useState<string | null>(null);
   const [referendumV2Providers, setReferendumV2Providers] = useState<ReferendumV2Providers | null>(
     null,
   );
@@ -42,9 +56,26 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
     // indexer, or proof-server path in a public synthetic build.
     if (!REAL_RUNTIME_ENABLED) {
       setProviders(null);
+      setPublicDataProvider(null);
+      setPublicReadError(null);
       setReferendumV2Providers(null);
       setError(null);
       return;
+    }
+
+    // Public state is intentionally assembled before wallet/action providers.
+    // Reading the indexer must not inherit the wallet's connection state.
+    try {
+      if (!INDEXER_URL || !INDEXER_WS_URL) {
+        throw new Error(
+          `${IS_UNDEPLOYED ? 'Undeployed' : 'Preview'} requiere VITE_MIDNIGHT_INDEXER_URL y VITE_MIDNIGHT_INDEXER_WS_URL`,
+        );
+      }
+      setPublicDataProvider(indexerPublicDataProvider(INDEXER_URL, INDEXER_WS_URL));
+      setPublicReadError(null);
+    } catch (err) {
+      setPublicDataProvider(null);
+      setPublicReadError(err instanceof Error ? err.message : 'No se pudo preparar el indexer');
     }
 
     // Relayer mode is the default civic path: the citizen has no wallet, so
@@ -126,6 +157,9 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
     <MidnightProvidersContext.Provider
       value={{
         providers,
+        publicDataProvider,
+        publicReadReady: publicDataProvider !== null,
+        publicReadError,
         referendumV2Providers,
         isReady: providers !== null,
         error,

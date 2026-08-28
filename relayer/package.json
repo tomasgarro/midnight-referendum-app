@@ -8,8 +8,11 @@
     "build": "tsc --build --force",
     "start": "node --env-file-if-exists=.env dist/server.js",
     "dev": "tsc --build && node --env-file-if-exists=.env dist/server.js",
+    "dev:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/server.js",
     "address": "tsc --build && node --env-file-if-exists=.env dist/address.js",
+    "address:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/address.js",
     "dust": "tsc --build && node --env-file-if-exists=.env dist/register-dust.js",
+    "dust:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/register-dust.js",
     "test": "vitest run"
   },
   "dependencies": {

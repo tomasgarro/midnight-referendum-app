@@ -95,7 +95,7 @@ describe('PassportIdentityBridge', () => {
     if (!request) throw new Error('Passport profile request was not posted');
     expect(request.requestId).toBe(requestId);
     expect(request.nonce).toBe(nonce);
-    expect(request.fields).toContain('passportContract');
+    expect(request.fields).toEqual(['displayName']);
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: ORIGIN,
@@ -149,6 +149,110 @@ describe('PassportIdentityBridge', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('installs the popup listener before Passport can post ready', async () => {
+    const postMessage = vi.fn();
+    const popup = { postMessage, closed: false } as unknown as Window;
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      timeoutMs: 200,
+      openPassport: (url) => {
+        const query = new URL(url).searchParams;
+        queueMicrotask(() =>
+          window.dispatchEvent(
+            new MessageEvent('message', {
+              origin: ORIGIN,
+              source: popup,
+              data: {
+                protocol: PASSPORT_PROFILE_PROTOCOL,
+                type: 'passport.profile.ready',
+                requestId: query.get('passportRequestId'),
+                nonce: query.get('passportNonce'),
+              },
+            }),
+          ),
+        );
+        return popup;
+      },
+    });
+
+    const pending = bridge.connect(['displayName']);
+    await Promise.resolve();
+    expect(postMessage.mock.calls.at(-1)?.[0]).toMatchObject({
+      type: 'passport.profile.request',
+      fields: ['displayName'],
+    });
+    const request = postMessage.mock.calls.at(-1)?.[0] as {
+      requestId: string;
+      nonce: string;
+    };
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.response',
+          requestId: request.requestId,
+          nonce: request.nonce,
+          approved: true,
+          profile: { displayName: 'ready-first' },
+        },
+      }),
+    );
+    await expect(pending).resolves.toMatchObject({ displayName: 'ready-first' });
+  });
+
+  it('supports an explicit session-only handshake without profile fields', async () => {
+    const postMessage = vi.fn();
+    const popup = { postMessage, closed: false } as unknown as Window;
+    let opened = '';
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      timeoutMs: 200,
+      openPassport: (url) => {
+        opened = url;
+        return popup;
+      },
+    });
+
+    const pending = bridge.connect([]);
+    const query = new URL(opened).searchParams;
+    const requestId = query.get('passportRequestId');
+    const nonce = query.get('passportNonce');
+    if (!requestId || !nonce) throw new Error('Passport request parameters were not created');
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.ready',
+          requestId,
+          nonce,
+        },
+      }),
+    );
+    const request = postMessage.mock.calls.at(-1)?.[0] as { fields: string[] } | undefined;
+    expect(request?.fields).toEqual([]);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.response',
+          requestId,
+          nonce,
+          approved: true,
+          profile: {},
+        },
+      }),
+    );
+    await expect(pending).resolves.toMatchObject({ requestId, nonce });
   });
 
   it('adopts the pair Passport mints when the app is embedded', async () => {

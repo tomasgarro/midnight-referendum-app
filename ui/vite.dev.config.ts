@@ -19,18 +19,6 @@ export default defineConfig({
       include: ['buffer', 'process', 'util', 'crypto', 'stream'],
     }),
   ],
-  optimizeDeps: {
-    // The workspace hoists dependencies to the repository root. Explicitly
-    // prebundle React and Phosphor so the browser receives ESM wrappers rather
-    // than trying to import named exports from React's CommonJS entrypoint.
-    include: [
-      'react',
-      'react-dom',
-      'react/jsx-runtime',
-      'react/jsx-dev-runtime',
-      '@phosphor-icons/react',
-    ],
-  },
   esbuild: {
     jsx: 'automatic',
     jsxDev: true,

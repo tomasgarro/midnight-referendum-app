@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getPreviewReadiness } from '../integration/preview';
+import {
+  findRuntimeReferendum,
+  getPreviewReadiness,
+  getPublicReadiness,
+  resolvePassportV2ActionRoute,
+} from '../integration/preview';
 
 describe('Preview readiness', () => {
   const base = {
@@ -63,5 +68,89 @@ describe('Preview readiness', () => {
     expect(readiness.state).toBe('demo');
     expect(readiness.label).toBe('Solo lectura local');
     expect(readiness.message).toContain('no confirma votos');
+  });
+
+  it('uses the local Undeployed label and still requires a contract', () => {
+    const readiness = getPreviewReadiness({
+      ...base,
+      appMode: 'undeployed',
+      contractAddress: null,
+    });
+    expect(readiness.state).toBe('blocked');
+    expect(readiness.label).toBe('Undeployed local requiere contrato');
+    expect(readiness.message).toContain('Undeployed local');
+  });
+
+  it('prioritizes provider failures over a disconnected wallet', () => {
+    const readiness = getPreviewReadiness({
+      ...base,
+      walletConnected: false,
+      providersError: 'indexer unavailable',
+    });
+    expect(readiness.label).toBe('Preview no disponible');
+    expect(readiness.message).toContain('indexer unavailable');
+  });
+
+  it('blocks v2 action routing until a verified credential exists', () => {
+    const readiness = getPreviewReadiness({
+      ...base,
+      v2RuntimeConfigured: true,
+      credentialVerified: false,
+    });
+    expect(readiness.state).toBe('blocked');
+    expect(readiness.label).toBe('Preview requiere credencial');
+    expect(readiness.message).toContain('No se usará una fixture');
+  });
+
+  it('keeps public readiness independent from wallet state', () => {
+    const readiness = getPublicReadiness({
+      appMode: 'preview',
+      contractAddress: 'contract',
+      publicProviderReady: true,
+    });
+    expect(readiness.state).toBe('ready');
+    expect(readiness.message).toContain('sin conectar una wallet');
+  });
+
+  it('resolves an unambiguous namespaced referendum identity', () => {
+    expect(
+      findRuntimeReferendum(
+        [{ referendumId: 'tierras-rurales:country' }, { referendumId: 'fiscal' }],
+        'tierras-rurales',
+      )?.referendumId,
+    ).toBe('tierras-rurales:country');
+    expect(
+      findRuntimeReferendum(
+        [{ referendumId: 'poll:world' }, { referendumId: 'poll:country' }],
+        'poll',
+      ),
+    ).toBeNull();
+  });
+
+  it('never falls back to legacy when an enabled v2 route is incomplete', () => {
+    expect(
+      resolvePassportV2ActionRoute({
+        runtimeConfigured: true,
+        credentialVerified: false,
+        actionPortAvailable: false,
+        referendumId: null,
+      }),
+    ).toMatchObject({ mode: 'blocked' });
+    expect(
+      resolvePassportV2ActionRoute({
+        runtimeConfigured: true,
+        credentialVerified: true,
+        actionPortAvailable: true,
+        referendumId: 'poll:world',
+      }),
+    ).toEqual({ mode: 'v2', referendumId: 'poll:world' });
+    expect(
+      resolvePassportV2ActionRoute({
+        runtimeConfigured: false,
+        credentialVerified: false,
+        actionPortAvailable: false,
+        referendumId: null,
+      }),
+    ).toEqual({ mode: 'legacy' });
   });
 });
