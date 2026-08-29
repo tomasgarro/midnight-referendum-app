@@ -21,6 +21,7 @@ let relayProcess;
 let proxyServer;
 let capturedAction;
 let secrets = [];
+let runtimeEnv = {};
 let relayOutput = '';
 let indexerRecoveryStarts = 0;
 
@@ -36,8 +37,11 @@ try {
   rmSync(manifestPath, { force: true });
   rmSync(transcriptPath, { force: true });
   rmSync(transcriptMarkdownPath, { force: true });
+  rmSync(relayEnvPath, { force: true });
+  rmSync(deploymentEnvPath, { force: true });
   const generated = generateRunEnvironment();
   secrets = generated.secrets;
+  runtimeEnv = generated.environment;
   record('run-secrets', { generated: true, count: secrets.length });
   const proofServerReused = await endpointMatches('http://127.0.0.1:6300/version', '8.1.0');
   const composeServices = ['postgres', 'node', 'indexer'];
@@ -138,6 +142,9 @@ try {
 } finally {
   await stopRelay();
   if (proxyServer) await new Promise((resolveClose) => proxyServer.close(resolveClose));
+  rmSync(relayEnvPath, { force: true });
+  rmSync(deploymentEnvPath, { force: true });
+  record('run-secret-cleanup', { persistentFiles: false });
   run.finishedAt = new Date().toISOString();
   writeTranscript(run);
 }
@@ -201,54 +208,46 @@ function generateRunEnvironment() {
   ] = values;
   const issuerId = Buffer.from('cico-fixture-issuer', 'utf8').toString('hex').padEnd(64, '0');
   const now = Date.now();
-  writePrivate(
-    relayEnvPath,
-    [
-      `RELAYER_SEED=${relayerSeed}`,
-      'RELAYER_NETWORK_ID=undeployed',
-      'RELAYER_INDEXER_HTTP_URL=http://127.0.0.1:8088/api/v4/graphql',
-      'RELAYER_INDEXER_WS_URL=ws://127.0.0.1:8088/api/v4/graphql/ws',
-      'RELAYER_NODE_URL=ws://127.0.0.1:9944',
-      'RELAYER_PROOF_SERVER_URL=http://127.0.0.1:6300',
-      'RELAYER_HOST=127.0.0.1',
-      'RELAYER_PORT=8790',
-      'RELAYER_ALLOWED_ORIGINS=http://localhost:4173',
-      `RELAYER_V2_CAPABILITY_SECRET=${actionSecret}`,
-      'RELAYER_V2_ALLOWED_NETWORKS=undeployed',
-      'RELAYER_V2_ALLOWED_CONTRACTS=',
-      'RELAYER_V2_ALLOWED_CIRCUITS=castVote',
-      'RELAYER_V2_DATABASE_URL=postgresql://v2_evidence:v2_evidence@127.0.0.1:5433/v2_evidence',
-      'RELAYER_V2_JOB_STORE_PATH=.state/v2-actions-undeployed.json',
-      '',
-    ].join('\n'),
-  );
-  writePrivate(
-    deploymentEnvPath,
-    [
-      'V2_NETWORK_ID=undeployed',
-      'V2_ISSUER_ID=cico-fixture-issuer',
-      `V2_ISSUER_ID_HEX=${issuerId}`,
-      `V2_REGISTRY_ID_HEX=${registryId}`,
-      'V2_CREDENTIAL_EPOCH=1',
-      `V2_ISSUER_ROLE_SECRET_HEX=${issuerSecret}`,
-      `V2_ORGANIZER_ROLE_SECRET_HEX=${organizerSecret}`,
-      `V2_FIXTURE_HOLDER_SECRET_HEX=${holderSecret}`,
-      `V2_FIXTURE_HOLDER_BLIND_HEX=${holderBlind}`,
-      `V2_FIXTURE_CREDENTIAL_BLIND_HEX=${credentialBlind}`,
-      'V2_FIXTURE_COUNTRY=032',
-      'V2_FIXTURE_AGE_CLASS=18-plus',
-      'V2_FIXTURE_ASSURANCE=document-nfc',
-      `V2_FIXTURE_VALID_FROM=${isoWholeSecond(now - 60_000)}`,
-      `V2_FIXTURE_VALID_UNTIL=${isoWholeSecond(now + 86_400_000)}`,
-      `V2_FIXTURE_VOTE_SALT_HEX=${voteSalt}`,
-      'V2_FIXTURE_VOTE_CHOICE=YES',
-      'V2_REFERENDUM_ID=undeployed:evidence:v2',
-      `V2_EVENT_ID_HEX=${eventId}`,
-      'V2_API_URL=http://127.0.0.1:8791',
-      '',
-    ].join('\n'),
-  );
-  return { secrets: values };
+  return {
+    secrets: values,
+    environment: {
+      RELAYER_SEED: relayerSeed,
+      RELAYER_NETWORK_ID: 'undeployed',
+      RELAYER_INDEXER_HTTP_URL: 'http://127.0.0.1:8088/api/v4/graphql',
+      RELAYER_INDEXER_WS_URL: 'ws://127.0.0.1:8088/api/v4/graphql/ws',
+      RELAYER_NODE_URL: 'ws://127.0.0.1:9944',
+      RELAYER_PROOF_SERVER_URL: 'http://127.0.0.1:6300',
+      RELAYER_HOST: '127.0.0.1',
+      RELAYER_PORT: '8790',
+      RELAYER_ALLOWED_ORIGINS: 'http://localhost:4173',
+      RELAYER_V2_CAPABILITY_SECRET: actionSecret,
+      RELAYER_V2_ALLOWED_NETWORKS: 'undeployed',
+      RELAYER_V2_ALLOWED_CONTRACTS: '',
+      RELAYER_V2_ALLOWED_CIRCUITS: 'castVote',
+      RELAYER_V2_DATABASE_URL: 'postgresql://v2_evidence:v2_evidence@127.0.0.1:5433/v2_evidence',
+      RELAYER_V2_JOB_STORE_PATH: '.state/v2-actions-undeployed.json',
+      V2_NETWORK_ID: 'undeployed',
+      V2_ISSUER_ID: 'cico-fixture-issuer',
+      V2_ISSUER_ID_HEX: issuerId,
+      V2_REGISTRY_ID_HEX: registryId,
+      V2_CREDENTIAL_EPOCH: '1',
+      V2_ISSUER_ROLE_SECRET_HEX: issuerSecret,
+      V2_ORGANIZER_ROLE_SECRET_HEX: organizerSecret,
+      V2_FIXTURE_HOLDER_SECRET_HEX: holderSecret,
+      V2_FIXTURE_HOLDER_BLIND_HEX: holderBlind,
+      V2_FIXTURE_CREDENTIAL_BLIND_HEX: credentialBlind,
+      V2_FIXTURE_COUNTRY: '032',
+      V2_FIXTURE_AGE_CLASS: '18-plus',
+      V2_FIXTURE_ASSURANCE: 'document-nfc',
+      V2_FIXTURE_VALID_FROM: isoWholeSecond(now - 60_000),
+      V2_FIXTURE_VALID_UNTIL: isoWholeSecond(now + 86_400_000),
+      V2_FIXTURE_VOTE_SALT_HEX: voteSalt,
+      V2_FIXTURE_VOTE_CHOICE: 'YES',
+      V2_REFERENDUM_ID: 'undeployed:evidence:v2',
+      V2_EVENT_ID_HEX: eventId,
+      V2_API_URL: 'http://127.0.0.1:8791',
+    },
+  };
 }
 
 async function startRelay({ requireDust = false } = {}) {
@@ -258,7 +257,7 @@ async function startRelay({ requireDust = false } = {}) {
     ['--env-file-if-exists=relayer/.env.undeployed', 'relayer/dist/server.js'],
     {
       cwd: ROOT,
-      env: { ...process.env, RELAYER_PORT: '8792' },
+      env: { ...process.env, ...runtimeEnv, RELAYER_PORT: '8792' },
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     },
@@ -480,17 +479,13 @@ function finalizeManifest({
 }
 
 function updateRelayAllowlist(address) {
-  const value = readFileSync(relayEnvPath, 'utf8').replace(
-    /^RELAYER_V2_ALLOWED_CONTRACTS=.*$/mu,
-    `RELAYER_V2_ALLOWED_CONTRACTS=${address}`,
-  );
-  writePrivate(relayEnvPath, value);
+  runtimeEnv.RELAYER_V2_ALLOWED_CONTRACTS = address;
 }
 
 function command(executable, args, label, extraEnv = {}) {
   const result = spawnSync(executable, args, {
     cwd: ROOT,
-    env: { ...process.env, ...extraEnv },
+    env: { ...process.env, ...runtimeEnv, ...extraEnv },
     encoding: 'utf8',
     windowsHide: true,
     maxBuffer: 16 * 1024 * 1024,
@@ -503,7 +498,7 @@ function command(executable, args, label, extraEnv = {}) {
 async function commandAsync(executable, args, label, extraEnv = {}) {
   const child = spawn(executable, args, {
     cwd: ROOT,
-    env: { ...process.env, ...extraEnv },
+    env: { ...process.env, ...runtimeEnv, ...extraEnv },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -657,12 +652,6 @@ function record(name, value) {
   run.steps.push({ name, completedAt: new Date().toISOString(), value });
 }
 
-function writePrivate(path, value) {
-  mkdirSync(resolve(path, '..'), { recursive: true });
-  writeFileSync(path, value, { encoding: 'utf8', mode: 0o600 });
-  chmodSync(path, 0o600);
-}
-
 function redact(value) {
   let result = typeof value === 'string' ? value : JSON.stringify(value);
   for (const secret of secrets) result = result.split(secret).join('[REDACTED]');
@@ -683,7 +672,8 @@ function appendBounded(previous, chunk) {
 
 function writeTranscript(value) {
   const safe = JSON.parse(redact(JSON.stringify(value)));
-  safe.secretPolicy = 'ignored 0600 env files only; raw actions and capabilities are memory-only';
+  safe.secretPolicy =
+    'memory-only process environment; no generated secret files; raw actions and capabilities are memory-only';
   safe.networkTrace = {
     paths: [...new Set(trace.paths)],
     legacyRequests: trace.legacyPaths.length,
