@@ -19,7 +19,7 @@
       "!**/test-results",
       "!**/*.compact",
       "!**/tsconfig*.json",
-      "!docs/evidence/**"
+      "!docs/evidence"
     ]
   },
   "formatter": {
