@@ -204,6 +204,11 @@ export async function startServer(): Promise<void> {
       '[relayer] v2 action routes disabled: RELAYER_V2_CAPABILITY_SECRET is not configured',
     );
   }
+  if (config.legacyApiEnabled) {
+    console.warn(
+      '[relayer] WARNING: compatibility-only /balance and /submit routes are explicitly enabled',
+    );
+  }
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -283,7 +288,7 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        if (request.method === 'POST' && url.pathname === '/balance') {
+        if (config.legacyApiEnabled && request.method === 'POST' && url.pathname === '/balance') {
           const body = await readJson(request);
           const hex = hexField(body, 'tx');
           const balanced = await enqueue(() => balanceAndFinalize(wallet, deserializeUnbound(hex)));
@@ -291,7 +296,7 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        if (request.method === 'POST' && url.pathname === '/submit') {
+        if (config.legacyApiEnabled && request.method === 'POST' && url.pathname === '/submit') {
           const body = await readJson(request);
           const hex = hexField(body, 'tx');
           const txId = await enqueue(() =>

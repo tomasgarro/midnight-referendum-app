@@ -177,4 +177,25 @@ describe('v2 HTTP routes', () => {
       expect(await unknown.json()).toEqual({ error: 'not_found' });
     });
   });
+
+  it('rejects operator circuits at the public HTTP boundary', async () => {
+    const { service: actionService, store } = service();
+    await withServer({ service: actionService, capabilitySecret: secret }, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/v2/actions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'idempotency-key': 'operator-request',
+        },
+        body: JSON.stringify({
+          ...body,
+          actionId: 'operator-action',
+          circuit: 'closeVote',
+        }),
+      });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'not_allowlisted' });
+      expect(await store.get('operator-action')).toBeNull();
+    });
+  });
 });

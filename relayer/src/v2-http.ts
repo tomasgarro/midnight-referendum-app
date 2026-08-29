@@ -14,8 +14,10 @@ export interface V2HttpRouteOptions {
 }
 
 /**
- * Handles the walletless v2 HTTP surface. Returns false for non-v2 paths so
- * the compatibility routes can remain in the legacy server handler.
+ * Handles the walletless citizen HTTP surface. It is structurally limited to
+ * `castVote`; operator circuits never cross this public boundary. Returns
+ * false for non-v2 paths so explicitly enabled compatibility mode can be
+ * handled by the legacy server code.
  */
 export async function handleV2Route(
   request: IncomingMessage,
@@ -38,6 +40,10 @@ export async function handleV2Route(
     const receiptMatch = /^\/v2\/receipts\/([^/]+)$/u.exec(url.pathname);
     if (request.method === 'POST' && url.pathname === '/v2/actions') {
       const body = await readJson(request);
+      if (body.circuit !== 'castVote' || (body.action !== undefined && body.action !== 'vote')) {
+        send(response, 403, { error: 'not_allowlisted' });
+        return true;
+      }
       const job = await options.service.accept(body, {
         idempotencyKey: headerValue(request, 'idempotency-key'),
         requestHash: headerValue(request, 'x-request-hash'),

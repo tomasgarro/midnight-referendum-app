@@ -226,6 +226,7 @@ function generateRunEnvironment() {
       RELAYER_V2_ALLOWED_CIRCUITS: 'castVote',
       RELAYER_V2_DATABASE_URL: 'postgresql://v2_evidence:v2_evidence@127.0.0.1:5433/v2_evidence',
       RELAYER_V2_JOB_STORE_PATH: '.state/v2-actions-undeployed.json',
+      RELAYER_LEGACY_API_ENABLED: 'false',
       V2_NETWORK_ID: 'undeployed',
       V2_ISSUER_ID: 'cico-fixture-issuer',
       V2_ISSUER_ID_HEX: issuerId,

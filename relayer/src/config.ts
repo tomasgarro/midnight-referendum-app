@@ -28,6 +28,8 @@ export interface RelayerConfig {
   v2DatabaseUrl: string;
   v2JobStorePath: string;
   v2ExplorerBaseUrl: string;
+  /** Compatibility-only v1 transaction routes. Disabled unless explicitly opted in. */
+  legacyApiEnabled: boolean;
 }
 
 function required(name: string): string {
@@ -51,11 +53,24 @@ function list(name: string, fallback: string): string[] {
     .filter(Boolean);
 }
 
+function boolean(name: string, fallback = false): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (!value) return fallback;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new Error(`${name} must be either "true" or "false".`);
+}
+
 export function loadConfig(): RelayerConfig {
   const seedHex = required('RELAYER_SEED').toLowerCase().replace(/^0x/, '');
   if (!/^[0-9a-f]{64}$/.test(seedHex)) {
     // Fail on shape alone; the value itself must never reach a log line.
     throw new Error('RELAYER_SEED must be 64 hexadecimal characters (32 bytes).');
+  }
+
+  const v2AllowedCircuits = list('RELAYER_V2_ALLOWED_CIRCUITS', 'castVote');
+  if (v2AllowedCircuits.length !== 1 || v2AllowedCircuits[0] !== 'castVote') {
+    throw new Error('The public v2 relayer may allow only the castVote circuit.');
   }
 
   return {
@@ -81,9 +96,10 @@ export function loadConfig(): RelayerConfig {
     v2CapabilitySecret: optional('RELAYER_V2_CAPABILITY_SECRET', ''),
     v2AllowedNetworks: list('RELAYER_V2_ALLOWED_NETWORKS', 'preview'),
     v2AllowedContracts: list('RELAYER_V2_ALLOWED_CONTRACTS', ''),
-    v2AllowedCircuits: list('RELAYER_V2_ALLOWED_CIRCUITS', 'castVote'),
+    v2AllowedCircuits,
     v2DatabaseUrl: optional('RELAYER_V2_DATABASE_URL', ''),
     v2JobStorePath: optional('RELAYER_V2_JOB_STORE_PATH', '.state/v2-actions.json'),
     v2ExplorerBaseUrl: optional('RELAYER_EXPLORER_BASE_URL', ''),
+    legacyApiEnabled: boolean('RELAYER_LEGACY_API_ENABLED'),
   };
 }
