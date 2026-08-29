@@ -255,7 +255,7 @@ export async function createReferendumV2WalletlessProviders(
       if (previous) {
         const recovered = await relay.getAction(previous.actionId);
         if (recovered && recovered.requestHash === previous.requestHash) {
-          const transactionId = await waitForTransactionId(
+          const transactionId = await waitForCanonicalReceipt(
             relay,
             recovered,
             pollIntervalMs,
@@ -298,7 +298,7 @@ export async function createReferendumV2WalletlessProviders(
         action: scope.action,
         tx,
       });
-      const transactionId = await waitForTransactionId(
+      const transactionId = await waitForCanonicalReceipt(
         relay,
         job,
         pollIntervalMs,
@@ -338,7 +338,7 @@ export async function createReferendumV2WalletlessProviders(
   };
 }
 
-async function waitForTransactionId(
+async function waitForCanonicalReceipt(
   relay: WalletlessActionClient,
   initial: WalletlessActionJob,
   intervalMs: number,
@@ -346,16 +346,27 @@ async function waitForTransactionId(
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   let job: WalletlessActionJob | null = initial;
-  while (job && !job.transactionId) {
+  for (;;) {
+    if (!job) throw new Error('Walletless relay lost the accepted action');
     if (job.status === 'failed' || job.status === 'recovery_required') {
       throw new Error(`Walletless relay stopped with ${job.errorCode ?? job.status}`);
+    }
+    const receipt = await relay.getReceipt(initial.actionId);
+    if (receipt) {
+      if (
+        receipt.network !== initial.network ||
+        receipt.contractAddress !== initial.contractAddress ||
+        receipt.circuit !== initial.circuit ||
+        (job.transactionId && receipt.transactionId !== job.transactionId)
+      ) {
+        throw new Error('Walletless canonical receipt does not match the accepted action');
+      }
+      return receipt.transactionId;
     }
     if (Date.now() >= deadline) throw new Error('Walletless relay submission is still pending');
     await delay(intervalMs);
     job = await relay.getAction(initial.actionId);
   }
-  if (!job?.transactionId) throw new Error('Walletless relay lost the accepted action');
-  return job.transactionId;
 }
 
 /** Browser/WebCrypto equivalent of the relay's deterministic request digest. */

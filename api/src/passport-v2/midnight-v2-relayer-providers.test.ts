@@ -48,6 +48,9 @@ describe('v2 walletless providers', () => {
           circuit: 'castVote',
         });
       }
+      if (url.includes('/v2/receipts/')) {
+        return response(200, canonicalReceipt('tx-1'));
+      }
       if (url.includes('/v2/actions/')) {
         return response(200, {
           actionId: issued[0]?.actionId,
@@ -96,6 +99,7 @@ describe('v2 walletless providers', () => {
     expect(posted).toMatchObject({ requestHash: expectedHash, tx: 'abcd' });
     expect(JSON.stringify(posted)).not.toContain(scope.credentialAuthorization);
     expect(requests.some((url) => url.endsWith('/balance') || url.endsWith('/submit'))).toBe(false);
+    expect(requests.some((url) => url.includes('/v2/receipts/'))).toBe(true);
     expect(runtime.getLastActionTrace()).toMatchObject({
       requestHash: expectedHash,
       transactionId: 'tx-1',
@@ -148,6 +152,9 @@ describe('v2 walletless providers', () => {
       if (String(input).endsWith('/keys')) {
         return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
       }
+      if (String(input).includes('/v2/receipts/')) {
+        return response(200, canonicalReceipt('tx-recovered'));
+      }
       if (String(input).includes('/v2/actions/')) {
         return response(200, {
           actionId,
@@ -175,4 +182,81 @@ describe('v2 walletless providers', () => {
     expect(postCount).toBe(1);
     expect(capabilityIssuer.issue).toHaveBeenCalledTimes(1);
   });
+
+  it('does not treat a relay transaction id as a canonical receipt', async () => {
+    const capabilityIssuer = { issue: vi.fn(async () => 'capability') };
+    let receiptPolls = 0;
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/keys')) {
+        return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
+      }
+      if (url.endsWith('/v2/actions') && init?.method === 'POST') {
+        const request = JSON.parse(String(init.body));
+        return response(202, {
+          actionId: request.actionId,
+          status: 'pending',
+          requestHash: request.requestHash,
+          network: 'undeployed',
+          contractAddress: 'contract-1',
+          circuit: 'castVote',
+          transactionId: 'tx-indexer-gated',
+        });
+      }
+      if (url.includes('/v2/receipts/')) {
+        receiptPolls += 1;
+        return receiptPolls === 1
+          ? response(202, { status: 'pending' })
+          : response(200, canonicalReceipt('tx-indexer-gated'));
+      }
+      if (url.includes('/v2/actions/')) {
+        return response(200, {
+          actionId: url.split('/').at(-1),
+          status: 'pending',
+          requestHash: 'pending',
+          network: 'undeployed',
+          contractAddress: 'contract-1',
+          circuit: 'castVote',
+          transactionId: 'tx-indexer-gated',
+        });
+      }
+      throw new Error(`unexpected URL ${url}`);
+    }) as typeof fetch;
+    const runtime = await createReferendumV2WalletlessProviders({
+      relayUrl: 'http://localhost:8790',
+      proofServerUri: 'http://localhost:6300',
+      networkId: 'undeployed',
+      indexerUri: 'http://localhost:8088/api/v4/graphql',
+      indexerWsUri: 'ws://localhost:8088/api/v4/graphql/ws',
+      capabilityIssuer,
+      fetchImpl,
+      zkConfigBaseUrl: 'http://localhost:4173/managed/referendum-v2',
+      pollIntervalMs: 10,
+      submissionTimeoutMs: 100,
+    });
+    const proven = { serialize: () => Uint8Array.from([3, 4]) };
+    const transactionId = await runtime.actionContext.run(scope, async () =>
+      runtime.providers.midnightProvider.submitTx(
+        await runtime.providers.walletProvider.balanceTx(proven as never),
+      ),
+    );
+
+    expect(transactionId).toBe('tx-indexer-gated');
+    expect(receiptPolls).toBe(2);
+  });
 });
+
+function canonicalReceipt(transactionId: string) {
+  return {
+    status: 'confirmed',
+    action: 'vote',
+    network: 'undeployed',
+    transactionId,
+    transactionHash: `hash-${transactionId}`,
+    contractAddress: 'contract-1',
+    circuit: 'castVote',
+    blockHeight: 7,
+    blockHash: 'block-7',
+    blockTimestamp: '2026-08-29T00:00:00.000Z',
+  };
+}
