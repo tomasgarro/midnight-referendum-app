@@ -142,3 +142,45 @@ assets, a CLI-driven `standalone.yml`, and a browser UI. Its infrastructure
 versions predate this repository's `ledger-v8@8.1.0`/Midnight.js `4.1.1` target.
 The referendum app therefore adopts its separation of app/contract/CLI ideas,
 not its old image tags or package lockfile.
+
+## Dependency audit posture
+
+`npm audit --omit=dev` reports **0 vulnerabilities**. The production dependency
+graph — the API, CICO service, relayer, and the shipped browser bundle — is
+clean.
+
+The full `npm audit`, which includes development tooling, reports 6 low and 4
+moderate findings. All of them resolve to three Vite plugins used only by the
+`ui` workspace's local dev server and its static build step:
+
+| Advisory | Severity | Package | Reached through |
+| --- | --- | --- | --- |
+| GHSA-67mh-4wv8-2f99 | moderate | `esbuild@0.14.54` | `@originjs/vite-plugin-commonjs@1.0.3` |
+| GHSA-848j-6mx2-7j84 | low (x6) | `elliptic@6.6.1` and its `crypto-browserify` chain | `vite-plugin-node-polyfills@0.28.0` |
+| GHSA-w5hq-g745-h8pq | moderate | `uuid@10.0.0` | `vite-plugin-top-level-await@1.6.0` |
+
+These are **accepted, monitored, dev-only risks**, not deferred work. Each of
+the three plugins is already at its latest published version, and none has an
+upstream release that resolves its advisory. `vite-plugin-top-level-await`
+pins `uuid` to an exact `10.0.0`, and `elliptic@6.6.1` is itself the newest
+release, so the advisory is unpatched upstream rather than merely un-upgraded.
+
+`npm audit fix --force` is **not** an acceptable remedy here and must not be
+run: its only proposed change is to downgrade these plugins to years-old
+releases, which carries real breakage risk and no security gain.
+
+The production build path does not use the vulnerable copies. `vite@7.3.6`
+bundles its own current `esbuild`; the vulnerable `esbuild@0.14.54` exists
+solely as the CommonJS transform invoked inside the Vite process. The
+`crypto-browserify`/`elliptic` alias only activates if the module graph imports
+Node's `crypto`, and the relayer, CICO, and API workspaces do not depend on
+`vite-plugin-node-polyfills` at all.
+
+Re-check on each dependency change and before any release:
+
+```bash
+npm audit --omit=dev
+npm audit
+```
+
+Treat any finding that appears under `--omit=dev` as a release blocker.
