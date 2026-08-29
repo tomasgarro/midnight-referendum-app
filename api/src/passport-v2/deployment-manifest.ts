@@ -1,3 +1,6 @@
+import { sha256 } from '@noble/hashes/sha256.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
+import { sanitizeCanonicalReceipt } from '../receipts/canonical.js';
 import { deriveRegistryContractBinding } from './crypto.js';
 import type { CanonicalReceipt } from './types.js';
 
@@ -83,6 +86,8 @@ export interface PassportV2ManifestActionEvidence {
 
 export interface PassportV2ManifestRelayEvidence {
   readonly submissionTransport: 'v2-actions';
+  readonly durableStore: 'postgresql';
+  readonly legacyApiEnabled: false;
   readonly states: readonly string[];
   readonly accepted: boolean;
   readonly duplicateResolved: boolean;
@@ -232,9 +237,16 @@ export function validatePassportV2DeploymentManifest(manifest: PassportV2Deploym
   if (manifest.network !== manifest.networkId) {
     throw new TypeError('Manifest network and networkId must match');
   }
-  if (!manifest.generatedAt || !manifest.runtime.apiUrl) {
+  if (
+    typeof manifest.generatedAt !== 'string' ||
+    !manifest.generatedAt.trim() ||
+    !manifest.runtime ||
+    typeof manifest.runtime.apiUrl !== 'string' ||
+    !manifest.runtime.apiUrl.trim()
+  ) {
     throw new TypeError('Manifest runtime metadata is incomplete');
   }
+  assertRuntimeApiUrl(manifest.runtime.apiUrl, manifest.network);
   assertPublicArtifacts(manifest.artifacts);
   assertPublicEndpoints(manifest.endpoints);
   assertDust(manifest.dust);
@@ -318,8 +330,25 @@ export function validatePassportV2DeploymentManifest(manifest: PassportV2Deploym
 
 /** A manifest is public evidence; private fixture material must fail closed. */
 function assertNoPrivateManifestFields(value: unknown): void {
-  const forbidden =
-    /^(?:secret|seed|seedphrase|witness|proof|credentialblind|credentialleaf|votersecret|votesalt|capabilitytoken)$/iu;
+  const forbidden = new Set([
+    'secret',
+    'seed',
+    'seedphrase',
+    'witness',
+    'proof',
+    'credentialblind',
+    'credentialleaf',
+    'votersecret',
+    'votesalt',
+    'capabilitytoken',
+    'holdersecret',
+    'holderblind',
+    'credentialopening',
+    'choice',
+    'passportprofile',
+    'privatestate',
+    'rawproof',
+  ]);
   const pending: unknown[] = [value];
   while (pending.length > 0) {
     const item = pending.pop();
@@ -329,7 +358,8 @@ function assertNoPrivateManifestFields(value: unknown): void {
     }
     if (!item || typeof item !== 'object') continue;
     for (const [key, child] of Object.entries(item)) {
-      if (forbidden.test(key.replace(/[-_]/gu, ''))) {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/gu, '');
+      if (forbidden.has(normalizedKey)) {
         throw new TypeError('Manifest contains private fixture material');
       }
       if (child && typeof child === 'object') pending.push(child);
@@ -389,8 +419,11 @@ export function assertCompletePassportV2DeploymentManifest(
   }
   const action = manifest.action;
   if (
-    !action?.actionId ||
-    !action.transactionId ||
+    !action ||
+    typeof action.actionId !== 'string' ||
+    !action.actionId.trim() ||
+    typeof action.transactionId !== 'string' ||
+    !action.transactionId.trim() ||
     action.status !== 'confirmed' ||
     !/^[0-9a-f]{64}$/iu.test(action.actionIdDigest) ||
     !/^[0-9a-f]{64}$/iu.test(action.idempotencyKeyDigest) ||
@@ -399,6 +432,12 @@ export function assertCompletePassportV2DeploymentManifest(
     !/^[0-9a-f]{64}$/iu.test(action.capabilityDigest)
   ) {
     throw new Error('Complete manifest is missing atomic action/idempotency evidence');
+  }
+  const expectedActionIdDigest = bytesToHex(
+    sha256(utf8ToBytes(`midnight-referendum:v2-action-id-digest:1:${action.actionId}`)),
+  );
+  if (action.actionIdDigest !== expectedActionIdDigest) {
+    throw new Error('Complete manifest action ID digest does not match its public action ID');
   }
   const relay = manifest.relay;
   const requiredRelayStates = [
@@ -412,14 +451,19 @@ export function assertCompletePassportV2DeploymentManifest(
   ];
   if (
     relay?.submissionTransport !== 'v2-actions' ||
-    !relay.accepted ||
-    !relay.duplicateResolved ||
-    !relay.concurrentIdempotent ||
-    !relay.restartRecovered ||
-    relay.states.length === 0 ||
-    !requiredRelayStates.every((state) => relay.states.includes(state))
+    relay?.durableStore !== 'postgresql' ||
+    relay?.legacyApiEnabled !== false ||
+    !relay?.accepted ||
+    !relay?.duplicateResolved ||
+    !relay?.concurrentIdempotent ||
+    !relay?.restartRecovered ||
+    !Array.isArray(relay?.states) ||
+    relay?.states.length !== requiredRelayStates.length ||
+    !requiredRelayStates.every((state, index) => relay?.states[index] === state)
   ) {
-    throw new Error('Complete manifest is missing relay state/idempotency evidence');
+    throw new Error(
+      'Complete manifest is missing the exact PostgreSQL relay policy/state/idempotency sequence',
+    );
   }
   const registry = manifest.registry;
   if (
@@ -464,17 +508,68 @@ export function assertCompletePassportV2DeploymentManifest(
   ) {
     throw new Error('Complete manifest is missing deployment or lifecycle transcript steps');
   }
-  const requiredReceipts: PassportV2DeploymentStepId[] = [
+  const requiredReceipts = [
     'lifecycle.cast',
     'lifecycle.close',
     'lifecycle.reveal',
     'lifecycle.finalize',
-  ];
+  ] as const;
+  if (
+    new Set(manifest.transcript.steps.map((step) => step.id)).size !==
+    manifest.transcript.steps.length
+  ) {
+    throw new Error('Complete manifest contains duplicate deployment transcript steps');
+  }
+  const referendumAddress = manifest.referenda[0]?.contractAddress;
+  if (!referendumAddress) {
+    throw new Error('Complete manifest is missing the lifecycle referendum address');
+  }
+  assertHex32(referendumAddress, 'lifecycle referendum address');
+  const lifecycleReceipts = new Map<PassportV2DeploymentStepId, CanonicalReceipt>();
   for (const id of requiredReceipts) {
     const step = manifest.transcript.steps.find((candidate) => candidate.id === id);
-    if (!step?.receipt?.transactionId) {
+    if (!step || (step.status !== 'confirmed' && step.status !== 'reconciled')) {
       throw new Error(`Complete manifest is missing ${id} transaction evidence`);
     }
+    if (!step.receipt?.transactionId) {
+      throw new Error(`Complete manifest is missing ${id} transaction evidence`);
+    }
+    const expectedCircuit = {
+      'lifecycle.cast': 'castVote',
+      'lifecycle.close': 'closeVote',
+      'lifecycle.reveal': 'revealVote',
+      'lifecycle.finalize': 'finalizeVote',
+    }[id];
+    let receipt: CanonicalReceipt;
+    try {
+      receipt = sanitizeCanonicalReceipt(step.receipt);
+    } catch {
+      throw new Error(`Complete manifest has an invalid ${id} canonical receipt`);
+    }
+    if (
+      receipt.status !== 'confirmed' ||
+      receipt.action !== 'vote' ||
+      receipt.network !== manifest.network ||
+      receipt.circuit !== expectedCircuit ||
+      !receipt.transactionId.trim() ||
+      stripHexPrefix(receipt.contractAddress) !== stripHexPrefix(referendumAddress)
+    ) {
+      throw new Error(
+        `Complete manifest ${id} receipt is not a confirmed ${expectedCircuit} receipt`,
+      );
+    }
+    lifecycleReceipts.set(id, receipt);
+  }
+  const receiptTransactionIds = new Set<string>();
+  for (const [id, receipt] of lifecycleReceipts) {
+    if (receiptTransactionIds.has(receipt.transactionId)) {
+      throw new Error(`Complete manifest has duplicate ${id} lifecycle transaction evidence`);
+    }
+    receiptTransactionIds.add(receipt.transactionId);
+  }
+  const castReceipt = lifecycleReceipts.get('lifecycle.cast');
+  if (!castReceipt || action.transactionId !== castReceipt.transactionId) {
+    throw new Error('Complete manifest action transaction does not match the cast receipt');
   }
   const replayStep = manifest.transcript.steps.find(
     (candidate) => candidate.id === 'lifecycle.replay-rejected',
@@ -485,29 +580,58 @@ export function assertCompletePassportV2DeploymentManifest(
   if (manifest.transcript.observations.length < 5) {
     throw new Error('Complete manifest is missing canonical indexer observations');
   }
+  const availableObservationTransactionIds = new Set<string>();
+  for (const observation of manifest.transcript.observations) {
+    if (observation.indexer.available !== true || observation.transactionId === undefined) {
+      continue;
+    }
+    if (!observation.transactionId.trim()) {
+      throw new Error('Complete manifest contains an empty indexer transaction observation');
+    }
+    if (availableObservationTransactionIds.has(observation.transactionId)) {
+      throw new Error('Complete manifest contains duplicate indexer transaction observations');
+    }
+    availableObservationTransactionIds.add(observation.transactionId);
+  }
   for (const id of requiredReceipts) {
-    if (
-      !manifest.transcript.observations.some(
-        (observation) => observation.stage === id && observation.indexer.available,
-      )
-    ) {
+    const observations = manifest.transcript.observations.filter(
+      (observation) => observation.stage === id && observation.indexer.available === true,
+    );
+    if (observations.length !== 1) {
       throw new Error(`Complete manifest is missing ${id} indexer observation`);
+    }
+    const observation = observations[0];
+    const receipt = lifecycleReceipts.get(id);
+    if (
+      !receipt ||
+      observation.transactionId !== receipt.transactionId ||
+      observation.indexer.source !== manifest.endpoints.indexerHttp
+    ) {
+      throw new Error(`Complete manifest ${id} indexer observation is not bound to its receipt`);
     }
   }
   const lifecycle = manifest.lifecycle;
   if (
     !lifecycle?.replayRejected ||
     !lifecycle.finalized ||
-    lifecycle.indexerObservations < requiredReceipts.length ||
-    !lifecycle.castTransactionId ||
-    !lifecycle.closeTransactionId ||
-    !lifecycle.revealTransactionId ||
-    !lifecycle.finalizeTransactionId
+    lifecycle.indexerObservations !== requiredReceipts.length ||
+    lifecycle.castTransactionId !== lifecycleReceipts.get('lifecycle.cast')?.transactionId ||
+    lifecycle.closeTransactionId !== lifecycleReceipts.get('lifecycle.close')?.transactionId ||
+    lifecycle.revealTransactionId !== lifecycleReceipts.get('lifecycle.reveal')?.transactionId ||
+    lifecycle.finalizeTransactionId !== lifecycleReceipts.get('lifecycle.finalize')?.transactionId
   ) {
-    throw new Error('Complete manifest is missing finalized lifecycle evidence');
+    throw new Error(
+      'Complete manifest is missing or has inconsistent finalized lifecycle evidence',
+    );
   }
   if (!manifest.manifestDigest || !/^[0-9a-f]{64}$/iu.test(manifest.manifestDigest)) {
     throw new Error('Complete manifest is missing its manifest digest');
+  }
+  const digestInput = { ...manifest } as Record<string, unknown>;
+  delete digestInput.manifestDigest;
+  const expectedManifestDigest = bytesToHex(sha256(utf8ToBytes(stableJson(digestInput))));
+  if (manifest.manifestDigest !== expectedManifestDigest) {
+    throw new Error('Complete manifest manifest digest does not match its canonical content');
   }
   if (
     manifest.endpoints.nodeRpc === null ||
@@ -567,6 +691,39 @@ function assertPublicUrl(value: string, label: string): void {
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
     throw new TypeError(`${label} must not contain credentials, query strings, or fragments`);
   }
+}
+
+function assertRuntimeApiUrl(value: string, network: PassportV2ManifestNetwork): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new TypeError('runtime apiUrl must be an absolute public URL');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new TypeError('runtime apiUrl must use HTTP or HTTPS');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new TypeError('runtime apiUrl must not contain credentials, query strings, or fragments');
+  }
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname.toLowerCase());
+  if (network === 'preview' && parsed.protocol !== 'https:') {
+    throw new TypeError('Preview runtime apiUrl must use HTTPS');
+  }
+  if (network === 'undeployed' && parsed.protocol === 'http:' && !local) {
+    throw new TypeError('Undeployed HTTP runtime apiUrl must target a local host');
+  }
+}
+
+/** Matches scripts/evidence-undeployed-v2.mjs stableJson exactly for JSON data. */
+function stableJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) as string;
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  const object = value as Record<string, unknown>;
+  return `{${Object.keys(object)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(object[key])}`)
+    .join(',')}}`;
 }
 
 function assertDust(dust: PassportV2ManifestDust): void {
