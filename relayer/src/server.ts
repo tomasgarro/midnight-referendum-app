@@ -253,6 +253,8 @@ export async function startServer(): Promise<void> {
           send(response, 200, {
             synced: state.isSynced,
             networkId: config.networkId,
+            v2ActionStore: config.v2DatabaseUrl ? 'postgresql' : 'local-file',
+            legacyApiEnabled: config.legacyApiEnabled,
             progress: {
               shielded: state.shielded.progress,
               unshielded: state.unshielded.progress,

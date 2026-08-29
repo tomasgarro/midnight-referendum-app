@@ -66,7 +66,11 @@ try {
 
   proxyServer = await startTraceProxy();
   relayProcess = await startRelay({ requireDust: true });
-  record('relay-before-prepare', await getJson(`${publicRelayOrigin}/health`));
+  const relayHealth = await getJson(`${publicRelayOrigin}/health`);
+  if (relayHealth.v2ActionStore !== 'postgresql' || relayHealth.legacyApiEnabled !== false) {
+    throw new Error('Evidence relay must use PostgreSQL with legacy transaction routes disabled');
+  }
+  record('relay-before-prepare', relayHealth);
   await commandAsync(
     npmCommand(),
     ['run', 'deploy:undeployed'],
@@ -457,6 +461,8 @@ function finalizeManifest({
   };
   manifest.relay = {
     ...manifest.relay,
+    durableStore: 'postgresql',
+    legacyApiEnabled: false,
     states: relayStates,
     accepted: true,
     duplicateResolved: true,
@@ -756,6 +762,8 @@ function renderJuryTranscript(evidence, manifest) {
       `- Idempotency digest: \`${markdownCell(manifest.action?.idempotencyKeyDigest ?? 'missing')}\``,
       `- Confirmed transaction: \`${markdownCell(manifest.action?.transactionId ?? 'missing')}\``,
       `- Durable states: ${(manifest.relay?.states ?? []).map((state) => `\`${markdownCell(state)}\``).join(' → ') || 'missing'}`,
+      `- Durable action store: **${markdownCell(manifest.relay?.durableStore ?? 'missing')}**`,
+      `- Legacy compatibility API enabled: **${manifest.relay?.legacyApiEnabled ? 'yes' : 'no'}**`,
       `- Concurrent duplicate resolved once: **${manifest.relay?.concurrentIdempotent ? 'yes' : 'no'}**`,
       `- Post-restart retry recovered the same action: **${manifest.relay?.restartRecovered ? 'yes' : 'no'}**`,
       `- Legacy \`/balance\` or \`/submit\` requests: **${markdownCell(evidence.networkTrace?.legacyRequests ?? 'unknown')}**`,
