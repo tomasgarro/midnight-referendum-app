@@ -4,7 +4,7 @@ Status: execution roadmap for the Midnight Buildathon. This document owns the
 three-wave product cadence and submission evidence. The current Undeployed v2
 lifecycle has an operator-verified local run, and its sanitized
 manifest/transcript are committed at
-[docs/evidence/undeployed-v2/abdd0a2/](docs/evidence/undeployed-v2/abdd0a2/).
+[docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/).
 This roadmap contains targets and source-status notes, not Preview
 transaction, Passport, NFC, CI, test-count, release-SHA, URL, or video
 evidence.

@@ -18,7 +18,8 @@
       "!**/playwright-report",
       "!**/test-results",
       "!**/*.compact",
-      "!**/tsconfig*.json"
+      "!**/tsconfig*.json",
+      "!docs/evidence/**"
     ]
   },
   "formatter": {

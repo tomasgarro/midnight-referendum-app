@@ -20,9 +20,10 @@ Passport approval, Midnight Preview evidence, or physical NFC evidence.
 
 The manifest attests source commit `abdd0a2203fbef909f70f6ddc06681ac1327f457`
 (tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`), which is the runtime,
-contract, relay, and operator code as it was executed. Later
-documentation-only commits on this branch do not alter that tree, so the
-attested SHA is deliberately the run's SHA rather than the branch head.
+contract, relay, and operator code as it was executed. Later commits on this
+branch change only documentation and the verification harness, never that
+runtime, contract, relay, or operator code, so the attested SHA is
+deliberately the run's SHA rather than the branch head.
 
 | Scope | Status in this checkout | What it proves | What it does not prove |
 | --- | --- | --- | --- |
