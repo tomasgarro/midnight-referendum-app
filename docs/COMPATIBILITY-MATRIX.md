@@ -3,7 +3,10 @@
 This is the local-first compatibility contract for the referendum MVP. It is
 deliberately pinned so the app, generated Compact assets, and the three local
 Midnight services do not drift independently. It describes target versions and
-procedures; the current review checkout has no verified runtime transcript.
+procedures. The current branch has an operator-verified local Undeployed v2 run
+against this stack; its sanitized manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/)
+(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
 
 Checked 2026-08-27 against the official [Midnight local-dev standalone
 configuration](https://github.com/midnightntwrk/midnight-local-dev/blob/main/standalone.yml)

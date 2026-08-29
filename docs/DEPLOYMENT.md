@@ -2,14 +2,17 @@
 
 Status: target topology for the local Undeployed v2 slice and a later hosted
 Passport Preview pilot. The checkout contains source paths for the CICO
-evidence/issuer process and capability-gated v2 relay, but runtime evidence is
-**not verified here**. No committed sanitized manifest/transcript, deployed
-address, transaction, release identity, CI result, hosted URL, Passport origin
-approval, or physical NFC evidence is asserted by this plan. A pinned/running
-self-hosted verificator, funded issuer wallet, deployed open registry, and
-physical NFC transcript remain external deployment dependencies. The legacy
-`/balance` and `/submit` routes remain compatibility-only and **must not** be
-published as the citizen action API.
+evidence/issuer process and capability-gated v2 relay, and the current local
+Undeployed lifecycle has been operator-verified. Its sanitized
+manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/)
+(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
+No Preview deployment, Passport origin approval, physical NFC evidence, hosted
+URL, CI result, or release identity is asserted. A pinned/running self-hosted verificator, funded
+issuer wallet, deployed open registry, and physical NFC transcript remain
+external deployment dependencies. The legacy `/balance` and `/submit` routes
+remain compatibility-only and **must not be published as the citizen action
+API**.
 
 This plan implements ADR-001 through ADR-006:
 
@@ -54,8 +57,9 @@ organizer key, relayer seed, or raw provider result.
 
 ### Development and verification: one WSL workstation
 
-Use this until browser-side `castVote`, the physical passport flow, and the v2
-credential vertical slice have real evidence.
+Use this topology to reproduce and inspect the verified local Undeployed v2
+run. The physical passport flow, real provider-backed credential, and Preview
+deployment remain separate gates; a local run is not hosted release evidence.
 
 | Component | Location | Exposure |
 | --- | --- | --- |

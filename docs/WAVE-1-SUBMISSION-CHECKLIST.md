@@ -1,24 +1,28 @@
 # Wave 1 evidence checklist
 
-This checklist is a release worksheet, not a claim that the current review
-checkout has completed these gates. Runtime evidence for Undeployed v2 is
-**in progress and unverified**. The active status summary is the four-row table
-in the [root README](../README.md). Historical v1 Preview values are preserved
-separately in [LEGACY-V1-PREVIEW-EVIDENCE.md](LEGACY-V1-PREVIEW-EVIDENCE.md).
+This checklist is a release worksheet. The current Undeployed v2 lifecycle has
+an operator-verified local run, and its sanitized manifest/transcript are
+committed at [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/);
+this checklist must not be read as a committed final Preview release record.
+The active status summary is the four-row table in the [root
+README](../README.md). Historical v1 Preview values are preserved separately in
+[LEGACY-V1-PREVIEW-EVIDENCE.md](LEGACY-V1-PREVIEW-EVIDENCE.md).
 
 ## Evidence record
 
-Leave fields blank until the run is complete and independently reviewed. Never
-record secrets, voter material, raw provider data, document images, or ballot
-choices.
+Leave release identity, reviewer, and date fields blank until the evidence is
+deliberately attached to the release record. Never record secrets, voter
+material, raw provider data, document images, or ballot choices.
 
 | Field | Value |
 | --- | --- |
 | Review checkout / branch | `feat/undeployed-v2-evidence-release` |
 | Release SHA | not assigned |
-| Sanitized manifest path | not present |
-| Sanitized transcript path | not present |
-| Runtime environment | not verified |
+| Evidence source SHA | `abdd0a2203fbef909f70f6ddc06681ac1327f457` (tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`) |
+| Manifest digest | `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d` |
+| Sanitized manifest path | `docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` |
+| Sanitized transcript path | `docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json` (human-readable form at `undeployed-v2.transcript.md`) |
+| Runtime environment | Undeployed v2 operator run verified locally |
 | Reviewer | |
 | Review date | |
 
@@ -28,9 +32,11 @@ choices.
 
 - [ ] README and this checklist distinguish historical v1, synthetic demo,
       current Undeployed v2, and Passport/Preview/NFC gates.
-- [ ] No current document claims a transaction hash, deployed address, release
-      SHA, CI status, test total, hosted URL, video, Passport origin approval,
-      Preview deployment, or physical NFC evidence without a committed source.
+- [ ] No current document claims a Preview transaction, deployed address,
+      release SHA, CI status, test total, hosted URL, video, Passport origin
+      approval, Preview deployment, or physical NFC evidence without a
+      committed source; the committed local Undeployed v2 identifiers stay
+      scoped to that lifecycle and are not restated as Preview evidence.
 - [ ] Browser profile/session fields remain separate from credential and ballot
       material.
 - [ ] Voter secret, credential opening, witness, choice, salt, raw MRZ/NFC data,
@@ -47,21 +53,18 @@ choices.
 
 ### Undeployed v2 runtime evidence
 
-- [ ] Run `npm run evidence:undeployed:v2` on Linux/WSL2 with Docker and the
-      pinned toolchain.
+- Verified locally by the operator: the pinned services and the registry
+  deploy/issue/freeze, referendum deploy/cast/replay rejection/close/reveal/
+  finalize lifecycle completed; the local indexer confirmed the action; and the
+  capability-gated relay passed DUST, concurrency, and restart checks.
 - [ ] Confirm the runner fails closed when local genesis funding is absent.
-- [ ] Confirm node, indexer, proof server, PostgreSQL, issuer, and relayer
-      services are the expected local components.
-- [ ] Confirm the lifecycle covers registry deploy, issue, freeze, referendum
-      deploy, cast, replay rejection, close, reveal, and finalize.
-- [ ] Confirm relay jobs are capability-gated, idempotent, DUST-safe across
-      concurrency/restart, and pending until indexer confirmation.
-- [ ] Confirm the generated manifest contains only reviewed public evidence and
-      no secret or private browser material.
-- [ ] Review the manifest/transcript, then deliberately stage it if it is safe;
-      generated evidence is ignored by default until this review.
+- [x] Sanitize and review the generated manifest/transcript; the reviewed
+      evidence is committed at `docs/evidence/undeployed-v2/abdd0a2/`.
+- [x] Deliberately stage and commit only the reviewed public manifest/transcript;
+      keep private env files, keys, voter material, witnesses, raw provider
+      data, and local database state ignored.
 - [ ] Record only public transaction identifiers and indexer observations from
-      the reviewed manifest; do not copy them into active docs by hand.
+      the committed manifest; do not copy them into active docs by hand.
 
 ### Passport, Preview, and physical evidence
 
@@ -72,7 +75,8 @@ choices.
       satisfy this gate.
 - [ ] Complete a physical-device/NFC transcript and retention/deletion review.
 - [ ] Run a fresh Preview issue/vote/close/reveal/finalize transcript only after
-      the local v2 gates and independent review are complete.
+      the local v2 gates and independent review are complete; the verified local
+      run does not satisfy this gate.
 - [ ] Record hosted URL, release SHA, CI links, and walkthrough video only when
       they actually exist and are attached to the release record.
 

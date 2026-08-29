@@ -19,30 +19,32 @@ Never edit the historical Windows project copy. Generated Compact assets are syn
 ## Current implementation status (review checkout)
 
 The checkout contains v2 contract, provider, issuer, browser, relayer, and
-operator-runner code. That is implementation status only. Runtime evidence is
-**in progress and unverified**: no committed sanitized Undeployed manifest or
-transcript is present, and no current Preview transaction or Passport/NFC
-session is asserted by this document. Do not add transaction IDs, addresses,
-release SHAs, CI results, test totals, hosted URLs, videos, or provider-approval
-claims until a fresh run is independently reviewed and its sanitized evidence
-is deliberately committed.
+operator-runner code. The current Undeployed v2 lifecycle and relay run have
+been verified locally by an operator, and the sanitized manifest/transcript are
+committed at
+`docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` and
+`docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json`
+(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
+Do not turn that local result into a Preview transaction, Passport approval,
+physical NFC/provider approval, CI result, test total, hosted URL, or video
+claim; those remain separate release gates.
 
 The bounded local procedure is `npm run evidence:undeployed:v2`. It generates
 secrets in ignored files, starts the pinned services, and fails closed when
-genesis funding or a lifecycle step is unavailable. A generated manifest or
-transcript is not evidence until it has passed the review gate in
-`docs/ENVIRONMENT-ACCEPTANCE.md`.
+genesis funding or a lifecycle step is unavailable. The committed manifest and
+transcript were reviewed against the gate in `docs/ENVIRONMENT-ACCEPTANCE.md`
+before being deliberately staged and committed.
 
-Still external/live-environment gated:
+Still external or release-record gated:
 
 - self-hosted and authenticated Rarimo verificator/callback service and a
   physical NFC transcript;
-- a real credential issuer run against the canonical local/Preview registry;
-- deployed v2 registry/referendum addresses and fresh Undeployed/Preview
-  transaction transcripts;
+- a real credential issuer run against the provider and canonical Preview
+  registry (the local run uses the fixture issuer);
+- a fresh Preview transaction transcript;
 - independent Passport origin approval and account/network validation;
-- atomic sponsored-relay, DUST concurrency/idempotency, restart/recovery, and
-  pilot operations evidence.
+- Preview/pilot sponsored-relay, DUST concurrency/idempotency, restart/recovery,
+  and operations evidence beyond the verified local run.
 
 ## Architecture decisions
 

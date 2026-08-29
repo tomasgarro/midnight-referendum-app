@@ -2,9 +2,13 @@
 
 Status: execution roadmap for the Midnight Buildathon. This document owns the
 three-wave product cadence and submission evidence. The current Undeployed v2
-runtime evidence is not verified in the review checkout; this roadmap contains
-targets and source-status notes, not deployed transaction, Passport, NFC, CI,
-test-count, release-SHA, URL, or video evidence. [`ROADMAP.md`](ROADMAP.md)
+lifecycle has an operator-verified local run, and its sanitized
+manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/](docs/evidence/undeployed-v2/abdd0a2/).
+This roadmap contains targets and source-status notes, not Preview
+transaction, Passport, NFC, CI, test-count, release-SHA, URL, or video
+evidence.
+[`ROADMAP.md`](ROADMAP.md)
 remains the source of truth for cryptographic release gates and
 [`FIRST-PUBLIC-DEPLOYMENT.md`](FIRST-PUBLIC-DEPLOYMENT.md) owns the release
 runbook.
@@ -60,18 +64,18 @@ Program references: [Midnight Buildathon overview](https://midnight.network/hack
 
 | Capability | Evidence today | Status |
 | --- | --- | --- |
-| Passport-first journey | Deterministic consent-to-receipt unit and browser journeys | Source path present; runtime evidence pending |
+| Passport-first journey | Deterministic consent-to-receipt unit and browser journeys | Synthetic journey path present; live Passport evidence pending |
 | Provider-neutral boundaries | Session, credential and civic-action ports with conformance checks | Source path present; verification pending |
 | Passport bridge | Exact origin/source, request ID and nonce binding; embedded and popup paths | Source path present; origin approval pending |
-| Credential policy | Issuer-bound reusable leaf, frozen epoch root, global/country/adult/assurance predicates | Source path present; current review verification pending |
+| Credential policy | Issuer-bound reusable leaf, frozen epoch root, global/country/adult/assurance predicates | Exercised by the operator-verified local Undeployed run; manifest/transcript committed at `docs/evidence/undeployed-v2/abdd0a2/` |
 | Rarimo boundary | Verified-status gate, request/holder binding, minimal claims, replay state and cleanup | In progress; provider and physical-device evidence pending |
-| CICO issuer | Preview-only issuer runtime, canonical root checks and epoch coordinator | Source path present; runtime evidence pending |
+| CICO issuer | Fixture-backed local issuer path, canonical root checks and epoch coordinator | Local run exercised the fixture path; real provider/Preview issuer remains gated |
 | Private browser state | Address-scoped AES-GCM IndexedDB state and choice-free receipts | Source path present; recovery evidence pending |
 | Public-mode isolation | Demo/showcase cannot activate wallet, relayer, proof, CICO, indexer or real contract ports | Source path present; privacy check pending |
 | Seedless onboarding signal | Showcase performs a non-invasive platform-passkey capability check without creating a credential or contacting a wallet | Source path present; no vendor integration claim |
 | Vercel release path | Protected-main, pinned Compact/Vercel CLI, strict CSP, local font and exact prebuilt showcase artifact | Workflow present; deployment not verified |
 | Physical NFC evidence | Hosted verifier and physical-device transcript | Not yet evidenced |
-| Wallet-less v2 action | Atomic sponsored action job and canonical live receipt | In progress; fresh runtime transcript pending |
+| Wallet-less v2 action | Atomic sponsored action job and canonical local receipt | Undeployed run verified locally; manifest/transcript committed at `docs/evidence/undeployed-v2/abdd0a2/`; Preview action pending |
 | Private geography | Delayed ZK aggregation and audit | Intentionally deferred |
 
 ## Pre-wave foundation — Aug 25–27

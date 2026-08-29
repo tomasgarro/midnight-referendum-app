@@ -2,10 +2,12 @@
 
 Status: working roadmap for a non-binding civic-consultation product targeting
 Midnight Preview. This is an outcome-driven plan, not a promise of dates or a
-claim that the product is suitable for governmental elections. Source code may
-be present while runtime evidence remains pending; this document does not
-assert a deployed network, Passport approval, NFC session, release identity,
-CI result, test total, URL, or video.
+claim that the product is suitable for governmental elections. The current
+Undeployed v2 lifecycle has an operator-verified local run, and its sanitized
+manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/).
+This document does not assert a Preview deployment, Passport approval, NFC
+session, release identity, CI result, test total, URL, or video.
 
 The weekly product and submission cadence for the August–November 2026 program
 lives in [`BUILDATHON-ROADMAP.md`](BUILDATHON-ROADMAP.md). This document remains
@@ -39,14 +41,14 @@ private geography percentages.
 
 | Stage | Initiative | Intended outcome | Exit evidence | Status |
 | --- | --- | --- | --- | --- |
-| Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Source path present; runtime evidence pending |
+| Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Synthetic journey path present; live Passport evidence pending |
 | Now | Provider-neutral domain ports | Rarimo and future Passport-native providers remain replaceable | Session, credential, and action conformance checks; no provider transports in use cases | Source path present; verification pending |
 | Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Vercel package, Hostinger separation plan | Configuration present; release checks pending |
-| Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while every referendum pins an exact frozen root | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Source path present; current review verification pending |
+| Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while every referendum pins an exact frozen root | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Exercised by the operator-verified local Undeployed run; manifest/transcript committed at `docs/evidence/undeployed-v2/abdd0a2/` |
 | Next | Rarimo evidence adapter + issuer | A physical passport verification can authorize a provider-neutral credential for an open enrollment epoch | Server-verified callback, claim-bound authorization, replay/idempotency checks, raw-data deletion check, synthetic and Rarimo conformance parity | In progress; source boundary exists, but trusted verificator, callback approval, funded issuer, physical NFC transcript, and runtime evidence remain gates |
-| Now | Credential epoch coordinator | A bounded cohort enrolls, the canonical root freezes, and only then do matching consultations open | Indexer-reconciled enrollment close/freeze transcript; UI states for enrollment, freeze, eligible epoch, and next epoch | Source path present; no committed runtime manifest/transcript |
-| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Source path present; fresh Undeployed and Preview evidence pending |
-| Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag checks | Source path present; service/DUST/restart transcript pending |
+| Now | Credential epoch coordinator | A bounded cohort enrolls, the canonical root freezes, and only then do matching consultations open | Indexer-reconciled enrollment close/freeze transcript; UI states for enrollment, freeze, eligible epoch, and next epoch | Exercised by the operator-verified local Undeployed run; manifest/transcript committed at `docs/evidence/undeployed-v2/abdd0a2/` |
+| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Undeployed v2 run verified locally; Preview evidence and committed local transcript pending |
+| Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag checks | Local capability, DUST, concurrency, and restart checks verified; hosted/Preview evidence pending |
 | Next | Encrypted private state and receipts | Refresh/restart recovery does not require cleartext browser persistence | Threat model, encrypted IndexedDB checks, export/recovery UX, no sensitive storage/log matches | In progress; runtime recovery and durable receipt evidence pending |
 | Later | Invited Preview pilot | A small cohort completes real passport-backed consultations reliably | Acceptance funnel, support runbook, incident exercise, privacy review, uptime/error data | Gated |
 | Later | Geography decision | Country participation reporting has an honest privacy and trust model | Explicit approval of public opt-in or delayed ZK aggregation; dedicated audit | Human decision gate |
@@ -54,13 +56,13 @@ private geography percentages.
 
 ## Release sequence and acceptance gates
 
-### R0 — executable local product slice (complete)
+### R0 — executable local product slice
 
 Scope: provider-neutral ports, deterministic Passport journey, World/Argentina
 policy UX, choice-free receipt, quality/CI, production build, headless browser
 tests, and static-host packaging.
 
-Gate:
+Gate requirements (not a current claim of a complete release record):
 
 - all Compact, API, and UI tests pass;
 - the critical Passport journey passes in Chromium;
@@ -83,9 +85,11 @@ Gate:
 - public transcript and ZKIR review find no country, age, holder binding,
   credential opening, choice, or salt disclosure in `castVote`.
 
-Source status: the contract and policy boundaries are in the checkout. The
-remaining evidence belongs to R2/R3 and requires a fresh local/Preview runtime
-transcript rather than additional prose or simulator claims.
+Source status: the contract and policy boundaries are in the checkout, and the
+current local Undeployed run exercises their deployed lifecycle. The sanitized
+manifest/transcript are committed at
+`docs/evidence/undeployed-v2/abdd0a2/`; independent cryptographic/ZKIR review
+and Preview evidence remain separate gates.
 
 ### R2 — real passport enrollment
 
@@ -132,11 +136,13 @@ private state, contract-specific providers, canonical root/path binding,
 browser-owned choice/witness preparation, choice-free receipts, pending
 confirmation recovery, and environment-driven composition exist in the
 checkout. The issuer/coordinator and catalog fail-closed boundaries are part
-of the source design. The v2 operator command, one-time capability issuer,
-durable relay, restart path, and indexer-only receipt lookup still need a fresh
-Undeployed transcript and independent review. No current transaction or
-indexer observation is asserted here. ADR-006 deliberately rejects an
-immediate passport scan against an already-frozen live referendum.
+of the source design. The current operator-verified Undeployed run covers the
+local v2 operator command, one-time capability issuer, durable relay, restart
+path, and indexer-only receipt lookup; its sanitized manifest/transcript are
+committed at `docs/evidence/undeployed-v2/abdd0a2/`. Preview evidence and
+independent review remain required. ADR-006
+deliberately rejects an immediate passport scan against an already-frozen live
+referendum.
 
 ### R4 — invited pilot
 

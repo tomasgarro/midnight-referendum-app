@@ -1,0 +1,502 @@
+{
+  "kind": "midnight-passport-v2-runtime",
+  "version": 2,
+  "status": "complete",
+  "network": "undeployed",
+  "networkId": "undeployed",
+  "generatedAt": "2026-08-29T14:34:13.005Z",
+  "source": {
+    "commit": "abdd0a2203fbef909f70f6ddc06681ac1327f457",
+    "tree": "9d1319aa3540a0943f760631ec3ac9c9e5b40b36"
+  },
+  "services": {
+    "api": {
+      "version": "0.1.0",
+      "hash": "c8b0674812b55f90d72428c01819f8b3ad8bac4627f45fc076667b9573e56ab5"
+    },
+    "relayer": {
+      "version": "0.1.0",
+      "hash": "a52172285c7ad7bbe8e76002f5541f44cc01b039a8a8e26577ce2311705665a9"
+    },
+    "node": {
+      "version": "midnightntwrk/midnight-node:1.0.0",
+      "hash": "530d6b0a9dc18fb0f5734d1c977a2dade24a4c29c531bb90e558e9a3704c09f9"
+    },
+    "indexer": {
+      "version": "midnightntwrk/indexer-standalone:4.3.3",
+      "hash": "e22afd54ca3afb622e3a0f3440b495f8e768476c15a81f77325f80429f20ff09"
+    },
+    "proofServer": {
+      "version": "midnightntwrk/proof-server:8.1.0",
+      "hash": "6e1ffb4a816a751443762ff5e8400852a4a1e38ba764b0a0ec4cc520cddbcdce"
+    },
+    "lockfile": {
+      "version": "npm-lock",
+      "hash": "8bfed28b5c7e7aa8582f5d11b3962f9519cb2a7e74ff139192dbc43103f401a4"
+    }
+  },
+  "artifacts": {
+    "compactLanguageVersion": "0.23",
+    "compactCompilerVersion": "0.31.1",
+    "compactRuntimeVersion": "0.16.0",
+    "midnightJsVersion": "4.1.1",
+    "ledgerVersion": "8.1.0",
+    "onchainRuntimeVersion": "3.0.0",
+    "registryArtifact": "credential-registry-v1",
+    "referendumArtifact": "referendum-v2",
+    "hashes": {
+      "credential-registry-v1": "81e9c9562397862426171fe985772ae2f3330a586c6ea2dd18e8084585d489fb",
+      "referendum-v2": "523fda89412e5c3566c5b699f631cfc637a1782c598aa4dc726ce0c3bdabd913"
+    }
+  },
+  "endpoints": {
+    "nodeRpc": "ws://127.0.0.1:9944",
+    "indexerHttp": "http://127.0.0.1:8088/api/v4/graphql",
+    "indexerWs": "ws://127.0.0.1:8088/api/v4/graphql/ws",
+    "proofServer": "http://127.0.0.1:6300",
+    "relay": "http://127.0.0.1:8790",
+    "explorer": null
+  },
+  "dust": {
+    "before": "54939482874360835",
+    "after": "52927393236564295",
+    "spent": "2012089637796540",
+    "beforeObservedAt": "2026-08-29T14:35:43.656Z",
+    "afterObservedAt": "2026-08-29T14:37:33.349Z",
+    "valuationAt": "2026-08-29T14:35:43Z",
+    "accounted": true
+  },
+  "runtime": {
+    "apiUrl": "http://127.0.0.1:8791",
+    "credentialTtlMs": 86400000,
+    "uniquenessTimestampUpperBoundUnixSeconds": "4102444800"
+  },
+  "registry": {
+    "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+    "registryContractBindingHex": "51aefc012783e520f9e8de44e862fca7af7a6236df579efc22e611557ad0fdd2",
+    "registryIdHex": "a30a0bd3a955ac784150d512124e33a7dd828f2f5148d4ec2e95c559cab825cc",
+    "issuerId": "cico-fixture-issuer",
+    "issuerIdHex": "6369636f2d666978747572652d69737375657200000000000000000000000000",
+    "credentialEpoch": "1",
+    "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+    "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+    "credentialCount": "1",
+    "frozen": true
+  },
+  "referenda": [
+    {
+      "referendumId": "undeployed:evidence:v2",
+      "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+      "registryContractBindingHex": "51aefc012783e520f9e8de44e862fca7af7a6236df579efc22e611557ad0fdd2",
+      "eventIdHex": "a055393fb74fa8e7cfcd4057a206d900aeb154e804d24717f8164f858b3270bd",
+      "organizerKeyHex": "cddce4dbd2ab5e5e731880a06714ee5f4d6036e8c1505fc70c8e4751ea436402",
+      "countryPolicy": null,
+      "minimumAssurance": "2",
+      "requireAdult": true,
+      "validityReference": "1788013763",
+      "title": "Passport v2 local referendum",
+      "question": "Should this civic consultation proceed?"
+    }
+  ],
+  "transcript": {
+    "steps": [
+      {
+        "id": "registry.deploy",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:35:50.287Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "credential",
+          "network": "undeployed",
+          "transactionId": "00efb939efebde176b9ca79c6269b0483ed9459749f3724c0a30d5b6119d75cbcb",
+          "transactionHash": "1a5579bde6d4715805b71360d81c10245ce8cf8c8048bb2d1651a09bebc6f97b",
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "circuit": "deploy",
+          "blockHeight": 39,
+          "blockHash": "221f815166d9ffd254ae2caa748a2d611875880e18fd09731826c0f74cd08f55",
+          "blockTimestamp": "2026-08-29T14:34:18.000Z"
+        }
+      },
+      {
+        "id": "registry.issue",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:35:50.361Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "credential",
+          "network": "undeployed",
+          "transactionId": "007fc928f5d7abc533916d57b0994e226f3a6f0d2ea492072a64897d0daa3cd966",
+          "transactionHash": "e934de10d42a3274e94d36a140e26c5a09029902d6d6868fefade27a2f8bc2f6",
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "circuit": "addCredential",
+          "blockHeight": 43,
+          "blockHash": "3812acd78e52d00c63858e32e72c783e2f5c84a78fe62b4686265e703725fb09",
+          "blockTimestamp": "2026-08-29T14:34:42.000Z"
+        },
+        "details": {
+          "credentialCount": "1"
+        }
+      },
+      {
+        "id": "registry.freeze",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:35:50.382Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "credential",
+          "network": "undeployed",
+          "transactionId": "00e5ca789a278b1c31889c668fbf01812aed9853323782acb88e31770ce50108c1",
+          "transactionHash": "7c19e15ef49bbab609a3bd03e5863ece2d494fd6e94f33ca562c8e653e929484",
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "circuit": "freeze",
+          "blockHeight": 47,
+          "blockHash": "4063753ccac6129029bd380c86be25b948467abc6568799cb2c3b83e15867352",
+          "blockTimestamp": "2026-08-29T14:35:06.000Z"
+        }
+      },
+      {
+        "id": "referendum.deploy",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:35:50.466Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "vote",
+          "network": "undeployed",
+          "transactionId": "00befa09068fb681731197f74f0272685b3b8867d83aa14bb260d7c57c9552afab",
+          "transactionHash": "9d3ac924ac6793701dc59a6fec366a40fbf44ec2738d2d5b4ad68498f2f702d3",
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "circuit": "deploy",
+          "blockHeight": 50,
+          "blockHash": "66842da1503b668faf6d718006bdd6f3fbe0705adcaff3eecb5a8a570108a1cc",
+          "blockTimestamp": "2026-08-29T14:35:24.000Z"
+        }
+      },
+      {
+        "id": "lifecycle.cast",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:36:13.969Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "vote",
+          "network": "undeployed",
+          "transactionId": "00cddfabb4d265599cf0a9489ac1fbe6ece7e62059a196ca1e1b4d8f788bf2f51f",
+          "transactionHash": "9de534f54965b48fa04da8789243b221dcb524268cf254709cbb1573fdaed648",
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "circuit": "castVote",
+          "blockHeight": 56,
+          "blockHash": "143a7e5206ae4a2e2673495705c02d7ea0e400e12ebf603de44d62172fb180a4",
+          "blockTimestamp": "2026-08-29T14:36:00.001Z"
+        }
+      },
+      {
+        "id": "lifecycle.replay-rejected",
+        "status": "rejected",
+        "completedAt": "2026-08-29T14:36:14.166Z",
+        "details": {
+          "reason": "Unexpected error executing scoped transaction '<unnamed>': Error: failed assert: This voter has already voted in this referendum"
+        }
+      },
+      {
+        "id": "lifecycle.close",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:36:38.297Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "vote",
+          "network": "undeployed",
+          "transactionId": "00665027fe40cac7b2a86585c13edffbc97b30375fbbfbb7b8e1c5d479806aaba3",
+          "transactionHash": "d5eb4e90668ae7f92fe4dfd489e6b1e4cffb70968b3a275331215891d59e3a60",
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "circuit": "closeVote",
+          "blockHeight": 60,
+          "blockHash": "0e466abcb2e35201a14a63e44821a597d4ed080c13432f3a8aaac868926addd3",
+          "blockTimestamp": "2026-08-29T14:36:24.001Z"
+        }
+      },
+      {
+        "id": "lifecycle.reveal",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:37:02.322Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "vote",
+          "network": "undeployed",
+          "transactionId": "00d9d8acaccb68e562edd32a17ac15f95420093740a5ab6e862268c0ce9877b046",
+          "transactionHash": "ef8589b84c2c54b83dd05619cb7bf11e98d59d287e66beec7b6aa513e9f3a8e4",
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "circuit": "revealVote",
+          "blockHeight": 64,
+          "blockHash": "1b751f55c016b9b2feb95276a3c8d4fd92cbfb88b34bc4adfde29ddc302463fe",
+          "blockTimestamp": "2026-08-29T14:36:48.000Z"
+        }
+      },
+      {
+        "id": "lifecycle.finalize",
+        "status": "confirmed",
+        "completedAt": "2026-08-29T14:37:26.340Z",
+        "receipt": {
+          "status": "confirmed",
+          "action": "vote",
+          "network": "undeployed",
+          "transactionId": "008bf66cd00910973718c47c713d00fff4b841603ff3bd6f407f5cc7754a8784e5",
+          "transactionHash": "af6663219903f089edeb127f9e5f7557888a3d05d0b8316596c4bbce9e3c1b3e",
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "circuit": "finalizeVote",
+          "blockHeight": 68,
+          "blockHash": "fa5cc7e9b03cb4ea8c9df55b17ac6a34d8c5537e95f06d0e1f321aa251ae08e1",
+          "blockTimestamp": "2026-08-29T14:37:12.000Z"
+        }
+      }
+    ],
+    "observations": [
+      {
+        "stage": "registry.deploy",
+        "observedAt": "2026-08-29T14:35:50.348Z",
+        "transactionId": "00efb939efebde176b9ca79c6269b0483ed9459749f3724c0a30d5b6119d75cbcb",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        }
+      },
+      {
+        "stage": "registry.issue",
+        "observedAt": "2026-08-29T14:35:50.381Z",
+        "transactionId": "007fc928f5d7abc533916d57b0994e226f3a6f0d2ea492072a64897d0daa3cd966",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        }
+      },
+      {
+        "stage": "registry.freeze",
+        "observedAt": "2026-08-29T14:35:50.402Z",
+        "transactionId": "00e5ca789a278b1c31889c668fbf01812aed9853323782acb88e31770ce50108c1",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        }
+      },
+      {
+        "stage": "referendum.deploy",
+        "observedAt": "2026-08-29T14:35:50.629Z",
+        "transactionId": "00befa09068fb681731197f74f0272685b3b8867d83aa14bb260d7c57c9552afab",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        },
+        "referendum": {
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "phase": "COMMIT",
+          "closed": false,
+          "issuedVotes": "0",
+          "tally": {
+            "YES": "0",
+            "NO": "0",
+            "ABSTAIN": "0"
+          }
+        }
+      },
+      {
+        "stage": "lifecycle.cast",
+        "observedAt": "2026-08-29T14:36:14.092Z",
+        "transactionId": "00cddfabb4d265599cf0a9489ac1fbe6ece7e62059a196ca1e1b4d8f788bf2f51f",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        },
+        "referendum": {
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "phase": "COMMIT",
+          "closed": false,
+          "issuedVotes": "1",
+          "tally": {
+            "YES": "0",
+            "NO": "0",
+            "ABSTAIN": "0"
+          }
+        }
+      },
+      {
+        "stage": "lifecycle.replay-rejected",
+        "observedAt": "2026-08-29T14:36:14.235Z",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        },
+        "referendum": {
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "phase": "COMMIT",
+          "closed": false,
+          "issuedVotes": "1",
+          "tally": {
+            "YES": "0",
+            "NO": "0",
+            "ABSTAIN": "0"
+          }
+        }
+      },
+      {
+        "stage": "lifecycle.close",
+        "observedAt": "2026-08-29T14:36:38.412Z",
+        "transactionId": "00665027fe40cac7b2a86585c13edffbc97b30375fbbfbb7b8e1c5d479806aaba3",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        },
+        "referendum": {
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "phase": "REVEAL",
+          "closed": true,
+          "issuedVotes": "1",
+          "tally": {
+            "YES": "0",
+            "NO": "0",
+            "ABSTAIN": "0"
+          }
+        }
+      },
+      {
+        "stage": "lifecycle.reveal",
+        "observedAt": "2026-08-29T14:37:02.445Z",
+        "transactionId": "00d9d8acaccb68e562edd32a17ac15f95420093740a5ab6e862268c0ce9877b046",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        },
+        "referendum": {
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "phase": "REVEAL",
+          "closed": true,
+          "issuedVotes": "1",
+          "tally": {
+            "YES": "1",
+            "NO": "0",
+            "ABSTAIN": "0"
+          }
+        }
+      },
+      {
+        "stage": "lifecycle.finalize",
+        "observedAt": "2026-08-29T14:37:26.443Z",
+        "transactionId": "008bf66cd00910973718c47c713d00fff4b841603ff3bd6f407f5cc7754a8784e5",
+        "indexer": {
+          "available": true,
+          "source": "http://127.0.0.1:8088/api/v4/graphql"
+        },
+        "registry": {
+          "contractAddress": "5cd355cf242b6906c3e20c6352002278a6a2b316df49ebda5d2741cba7b53622",
+          "currentRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "frozenRootField": "9541604641453441483771715182390480768947133921832842927505602360350060446905",
+          "credentialCount": "1",
+          "frozen": true
+        },
+        "referendum": {
+          "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+          "phase": "FINALIZED",
+          "closed": true,
+          "issuedVotes": "1",
+          "tally": {
+            "YES": "1",
+            "NO": "0",
+            "ABSTAIN": "0"
+          }
+        }
+      }
+    ]
+  },
+  "action": {
+    "actionId": "189ed1ee-153a-4eed-8db1-0c6bbbd1fe73",
+    "actionIdDigest": "aa90c0c661bffe7bf630fc9b097353cae2fd26584f1050800b289797cc2fbff9",
+    "idempotencyKeyDigest": "8c220a7b8d9c08aa24c583f8c4e9661458c8c6445d51945187f20e14876944b2",
+    "requestHash": "d08f5daab85127b29152a5f47ae518af8ae58edc68ee923639bc6a8bb91f1bdb",
+    "txDigest": "e131a0cc6b51f2f61be2b1aa73779a2d341e4b1c0146de9837363834ac5a5ae9",
+    "capabilityDigest": "0a4dc30c50290b3ceb3263b5a13f5e3342ed48551cccb790d2c27f846c7d598a",
+    "transactionId": "00cddfabb4d265599cf0a9489ac1fbe6ece7e62059a196ca1e1b4d8f788bf2f51f",
+    "status": "confirmed"
+  },
+  "submissionTransport": "v2-actions",
+  "relay": {
+    "submissionTransport": "v2-actions",
+    "states": [
+      "authorized",
+      "validated",
+      "dust_reserved",
+      "finalized",
+      "submitted",
+      "indexer_pending",
+      "confirmed"
+    ],
+    "accepted": true,
+    "duplicateResolved": true,
+    "concurrentIdempotent": true,
+    "restartRecovered": true,
+    "durableStore": "postgresql",
+    "legacyApiEnabled": false
+  },
+  "lifecycle": {
+    "castTransactionId": "00cddfabb4d265599cf0a9489ac1fbe6ece7e62059a196ca1e1b4d8f788bf2f51f",
+    "closeTransactionId": "00665027fe40cac7b2a86585c13edffbc97b30375fbbfbb7b8e1c5d479806aaba3",
+    "revealTransactionId": "00d9d8acaccb68e562edd32a17ac15f95420093740a5ab6e862268c0ce9877b046",
+    "finalizeTransactionId": "008bf66cd00910973718c47c713d00fff4b841603ff3bd6f407f5cc7754a8784e5",
+    "replayRejected": true,
+    "finalized": true,
+    "indexerObservations": 4
+  },
+  "manifestDigest": "d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d"
+}
