@@ -621,7 +621,12 @@ async function observe(stage, registryAddressValue, referendumAddressValue) {
     ...manifest,
     transcript: {
       ...manifest.transcript,
-      observations: [...(manifest.transcript.observations ?? []), observation],
+      observations: [
+        ...(manifest.transcript.observations ?? []).filter(
+          (candidate) => candidate.stage !== stage,
+        ),
+        observation,
+      ],
     },
   };
   saveManifest();
