@@ -27,6 +27,7 @@ managed/
 *.sqlite3
 deploy/passport-v2/*.manifest.json
 deploy/passport-v2/*.transcript.json
+deploy/passport-v2/*.transcript.md
 
 # Temporary smoke-test material
 tmp/

@@ -12,6 +12,7 @@ const relayEnvPath = resolve(ROOT, 'relayer/.env.undeployed');
 const deploymentEnvPath = resolve(ROOT, '.env.v2.undeployed');
 const manifestPath = resolve(ROOT, 'deploy/passport-v2/undeployed.manifest.json');
 const transcriptPath = resolve(ROOT, 'deploy/passport-v2/undeployed-v2.transcript.json');
+const transcriptMarkdownPath = resolve(ROOT, 'deploy/passport-v2/undeployed-v2.transcript.md');
 const publicRelayOrigin = 'http://127.0.0.1:8790';
 const internalRelayOrigin = 'http://127.0.0.1:8792';
 const run = { startedAt: new Date().toISOString(), network: 'undeployed', steps: [] };
@@ -34,6 +35,7 @@ try {
   // history needed to test durable behavior.
   rmSync(manifestPath, { force: true });
   rmSync(transcriptPath, { force: true });
+  rmSync(transcriptMarkdownPath, { force: true });
   const generated = generateRunEnvironment();
   secrets = generated.secrets;
   record('run-secrets', { generated: true, count: secrets.length });
@@ -692,6 +694,120 @@ function writeTranscript(value) {
     mode: 0o600,
   });
   chmodSync(transcriptPath, 0o600);
+
+  let manifest;
+  try {
+    manifest = JSON.parse(redact(readFileSync(manifestPath, 'utf8')));
+  } catch {
+    manifest = undefined;
+  }
+  writeFileSync(transcriptMarkdownPath, renderJuryTranscript(safe, manifest), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  chmodSync(transcriptMarkdownPath, 0o600);
+}
+
+function renderJuryTranscript(evidence, manifest) {
+  const lines = [
+    '# Undeployed Passport-v2 jury transcript',
+    '',
+    '> Sanitized local evidence. This is not Midnight Preview, live Passport consent, or physical NFC evidence.',
+    '',
+    '## Outcome',
+    '',
+    `- Status: ${markdownCell(evidence.status ?? 'unknown')}`,
+    `- Network: ${markdownCell(evidence.network ?? 'unknown')}`,
+    `- Started: ${markdownCell(evidence.startedAt ?? 'unknown')}`,
+    `- Finished: ${markdownCell(evidence.finishedAt ?? 'unknown')}`,
+    `- Reproduce: \`npm ci && npm run evidence:undeployed:v2\` from Linux/WSL with Docker running.`,
+    '',
+  ];
+
+  if (manifest) {
+    lines.push(
+      '## Reproducible source and stack',
+      '',
+      `- Source commit: \`${markdownCell(manifest.source?.commit ?? 'missing')}\``,
+      `- Source tree: \`${markdownCell(manifest.source?.tree ?? 'missing')}\``,
+      `- Manifest digest: \`${markdownCell(manifest.manifestDigest ?? 'missing')}\``,
+      `- Compact compiler: ${markdownCell(manifest.artifacts?.compactCompilerVersion ?? 'missing')}`,
+      `- Midnight.js: ${markdownCell(manifest.artifacts?.midnightJsVersion ?? 'missing')}`,
+      `- Node / indexer / proof server: ${markdownCell(manifest.services?.node?.version ?? 'missing')} / ${markdownCell(manifest.services?.indexer?.version ?? 'missing')} / ${markdownCell(manifest.services?.proofServer?.version ?? 'missing')}`,
+      '',
+      '## Public deployment bindings',
+      '',
+      '| Item | Public value |',
+      '| --- | --- |',
+      `| Registry contract | \`${markdownCell(manifest.registry?.contractAddress ?? 'missing')}\` |`,
+      `| Frozen registry root | \`${markdownCell(manifest.registry?.frozenRootField ?? 'missing')}\` |`,
+      `| Referendum contract | \`${markdownCell(manifest.referenda?.[0]?.contractAddress ?? 'missing')}\` |`,
+      `| Registry binding | \`${markdownCell(manifest.referenda?.[0]?.registryContractBindingHex ?? 'missing')}\` |`,
+      '',
+      '## Indexer-confirmed lifecycle',
+      '',
+      '| Step | Status | Circuit | Transaction | Block |',
+      '| --- | --- | --- | --- | ---: |',
+    );
+    for (const step of manifest.transcript?.steps ?? []) {
+      lines.push(
+        `| ${markdownCell(step.id)} | ${markdownCell(step.status)} | ${markdownCell(step.receipt?.circuit ?? '—')} | ${step.receipt?.transactionId ? `\`${markdownCell(step.receipt.transactionId)}\`` : '—'} | ${markdownCell(step.receipt?.blockHeight ?? '—')} |`,
+      );
+    }
+    lines.push(
+      '',
+      `Canonical final state: **${manifest.lifecycle?.finalized ? 'FINALIZED' : 'NOT FINALIZED'}**. Replay rejected: **${manifest.lifecycle?.replayRejected ? 'yes' : 'no'}**.`,
+      '',
+      '## Atomic walletless relay',
+      '',
+      `- Submission transport: \`${markdownCell(manifest.submissionTransport ?? 'missing')}\``,
+      `- Action ID: \`${markdownCell(manifest.action?.actionId ?? 'missing')}\``,
+      `- Idempotency digest: \`${markdownCell(manifest.action?.idempotencyKeyDigest ?? 'missing')}\``,
+      `- Confirmed transaction: \`${markdownCell(manifest.action?.transactionId ?? 'missing')}\``,
+      `- Durable states: ${(manifest.relay?.states ?? []).map((state) => `\`${markdownCell(state)}\``).join(' → ') || 'missing'}`,
+      `- Concurrent duplicate resolved once: **${manifest.relay?.concurrentIdempotent ? 'yes' : 'no'}**`,
+      `- Post-restart retry recovered the same action: **${manifest.relay?.restartRecovered ? 'yes' : 'no'}**`,
+      `- Legacy \`/balance\` or \`/submit\` requests: **${markdownCell(evidence.networkTrace?.legacyRequests ?? 'unknown')}**`,
+      '',
+      '## DUST accounting',
+      '',
+      `- Fixed valuation instant: ${markdownCell(manifest.dust?.valuationAt ?? 'missing')}`,
+      `- Before / after: ${markdownCell(manifest.dust?.before ?? 'missing')} / ${markdownCell(manifest.dust?.after ?? 'missing')}`,
+      `- Accounted spend: ${markdownCell(manifest.dust?.spent ?? 'missing')}`,
+      '',
+    );
+  } else {
+    lines.push(
+      '## Manifest',
+      '',
+      'No readable runtime manifest was produced. This transcript is incomplete and cannot satisfy the release gate.',
+      '',
+    );
+  }
+
+  lines.push(
+    '## Privacy boundary',
+    '',
+    '- Operator-only deployment, issuance, freeze, close, reveal, and finalize actions never traverse the public relay.',
+    '- The public relay is allowlisted to the exact Undeployed network, referendum contract, and `castVote` circuit.',
+    '- This transcript contains public addresses, transaction identifiers, state and digests only. It omits private keys, holder openings, witness/proof payloads, vote salt, raw transaction bodies, Passport profile data, and bearer capabilities.',
+    `- Runtime secret policy: ${markdownCell(evidence.secretPolicy ?? 'missing')}.`,
+    '',
+    '## Remaining external gates',
+    '',
+    '- Real Passport HTTPS-origin consent and encrypted recovery.',
+    '- Deployment of the same artifacts to Midnight Preview with independent funded identities.',
+    '- Physical iOS/Android Rarimo NFC evidence.',
+    '',
+  );
+  return `${lines.join('\n')}\n`;
+}
+
+function markdownCell(value) {
+  return String(value ?? '')
+    .replaceAll('|', '\\|')
+    .replaceAll('\r', ' ')
+    .replaceAll('\n', ' ');
 }
 
 function sha256(value) {
