@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS v2_action_jobs (
     'authorized', 'validated', 'dust_reserved', 'finalized', 'submitted',
     'indexer_pending', 'confirmed', 'failed', 'recovery_required'
   )),
+  transitions jsonb NOT NULL DEFAULT '["authorized"]'::jsonb,
   dust_reservation_id text UNIQUE,
   transaction_id text,
   receipt jsonb,
@@ -50,6 +51,8 @@ CREATE TABLE IF NOT EXISTS v2_action_jobs (
   created_at timestamptz NOT NULL,
   updated_at timestamptz NOT NULL
 );
+ALTER TABLE v2_action_jobs
+  ADD COLUMN IF NOT EXISTS transitions jsonb NOT NULL DEFAULT '["authorized"]'::jsonb;
 CREATE TABLE IF NOT EXISTS v2_action_capabilities (
   digest char(64) PRIMARY KEY,
   action_id text NOT NULL,
@@ -79,8 +82,8 @@ export class PostgresV2ActionStore implements V2ActionStore {
     return this.transaction(async (client) => {
       const inserted = await client.query<Row>({
         text: `INSERT INTO v2_action_jobs
-          (id, idempotency_key, request_hash, capability_digest, tx_digest, network, contract_address, circuit, action, status, created_at, updated_at)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'authorized',$10,$10)
+          (id, idempotency_key, request_hash, capability_digest, tx_digest, network, contract_address, circuit, action, status, transitions, created_at, updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'authorized','["authorized"]'::jsonb,$10,$10)
           ON CONFLICT DO NOTHING
           RETURNING *`,
         values: [
@@ -178,6 +181,7 @@ export class PostgresV2ActionStore implements V2ActionStore {
       if (patch.status !== undefined) {
         values.push(patch.status);
         assignments.push(`status = $${values.length}`);
+        assignments.push(`transitions = transitions || jsonb_build_array($${values.length}::text)`);
       }
       if (patch.dustReservationId !== undefined) {
         values.push(patch.dustReservationId);
@@ -210,7 +214,10 @@ export class PostgresV2ActionStore implements V2ActionStore {
       await client.query(`SELECT pg_advisory_xact_lock(hashtext('midnight-referendum:v2:dust'))`);
       const result = await client.query<Row>(
         `UPDATE v2_action_jobs
-         SET status = 'dust_reserved', dust_reservation_id = $2, updated_at = NOW()
+         SET status = 'dust_reserved',
+             transitions = transitions || jsonb_build_array('dust_reserved'::text),
+             dust_reservation_id = $2,
+             updated_at = NOW()
          WHERE id = $1 AND status = 'validated'
            AND NOT EXISTS (
              SELECT 1 FROM v2_action_jobs
@@ -264,6 +271,7 @@ interface Row extends Record<string, unknown> {
   circuit: string;
   action: 'credential' | 'vote' | 'cohort';
   status: V2ActionJobStatus;
+  transitions?: V2ActionJobStatus[] | string | null;
   dust_reservation_id?: string | null;
   transaction_id?: string | null;
   receipt?: CanonicalReceipt | string | null;
@@ -278,6 +286,7 @@ function rowToJob(row: Row): V2ActionJob {
         typeof row.receipt === 'string' ? JSON.parse(row.receipt) : row.receipt,
       )
     : undefined;
+  const transitions = parseTransitions(row.transitions, row.status);
   return {
     id: row.id,
     idempotencyKey: row.idempotency_key,
@@ -289,6 +298,7 @@ function rowToJob(row: Row): V2ActionJob {
     circuit: row.circuit,
     action: row.action,
     status: row.status,
+    transitions,
     ...(row.dust_reservation_id ? { dustReservationId: row.dust_reservation_id } : {}),
     ...(row.transaction_id ? { transactionId: row.transaction_id } : {}),
     ...(receipt ? { receipt } : {}),
@@ -296,6 +306,30 @@ function rowToJob(row: Row): V2ActionJob {
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
+}
+
+function parseTransitions(
+  value: Row['transitions'],
+  fallback: V2ActionJobStatus,
+): readonly V2ActionJobStatus[] {
+  const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!Array.isArray(parsed)) return [fallback];
+  const transitions = parsed.filter(isStatus);
+  return transitions.length > 0 ? transitions : [fallback];
+}
+
+function isStatus(value: unknown): value is V2ActionJobStatus {
+  return (
+    value === 'authorized' ||
+    value === 'validated' ||
+    value === 'dust_reserved' ||
+    value === 'finalized' ||
+    value === 'submitted' ||
+    value === 'indexer_pending' ||
+    value === 'confirmed' ||
+    value === 'failed' ||
+    value === 'recovery_required'
+  );
 }
 
 function toIso(value: string | Date): string {

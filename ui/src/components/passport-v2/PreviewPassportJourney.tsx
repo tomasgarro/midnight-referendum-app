@@ -21,6 +21,7 @@ import type {
 } from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import { type CicoLocale, persistLocale } from '@/integration/locale';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
 import { EnrollmentHandoff } from './EnrollmentHandoff';
@@ -44,6 +45,8 @@ interface PreviewPassportJourneyProps {
   readonly onClose: () => void;
   readonly onCredentialReady?: (credential: DemoCredentialSummary) => void;
   readonly onPassportConnected?: (session: CivicPassportSession | null) => void;
+  readonly initialLocale?: CicoLocale;
+  readonly onLocaleChange?: (locale: CicoLocale) => void;
 }
 
 type PreviewStage = 'consent' | 'provider' | 'enrollment' | 'credential';
@@ -67,7 +70,10 @@ export function PreviewPassportJourney({
   onClose,
   onCredentialReady,
   onPassportConnected,
+  initialLocale,
+  onLocaleChange,
 }: PreviewPassportJourneyProps) {
+  const [locale, setLocale] = useState<CicoLocale>(initialLocale ?? 'es');
   const [stage, setStage] = useState<PreviewStage>('consent');
   const [session, setSession] = useState<CivicPassportSession | null>(null);
   const [enrollment, setEnrollment] = useState<CredentialEnrollment | null>(null);
@@ -79,6 +85,12 @@ export function PreviewPassportJourney({
   const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const en = locale === 'en';
+  const setLanguage = (next: CicoLocale) => {
+    setLocale(next);
+    persistLocale(next);
+    onLocaleChange?.(next);
+  };
 
   useLayoutEffect(() => {
     if (stage) headingRef.current?.focus();
@@ -201,17 +213,32 @@ export function PreviewPassportJourney({
     <main className="page-content passport-journey-page unified-onboarding">
       <div className="showcase-toolbar unified-onboarding-toolbar">
         <button className="back-button" onClick={onClose} type="button">
-          <ArrowLeft size={18} /> Volver a la app
+          <ArrowLeft size={18} /> {en ? 'Back to app' : 'Volver a la app'}
         </button>
+        <label>
+          <span className="sr-only">{en ? 'Language' : 'Idioma'}</span>
+          <select
+            aria-label={en ? 'Language' : 'Idioma'}
+            value={locale}
+            onChange={(event) => setLanguage(event.target.value as CicoLocale)}
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
         <span className="passport-demo-label">
-          {mode === 'undeployed' ? 'UNDEPLOYED · PASSPORT PREVIEW' : 'PREVIEW · CREDENCIAL'}
+          {mode === 'undeployed'
+            ? 'UNDEPLOYED · PASSPORT PREVIEW'
+            : en
+              ? 'PREVIEW · CREDENTIAL'
+              : 'PREVIEW · CREDENCIAL'}
         </span>
       </div>
 
       <header className="unified-onboarding-header">
         <div>
-          <p className="eyebrow">Tu primer recorrido</p>
-          <h1>Tu identidad no es tu voto</h1>
+          <p className="eyebrow">{en ? 'Your first journey' : 'Tu primer recorrido'}</p>
+          <h1>{en ? 'Your identity is not your vote' : 'Tu identidad no es tu voto'}</h1>
         </div>
         <div className="unified-truth-labels">
           <span className="live">
@@ -233,7 +260,10 @@ export function PreviewPassportJourney({
       </header>
 
       <ol className="unified-progress" aria-label="Tu primer recorrido">
-        {['Entender', 'Passport', 'Evidencia', 'Lista'].map((label, index) => {
+        {(en
+          ? ['Learn', 'Passport', 'Evidence', 'Ready']
+          : ['Entender', 'Passport', 'Evidencia', 'Lista']
+        ).map((label, index) => {
           const activeIndex = ['consent', 'provider', 'enrollment', 'credential'].indexOf(stage);
           return (
             <li
@@ -256,7 +286,7 @@ export function PreviewPassportJourney({
           onClick={() => setStage(previousStage[stage] as PreviewStage)}
           type="button"
         >
-          <ArrowLeft size={16} /> Paso anterior
+          <ArrowLeft size={16} /> {en ? 'Previous step' : 'Paso anterior'}
         </button>
       ) : null}
 
@@ -275,27 +305,29 @@ export function PreviewPassportJourney({
           <div className="unified-hero-icon">
             <Fingerprint size={38} />
           </div>
-          <p className="eyebrow">Antes de empezar</p>
+          <p className="eyebrow">{en ? 'Before you start' : 'Antes de empezar'}</p>
           <h2 id="preview-consent-title" ref={headingRef} tabIndex={-1}>
-            Conectá Midnight Passport
+            {en ? 'Connect Midnight Passport' : 'Conectá Midnight Passport'}
           </h2>
           <p>
-            Passport establece la sesión y el consentimiento de perfil. No comparte tu respuesta ni
-            se usa como sustituto de una credencial de nacionalidad.
+            {en
+              ? 'Passport establishes your session and profile consent. It does not share your response or replace a country credential.'
+              : 'Passport establece la sesión y el consentimiento de perfil. No comparte tu respuesta ni se usa como sustituto de una credencial de país.'}
           </p>
           {mode === 'undeployed' ? (
             <PrivacyNotice>
-              Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra
-              superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una
-              cuenta local.
+              {en
+                ? 'Your Passport account connects on Preview. This environment’s local chain is a separate surface and has no deployed contract; connecting an account does not turn it into a local account.'
+                : 'Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una cuenta local.'}
             </PrivacyNotice>
           ) : null}
           <PrivacyNotice>
-            Solicitamos únicamente sesión y perfil visible. No pedimos wallet, voto, witnesses ni
-            autorización de transacción.
+            {en
+              ? 'We request only a session and visible profile. We do not request a wallet, vote, witnesses, or transaction approval.'
+              : 'Solicitamos únicamente sesión y perfil visible. No pedimos wallet, voto, witnesses ni autorización de transacción.'}
           </PrivacyNotice>
-          <JourneyButton busy={busy} onClick={connect}>
-            Conectar Passport <ArrowRight size={19} />
+          <JourneyButton locale={locale} busy={busy} onClick={connect}>
+            {en ? 'Connect Passport' : 'Conectar Passport'} <ArrowRight size={19} />
           </JourneyButton>
         </section>
       ) : null}
@@ -308,21 +340,23 @@ export function PreviewPassportJourney({
           <div className="unified-hero-icon passport">
             <ShieldCheck size={38} />
           </div>
-          <p className="eyebrow">Paso 1 · sesión</p>
+          <p className="eyebrow">{en ? 'Step 1 · session' : 'Paso 1 · sesión'}</p>
           <h2 id="preview-provider-title" ref={headingRef} tabIndex={-1}>
-            Sesión Passport conectada
+            {en ? 'Passport session connected' : 'Sesión Passport conectada'}
           </h2>
           <dl className="credential-summary">
             <div>
-              <dt>Perfil</dt>
-              <dd>{session?.profile?.displayName ?? 'Perfil aprobado'}</dd>
+              <dt>{en ? 'Profile' : 'Perfil'}</dt>
+              <dd>
+                {session?.profile?.displayName ?? (en ? 'Approved profile' : 'Perfil aprobado')}
+              </dd>
             </div>
             <div>
-              <dt>Red</dt>
+              <dt>{en ? 'Network' : 'Red'}</dt>
               <dd>{session?.network}</dd>
             </div>
             <div>
-              <dt>Capacidades</dt>
+              <dt>{en ? 'Capabilities' : 'Capacidades'}</dt>
               <dd>{session?.capabilities.join(', ')}</dd>
             </div>
           </dl>
@@ -330,8 +364,11 @@ export function PreviewPassportJourney({
             <div className="passport-notice info" role="status">
               <Info size={18} />
               <p>
-                Cuenta Passport: <strong>{session?.network ?? 'preview'}</strong>. Cadena de la
-                aplicación: <strong>local no desplegada</strong>. Estas redes no se mezclan.
+                {en ? 'Passport account:' : 'Cuenta Passport:'}{' '}
+                <strong>{session?.network ?? 'preview'}</strong>.{' '}
+                {en ? 'App chain:' : 'Cadena de la aplicación:'}{' '}
+                <strong>{en ? 'undeployed local' : 'local no desplegada'}</strong>.{' '}
+                {en ? 'These networks stay separate.' : 'Estas redes no se mezclan.'}
               </p>
             </div>
           ) : null}
@@ -343,19 +380,25 @@ export function PreviewPassportJourney({
               {holderBinding.status === 'verified' ? <Check size={18} /> : <Info size={18} />}
               <p>
                 {holderBinding.status === 'verified'
-                  ? 'Holder binding verificado para esta sesión Passport. El binding no se muestra ni se trata como un claim.'
-                  : 'Esta versión de Passport no expone un holder binding verificado. La sesión no se presenta como una credencial.'}
+                  ? en
+                    ? 'Holder binding verified for this Passport session. The binding is not shown or treated as a claim.'
+                    : 'Holder binding verificado para esta sesión Passport. El binding no se muestra ni se trata como un claim.'
+                  : en
+                    ? 'This Passport build does not expose a verified holder binding. The session is not presented as a credential.'
+                    : 'Esta versión de Passport no expone un holder binding verificado. La sesión no se presenta como una credencial.'}
               </p>
             </div>
           ) : null}
           {ports.credential ? (
             <>
               <PrivacyNotice>
-                La evidencia documental se procesa mediante el adaptador configurado; Passport sigue
-                siendo la superficie de sesión y consentimiento.
+                {en
+                  ? 'Evidence is processed through the configured adapter; Passport remains the session and consent surface.'
+                  : 'La evidencia se procesa mediante el adaptador configurado; Passport sigue siendo la superficie de sesión y consentimiento.'}
               </PrivacyNotice>
-              <JourneyButton busy={busy} onClick={beginEnrollment}>
-                Iniciar verificación documental <ArrowRight size={19} />
+              <JourneyButton locale={locale} busy={busy} onClick={beginEnrollment}>
+                {en ? 'Start evidence verification' : 'Iniciar verificación documental'}{' '}
+                <ArrowRight size={19} />
               </JourneyButton>
             </>
           ) : (
@@ -363,7 +406,9 @@ export function PreviewPassportJourney({
               <Info size={18} />
               <p>
                 {ports.configurationError ??
-                  'Passport funciona, pero el gateway de evidencia y el emisor de credenciales aún no están configurados en este despliegue. No se sustituirán por datos sintéticos.'}
+                  (en
+                    ? 'Passport works, but the evidence gateway and credential issuer are not configured in this deployment. They will not be replaced with synthetic data.'
+                    : 'Passport funciona, pero el gateway de evidencia y el emisor de credenciales aún no están configurados en este despliegue. No se sustituirán por datos sintéticos.')}
               </p>
             </div>
           )}
@@ -378,27 +423,29 @@ export function PreviewPassportJourney({
           <div className="unified-hero-icon evidence">
             <QrCode size={38} />
           </div>
-          <p className="eyebrow">Paso 2 · evidencia NFC/QR</p>
+          <p className="eyebrow">{en ? 'Step 2 · NFC/QR evidence' : 'Paso 2 · evidencia NFC/QR'}</p>
           <h2 id="preview-evidence-title" ref={headingRef} tabIndex={-1}>
-            Completá la verificación en tu teléfono
+            {en ? 'Complete verification on your phone' : 'Completá la verificación en tu teléfono'}
           </h2>
           <p>
-            El navegador conserva el holder binding. El backend recibe la prueba del proveedor y
-            devuelve únicamente evidencia mínima verificada.
+            {en
+              ? 'The browser keeps the holder binding. The backend receives provider proof and returns only minimal verified evidence.'
+              : 'El navegador conserva el holder binding. El backend recibe la prueba del proveedor y devuelve únicamente evidencia mínima verificada.'}
           </p>
           <dl className="credential-summary">
             <div>
-              <dt>Estado</dt>
+              <dt>{en ? 'Status' : 'Estado'}</dt>
               <dd>{enrollmentStatus?.status ?? enrollment?.status ?? 'pending'}</dd>
             </div>
             <div>
-              <dt>Vence</dt>
+              <dt>{en ? 'Expires' : 'Vence'}</dt>
               <dd>{enrollment ? new Date(enrollment.expiresAt).toLocaleString() : '—'}</dd>
             </div>
           </dl>
           {lastCheckedAt ? (
             <p className="enrollment-last-checked" role="status">
-              Última comprobación: {new Date(lastCheckedAt).toLocaleTimeString()}
+              {en ? 'Last checked: ' : 'Última comprobación: '}
+              {new Date(lastCheckedAt).toLocaleTimeString()}
             </p>
           ) : null}
           {enrollment?.interaction ? (
@@ -411,28 +458,43 @@ export function PreviewPassportJourney({
             <div className="passport-notice warning" role="alert">
               <Info size={18} />
               <p>
-                El enlace venció. Generá un enlace nuevo para volver a intentar la verificación.
+                {en
+                  ? 'The link expired. Create a new link to try verification again.'
+                  : 'El enlace venció. Generá un enlace nuevo para volver a intentar la verificación.'}
               </p>
             </div>
           ) : null}
           <PrivacyNotice>
-            CICO no muestra ni conserva MRZ, fecha de nacimiento, imagen, NFC o prueba cruda en el
-            navegador.
+            {en
+              ? 'CICO does not display or retain MRZ, date of birth, images, NFC data, or raw proof in the browser.'
+              : 'CICO no muestra ni conserva MRZ, fecha de nacimiento, imagen, NFC o prueba cruda en el navegador.'}
           </PrivacyNotice>
-          <JourneyButton busy={busy} onClick={checkEnrollment}>
-            {error ? 'Reintentar verificación' : 'Comprobar verificación'} <ArrowRight size={19} />
+          <JourneyButton locale={locale} busy={busy} onClick={checkEnrollment}>
+            {error
+              ? en
+                ? 'Retry verification'
+                : 'Reintentar verificación'
+              : en
+                ? 'Check verification'
+                : 'Comprobar verificación'}{' '}
+            <ArrowRight size={19} />
           </JourneyButton>
           {enrollmentStatus?.status === 'pending' && !enrollmentExpired ? (
-            <JourneyButton busy={busy} variant="secondary" onClick={restartEnrollment}>
-              Cancelar verificación
+            <JourneyButton
+              locale={locale}
+              busy={busy}
+              variant="secondary"
+              onClick={restartEnrollment}
+            >
+              {en ? 'Cancel verification' : 'Cancelar verificación'}
             </JourneyButton>
           ) : null}
           {enrollmentExpired ||
           (enrollmentStatus &&
             enrollmentStatus.status !== 'pending' &&
             enrollmentStatus.status !== 'issued') ? (
-            <JourneyButton busy={busy} onClick={restartEnrollment}>
-              Empezar de nuevo <ArrowRight size={19} />
+            <JourneyButton locale={locale} busy={busy} onClick={restartEnrollment}>
+              {en ? 'Start over' : 'Empezar de nuevo'} <ArrowRight size={19} />
             </JourneyButton>
           ) : null}
         </section>
@@ -447,25 +509,28 @@ export function PreviewPassportJourney({
             <Check size={42} />
           </div>
           <div className="mascot-reserved-slot" data-mascot="future-capybara" aria-hidden="true" />
-          <p className="eyebrow">Paso 3 · credencial creada</p>
+          <p className="eyebrow">
+            {en ? 'Step 3 · credential created' : 'Paso 3 · credencial creada'}
+          </p>
           <h2 id="preview-success-title" ref={headingRef} tabIndex={-1}>
-            Tu credencial está lista
+            {en ? 'Your credential is ready' : 'Tu credencial está lista'}
           </h2>
           <p>
-            La credencial se puede usar para explorar consultas. La respuesta y cualquier acción
-            posterior siguen separadas y no aparecen en esta credencial.
+            {en
+              ? 'This credential can be used to explore consultations. Your response and any later action remain separate and do not appear in it.'
+              : 'La credencial se puede usar para explorar consultas. La respuesta y cualquier acción posterior siguen separadas y no aparecen en esta credencial.'}
           </p>
           <div className="credential-success-summary">
             <span className="synthetic-credential-banner">
-              <ShieldCheck size={16} /> CREDENCIAL VERIFICADA
+              <ShieldCheck size={16} /> {en ? 'VERIFIED CREDENTIAL' : 'CREDENCIAL VERIFICADA'}
             </span>
             <dl>
               <div>
-                <dt>Nacionalidad</dt>
+                <dt>{en ? 'Country' : 'Nacionalidad'}</dt>
                 <dd>{iso31661NumericToAlpha2[String(credential.country)] ?? credential.country}</dd>
               </div>
               <div>
-                <dt>Clase de edad</dt>
+                <dt>{en ? 'Age class' : 'Clase de edad'}</dt>
                 <dd>{credential.ageClass === '18-plus' ? '18+' : credential.ageClass}</dd>
               </div>
               <div>
@@ -473,17 +538,21 @@ export function PreviewPassportJourney({
                 <dd>{credential.assurance}</dd>
               </div>
               <div>
-                <dt>Válida hasta</dt>
+                <dt>{en ? 'Valid until' : 'Válida hasta'}</dt>
                 <dd>{new Date(credential.validUntil).toLocaleDateString()}</dd>
               </div>
             </dl>
           </div>
           <div className="passport-notice success">
             <ShieldCheck size={18} />
-            <p>Tu documento y tu futura elección no aparecen en el comprobante de identidad.</p>
+            <p>
+              {en
+                ? 'Your evidence and future choice do not appear in the identity receipt.'
+                : 'Tu evidencia y tu futura elección no aparecen en el comprobante de identidad.'}
+            </p>
           </div>
-          <JourneyButton busy={false} onClick={finish}>
-            Ir al panel cívico <ArrowRight size={19} />
+          <JourneyButton locale={locale} busy={false} onClick={finish}>
+            {en ? 'Go to civic dashboard' : 'Ir al panel cívico'} <ArrowRight size={19} />
           </JourneyButton>
         </section>
       ) : null}
@@ -502,12 +571,14 @@ function PrivacyNotice({ children }: { children: React.ReactNode }) {
 
 function JourneyButton({
   busy,
+  locale = 'es',
   children,
   disabled = false,
   variant = 'primary',
   onClick,
 }: {
   busy: boolean;
+  locale?: CicoLocale;
   children: React.ReactNode;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
@@ -520,7 +591,7 @@ function JourneyButton({
       onClick={onClick}
       type="button"
     >
-      {busy ? 'Procesando…' : children}
+      {busy ? (locale === 'es' ? 'Procesando…' : 'Processing…') : children}
     </button>
   );
 }

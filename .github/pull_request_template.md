@@ -1,5 +1,10 @@
 ## Passport-first Midnight Preview MVP
 
+Evidence fields are release records, not placeholders. Leave a gate unchecked
+when the underlying run, approval, URL, SHA, CI result, video, Preview
+transaction, or physical NFC session does not exist. Never infer it from source
+code or a local fixture.
+
 ### Summary
 
 <!-- What changed, why, and which release stage it belongs to. Link an ADR when changing a trust boundary. -->

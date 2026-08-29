@@ -1,4 +1,10 @@
-# Overnight architecture handoff
+# Overnight architecture handoff (historical context)
+
+This note records an earlier implementation handoff. It is retained for
+architecture context, not as current runtime evidence. The review checkout has
+not verified an Undeployed v2 run; use the [root README](../README.md),
+[environment acceptance matrix](ENVIRONMENT-ACCEPTANCE.md), and
+[Wave 1 checklist](WAVE-1-SUBMISSION-CHECKLIST.md) for current status.
 
 ## Outcome
 
@@ -48,14 +54,14 @@ real civic action.
 - Public showcase bundles no longer embed loopback service defaults. Local
   undeployed URLs must be supplied through the undeployed environment.
 
-## Mode truth table
+## Intended mode truth table
 
 | Mode | Passport | Public reads | Vote execution |
 | --- | --- | --- | --- |
 | Demo | deterministic simulation | synthetic | synthetic, clearly labelled |
-| Showcase | live Passport presentation | showcase data | no vote execution |
-| Preview | configured Passport/credential lane | configured indexer | valid v2 config uses v2 only; invalid/incomplete v2 blocks; absent v2 config retains the explicit legacy compatibility lane |
-| Undeployed | simulated app identity plus operator local services | configured indexer | synthetic app flow; the separately tested local relayer is never labelled v2 |
+| Showcase | intended Passport presentation (origin approval pending) | showcase data | no vote execution |
+| Preview | configured Passport/credential lane (not verified here) | configured indexer (not verified here) | v2 only after a reviewed valid configuration; incomplete configuration blocks |
+| Undeployed | simulated app identity plus local services when run | configured local indexer when run | v2 lifecycle is in progress; no current transaction or receipt is asserted |
 
 ## Next architectural build, in priority order
 
@@ -99,16 +105,13 @@ Add v2 organizer flows for proposal creation, freeze/open/close transitions,
 reveal/counting where applicable, and operational recovery. Every transition
 needs authorization, idempotency, and indexer-observed state tests.
 
-## Verification completed
+## Verification record
 
-- Full unit/integration suite: 21 UI files plus contract, API, and CICO suites;
-  195 tests passed.
-- Demo browser suite: 4 passed, 5 correctly skipped because they require
-  showcase, runtime wallet, or local relayer opt-in.
-- Showcase production build and privacy gate passed; four emitted text assets
-  were scanned.
-- Biome exited successfully with 57 existing warnings and no errors.
-- `git diff --check` passed.
+No current verification result is asserted in this historical note. Rerun the
+repository checks from the reviewed checkout and record their observed output
+only in a reviewed release record. Do not copy test totals, CI status, release
+SHA, deployment URL, transaction identifiers, or video references into active
+documentation without source evidence.
 
 ## Known limits
 

@@ -1,8 +1,10 @@
 # Passport-first v2 architecture
 
-This document is the ownership map for the active product. It deliberately
-separates account consent, civic eligibility, action authority, and public
-receipt resolution. A value crossing one boundary is not authority in another.
+This document is the ownership map for the active product and target runtime.
+It deliberately separates account consent, civic eligibility, action authority,
+and public receipt resolution. A value crossing one boundary is not authority
+in another. The current review checkout has no verified Undeployed v2 runtime
+transcript; this map is not deployment or Preview evidence.
 
 ```text
 Official Midnight Passport PWA
@@ -69,7 +71,8 @@ credential, or a wallet.
 2. Evidence authorization is opaque and single-use; CICO persists only the
    minimum derived claims needed for issuance.
 3. Holder material is generated and encrypted in the browser boundary.
-4. Proof creation happens locally for the undeployed and Preview product paths.
+4. Proof creation is intended to happen locally for the Undeployed and Preview
+   product paths; this requirement is not a claim that either path is live.
 5. The relay accepts only already-proved, allowlisted work and reserves DUST
    transactionally.
 6. A relay acknowledgement is pending state. Only an indexer observation can

@@ -1,0 +1,182 @@
+{
+  "startedAt": "2026-08-29T14:30:22.399Z",
+  "network": "undeployed",
+  "steps": [
+    {
+      "name": "Docker Compose preflight",
+      "completedAt": "2026-08-29T14:30:22.563Z",
+      "value": "\n"
+    },
+    {
+      "name": "preflight",
+      "completedAt": "2026-08-29T14:30:23.271Z",
+      "value": {
+        "node": "v22.22.0",
+        "dockerCompose": "valid",
+        "compactCompiler": "0.31.1"
+      }
+    },
+    {
+      "name": "run-secrets",
+      "completedAt": "2026-08-29T14:30:23.273Z",
+      "value": {
+        "generated": true,
+        "count": 10
+      }
+    },
+    {
+      "name": "Docker services",
+      "completedAt": "2026-08-29T14:30:32.444Z",
+      "value": "\n Container referendum-undeployed-postgres  Recreate\n Container referendum-undeployed-node  Recreate\n Container referendum-undeployed-postgres  Recreated\n Container referendum-undeployed-node  Recreated\n Container referendum-undeployed-indexer  Recreate\n Container referendum-undeployed-indexer  Recreated\n Container referendum-undeployed-node  Starting\n Container referendum-undeployed-postgres  Starting\n Container referendum-undeployed-postgres  Started\n Container referendum-undeployed-node  Started\n Container referendum-undeployed-node  Waiting\n Container referendum-undeployed-node  Healthy\n Container referendum-undeployed-indexer  Starting\n Container referendum-undeployed-indexer  Started\n"
+    },
+    {
+      "name": "proof-server-source",
+      "completedAt": "2026-08-29T14:30:32.444Z",
+      "value": {
+        "reusedHealthyLocalService": true,
+        "requiredVersion": "8.1.0",
+        "requiredProtocol": "V2"
+      }
+    },
+    {
+      "name": "service-health",
+      "completedAt": "2026-08-29T14:30:35.220Z",
+      "value": {
+        "node": {
+          "peers": 0,
+          "isSyncing": false,
+          "shouldHavePeers": false
+        },
+        "indexer": {
+          "status": "GraphQL stable",
+          "recoveryStarts": 0
+        },
+        "proofServerVersion": "8.1.0",
+        "proofProtocol": [
+          "V2"
+        ]
+      }
+    },
+    {
+      "name": "Legacy compatibility compilation",
+      "completedAt": "2026-08-29T14:31:08.043Z",
+      "value": "\n> midnight-referendum@0.1.0 compile\n> node scripts/compile-contract.mjs\n\n\nCompiling 5 circuits:\n"
+    },
+    {
+      "name": "Compact v2 compilation",
+      "completedAt": "2026-08-29T14:32:15.119Z",
+      "value": "\n> midnight-referendum@0.1.0 compile:v2\n> node scripts/compile-passport-v2-contracts.mjs\n\n\nCompiling 2 circuits:\nCompiling 4 circuits:\n"
+    },
+    {
+      "name": "production build",
+      "completedAt": "2026-08-29T14:33:16.136Z",
+      "value": "\n> midnight-referendum@0.1.0 build\n> npm run sync:contract && npm run build --workspace midnight-referendum-api && npm run build --workspace midnight-referendum-cico-service && npm run build --workspace midnight-referendum-relayer && npm run build --workspace midnight-referendum-ui\n\n\n> midnight-referendum@0.1.0 sync:contract\n> node scripts/sync-contract-assets.mjs\n\nSynchronized referendum, credential-registry-v1, referendum-v2 runtime and ZK assets.\n\n> midnight-referendum-api@0.1.0 build\n> node ../scripts/sync-contract-assets.mjs && tsc --build --force\n\nSynchronized referendum, credential-registry-v1, referendum-v2 runtime and ZK assets.\n\n> midnight-referendum-cico-service@0.1.0 build\n> tsc --build --force\n\n\n> midnight-referendum-relayer@0.1.0 build\n> tsc --build --force\n\n\n> midnight-referendum-ui@0.1.0 build\n> tsc -b && vite build --configLoader runner\n\nvite v7.3.6 building client environment for production...\ntransforming...\n✓ 6159 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                                  0.40 kB │ gzip:     0.27 kB\ndist/assets/midnight_onchain_runtime_wasm_bg-D2U4EkPt.wasm   1,398.94 kB │ gzip:   412.20 kB\ndist/assets/midnight_ledger_wasm_bg-D5swusBh.wasm           10,143.78 kB │ gzip: 4,638.69 kB\ndist/assets/index-CKXyLHWQ.css                                  96.21 kB │ gzip:    16.18 kB\ndist/assets/index-CtTi-FR2.js                                   12.41 kB │ gzip:     3.05 kB\ndist/assets/index-Bt3bUDQc.js                                5,056.77 kB │ gzip:   699.20 kB\n✓ built in 32.22s\n\n../node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs (794:89): \"WebSocket\" is not exported by \"../node_modules/isomorphic-ws/browser.js\", imported by \"../node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs\".\n../node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs (1040:81): \"WebSocket\" is not exported by \"../node_modules/isomorphic-ws/browser.js\", imported by \"../node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs\".\n"
+    },
+    {
+      "name": "Undeployed genesis funding",
+      "completedAt": "2026-08-29T14:34:02.924Z",
+      "value": "\n> midnight-referendum@0.1.0 relayer:fund:undeployed\n> npm run fund:undeployed --workspace midnight-referendum-relayer\n\n\n> midnight-referendum-relayer@0.1.0 fund:undeployed\n> tsc --build && node --env-file-if-exists=.env.undeployed dist/fund-undeployed.js\n\nfunding the generated relay wallet from the Undeployed genesis wallet…\nlocal NIGHT funding submitted: 00cd284b1ce5ce3b3f2fdcf958dead9f0521d4384b10e3a39b2ce301eb26bc0f37\nrelay DUST registration submitted: 002dccfa8b912440f2cff2bd0b74c7b666b7ad8b6f97605c38abd7fb11351560a5\nrelay wallet ready: NIGHT UTXOs=0 DUST coins=1\n\n.env.undeployed not found. Continuing without it.\n2026-08-29 16:33:22        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n2026-08-29 16:33:22        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n2026-08-29 16:33:22        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n2026-08-29 16:33:22        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n"
+    },
+    {
+      "name": "relay-before-prepare",
+      "completedAt": "2026-08-29T14:34:08.990Z",
+      "value": {
+        "synced": true,
+        "networkId": "undeployed",
+        "v2ActionStore": "postgresql",
+        "legacyApiEnabled": false,
+        "progress": {
+          "shielded": {
+            "appliedIndex": "29",
+            "highestRelevantWalletIndex": "29",
+            "highestIndex": "0",
+            "highestRelevantIndex": "0",
+            "isConnected": true
+          },
+          "unshielded": {
+            "appliedId": "28",
+            "highestTransactionId": "28",
+            "isConnected": true
+          },
+          "dust": {
+            "appliedIndex": "132",
+            "highestRelevantWalletIndex": "132",
+            "highestIndex": "0",
+            "highestRelevantIndex": "0",
+            "isConnected": true
+          }
+        },
+        "unshieldedAddress": "mn_addr_undeployed18dq6sklk8grrw56u4e3zydhhyddzz2vsqgzkhantll4klj66mussvq7qas",
+        "shieldedAddress": "mn_shield-addr_undeployed1q4japytqcjtxflxlzj258dlv2xz0eyqnyazg7nqycjygv66v47jfnawnj34l0wpv2sjkkdlykufmta9ccrzpwhspezyxun0ue5gvezgg8hyyt",
+        "dustAddress": "mn_dust_undeployed1w0u0npsezs0l58j9dcedflc9ys9q7wul8n9cenr4phf6w750tcc4unhtl2r",
+        "unshieldedBalances": {
+          "0000000000000000000000000000000000000000000000000000000000000000": "50000000000"
+        },
+        "dustBalance": "15671232874360835",
+        "dustEvaluationTime": "2026-08-29T14:34:08.981Z"
+      }
+    },
+    {
+      "name": "Registry/referendum preparation",
+      "completedAt": "2026-08-29T14:35:38.504Z",
+      "value": "\n> midnight-referendum@0.1.0 deploy:undeployed\n> node --env-file-if-exists=relayer/.env.undeployed --env-file-if-exists=.env.v2.undeployed scripts/deploy-passport-v2.mjs\n\nrelayer/.env.undeployed not found. Continuing without it.\n.env.v2.undeployed not found. Continuing without it.\n2026-08-29 16:34:14        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n2026-08-29 16:34:14        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\nPassport v2 undeployed preparation manifest: /home/tomas/src/midnight-referendum-evidence-c330d2d/deploy/passport-v2/undeployed.manifest.json\n"
+    },
+    {
+      "name": "relay-policy",
+      "completedAt": "2026-08-29T14:35:43.664Z",
+      "value": {
+        "network": "undeployed",
+        "contractAddress": "f03b605dd17b6f80e5cc703f809d4513fe3dda4020444023cf40d6e14e76ebd8",
+        "circuit": "castVote"
+      }
+    },
+    {
+      "name": "Atomic walletless lifecycle",
+      "completedAt": "2026-08-29T14:37:27.138Z",
+      "value": "\n> midnight-referendum@0.1.0 deploy:undeployed\n> node --env-file-if-exists=relayer/.env.undeployed --env-file-if-exists=.env.v2.undeployed scripts/deploy-passport-v2.mjs\n\nrelayer/.env.undeployed not found. Continuing without it.\n.env.v2.undeployed not found. Continuing without it.\n2026-08-29 16:35:49        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n2026-08-29 16:35:49        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from ws://127.0.0.1:9944/: 1000:: Normal Closure\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\n[relayer] balanced: recipe=UNBOUND_TRANSACTION dustSpends=1\nPassport v2 undeployed manifest: /home/tomas/src/midnight-referendum-evidence-c330d2d/deploy/passport-v2/undeployed.manifest.json\n{\n  \"status\": \"in-progress\",\n  \"network\": \"undeployed\",\n  \"submissionTransport\": \"v2-actions\",\n  \"message\": \"Lifecycle is finalized; relay restart and DUST evidence are still pending.\"\n}\n"
+    },
+    {
+      "name": "complete manifest validation",
+      "completedAt": "2026-08-29T14:37:34.490Z",
+      "value": "\n"
+    },
+    {
+      "name": "relay-evidence",
+      "completedAt": "2026-08-29T14:37:34.490Z",
+      "value": {
+        "submissionTransport": "v2-actions",
+        "concurrentIdempotent": true,
+        "restartRecovered": true,
+        "transactionId": "00cddfabb4d265599cf0a9489ac1fbe6ece7e62059a196ca1e1b4d8f788bf2f51f",
+        "networkPaths": [
+          "/health",
+          "/keys",
+          "/v2/actions",
+          "/v2/receipts/189ed1ee-153a-4eed-8db1-0c6bbbd1fe73",
+          "/v2/actions/189ed1ee-153a-4eed-8db1-0c6bbbd1fe73"
+        ],
+        "legacyRequests": 0
+      }
+    },
+    {
+      "name": "run-secret-cleanup",
+      "completedAt": "2026-08-29T14:37:34.586Z",
+      "value": {
+        "persistentFiles": false
+      }
+    }
+  ],
+  "status": "complete",
+  "finishedAt": "2026-08-29T14:37:34.586Z",
+  "secretPolicy": "memory-only process environment; no generated secret files; raw actions and capabilities are memory-only",
+  "networkTrace": {
+    "paths": [
+      "/health",
+      "/keys",
+      "/v2/actions",
+      "/v2/receipts/189ed1ee-153a-4eed-8db1-0c6bbbd1fe73",
+      "/v2/actions/189ed1ee-153a-4eed-8db1-0c6bbbd1fe73"
+    ],
+    "legacyRequests": 0
+  }
+}

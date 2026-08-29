@@ -282,7 +282,7 @@ export class V2ActionService {
     await this.enqueueWallet(async () => {
       const job = await this.options.store.get(id);
       const pending = this.transient.get(id);
-      if (!job || job.status !== 'authorized' || !pending) return;
+      if (job?.status !== 'authorized' || !pending) return;
       const validated = await this.options.store.transition(id, 'authorized', {
         status: 'validated',
       });

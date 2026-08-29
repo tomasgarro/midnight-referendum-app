@@ -1,7 +1,8 @@
 # Vercel setup for the Passport showcase
 
 This guide explains the `husky: command not found` failure and the exact place
-for the deployment credentials.
+for the deployment credentials. It is a target procedure: no Vercel deployment
+URL or Passport-origin approval is asserted by the current review checkout.
 
 ## Why the build failed
 
@@ -97,10 +98,10 @@ assigning a permanent domain.
 
 ## Add the custom domain later
 
-Keep `midnightpassport.com` and `www.midnightpassport.com` on the Passport
-site. Add a CICO subdomain such as `cico.midnightpassport.com` to the Vercel
-project, then add the exact CNAME record Vercel displays in the Hostinger DNS
-editor. Do not replace the apex or `www` records.
+Keep the approved Passport site records unchanged. Add only the CICO subdomain
+selected by the release owner to the Vercel project, then add the exact CNAME
+record Vercel displays in the Hostinger DNS editor. Do not replace apex or
+`www` records.
 
 The current workflow creates a preview deployment. A permanent domain should
 only be attached after a gated production deploy or promotion step has been
@@ -117,4 +118,3 @@ added and tested.
 - Browser journey failure: keep the generated URL private until the network
   log confirms the showcase did not contact CICO, Rarimo, the relayer, proof
   server, indexer, or a real contract.
-

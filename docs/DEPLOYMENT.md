@@ -1,16 +1,18 @@
 # Deployment topology
 
-Status: implemented local boundary plus proposed hosted topology for CICO
-Passport Preview. `cico-service/` now provides a tested, runnable Preview-only
-process with the proof-free Rarimo HTTP gateway, claim-bound authorization,
-durable replay/issuance journals, a dedicated Midnight issuer wallet, and the
-canonical registry executor. A pinned/running self-hosted verificator, funded
-issuer wallet, deployed open registry and physical NFC transcript are still
-external deployment dependencies. This is not evidence that pilot hardening is complete. The active
-v2 relay exposes one capability-gated, idempotent `/v2/actions` job boundary and
-publishes a receipt only after independent indexer observation. The legacy
-`/balance` and `/submit` routes remain compatibility-only and **must not** be
-published as the citizen action API.
+Status: target topology for the local Undeployed v2 slice and a later hosted
+Passport Preview pilot. The checkout contains source paths for the CICO
+evidence/issuer process and capability-gated v2 relay, and the current local
+Undeployed lifecycle has been operator-verified. Its sanitized
+manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/)
+(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
+No Preview deployment, Passport origin approval, physical NFC evidence, hosted
+URL, CI result, or release identity is asserted. A pinned/running self-hosted verificator, funded
+issuer wallet, deployed open registry, and physical NFC transcript remain
+external deployment dependencies. The legacy `/balance` and `/submit` routes
+remain compatibility-only and **must not be published as the citizen action
+API**.
 
 This plan implements ADR-001 through ADR-006:
 
@@ -55,8 +57,9 @@ organizer key, relayer seed, or raw provider result.
 
 ### Development and verification: one WSL workstation
 
-Use this until browser-side `castVote`, the physical passport flow, and the v2
-credential vertical slice have real evidence.
+Use this topology to reproduce and inspect the verified local Undeployed v2
+run. The physical passport flow, real provider-backed credential, and Preview
+deployment remain separate gates; a local run is not hosted release evidence.
 
 | Component | Location | Exposure |
 | --- | --- | --- |
@@ -111,11 +114,11 @@ SSH by key and operator IP/VPN where possible.
 
 #### Pilot transaction flow
 
-1. The citizen loads `https://pilot.example.org` from Vercel.
+1. The citizen loads `<PILOT_UI_ORIGIN>` from Vercel.
 2. The browser proves locally, or tells the person exactly which approved
    Passport provider can receive the witness.
 3. The browser sends one authenticated and idempotent citizen-action request
-   to `https://relay-preview.example.org`; it does **not** call independent
+   to `<RELAY_ORIGIN>`; it does **not** call independent
    `/balance` and `/submit` endpoints.
 4. The relayer validates Preview network, contract address and citizen circuit;
    serializes balance, finalization, submission and indexer confirmation; then
@@ -123,7 +126,7 @@ SSH by key and operator IP/VPN where possible.
 5. The browser treats all pre-indexer outcomes as pending and creates a receipt
    only after canonical indexer confirmation.
 
-This is the implemented v2 relay contract. A hosted pilot still requires
+This is the v2 relay contract represented in source. A hosted pilot still requires
 PostgreSQL, TLS, service isolation, funded DUST, and a fresh restart/concurrency
 transcript; a reverse proxy alone does not satisfy those gates.
 
@@ -182,8 +185,8 @@ Preview; hosting terminology never changes the network or product claim.
 
 ### Hostinger VPS and relay domain
 
-- Terminate TLS at Nginx (or maintained equivalent) for
-  `relay-preview.example.org`; proxy only to `127.0.0.1:8790`.
+- Terminate TLS at Nginx (or maintained equivalent) for the approved relay
+  origin; proxy only to `127.0.0.1:8790`.
 - Firewall Node and proof-server ports from the Internet. Nginx is the only
   public process; the relay needs no inbound WebSocket endpoint.
 - Set `RELAYER_ALLOWED_ORIGINS` to exact Vercel pilot domains. Never use `*`,

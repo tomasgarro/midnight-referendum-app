@@ -1,150 +1,96 @@
-# Wave 1 submission checklist
+# Wave 1 evidence checklist
 
-This is the evidence handoff for the Passport-first CICO prototype. It is
-deliberately honest about what is verified locally, what still requires an
-external provider or deployment, and what must be collected from users.
+This checklist is a release worksheet. The current Undeployed v2 lifecycle has
+an operator-verified local run, and its sanitized manifest/transcript are
+committed at [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/);
+this checklist must not be read as a committed final Preview release record.
+The active status summary is the four-row table in the [root
+README](../README.md). Historical v1 Preview values are preserved separately in
+[LEGACY-V1-PREVIEW-EVIDENCE.md](LEGACY-V1-PREVIEW-EVIDENCE.md).
 
-Status date: 2026-08-27  
-Current review checkout: `de0d247` plus uncommitted Wave 1 changes  
-Release SHA: **not assigned until the reviewed worktree is committed**
+## Evidence record
 
-## Evidence already available
-
-- [x] Mobile-first Passport showcase rendered and inspected at 320px and
-      390px.
-- [x] Four-stage learning flow: Understand → Passport → Eligibility → Vote.
-- [x] Persistent `LIVE PASSPORT`, `SYNTHETIC CREDENTIAL`, and `SIMULATED
-      VOTE` labels.
-- [x] Passport profile/session adapter is isolated behind
-      `PassportSessionPort` and requests only `session` + `profile`.
-- [x] Popup handshake validates origin, source window, request ID, and nonce.
-- [x] Anonymous exploration never creates a live Passport session badge.
-- [x] Showcase stage transitions move focus to the new lesson heading instead
-      of leaving focus on the control that just disappeared.
-- [x] Midnight DApp Connector v4 discovery, network validation, and
-      `hintUsage()` permission intent are provider-neutral and passkey-ready;
-      multiple injected wallets get an explicit chooser with metadata safety
-      checks.
-- [x] Showcase mode cannot contact the wallet, relayer, proof server, indexer,
-      CICO, Rarimo, or contract routes, and does not display a wallet control.
-- [x] Windows UI suite: 19 files / 103 tests passed, including the passive
-      platform-passkey readiness building block.
-- [x] Repository Biome quality check exits successfully after applying the
-      repository's LF text policy; remaining diagnostics are non-blocking
-      warnings in legacy provider/SDK boundary code.
-- [x] Showcase production build passed.
-- [x] Local prebuilt showcase artifact passed the privacy-boundary, popup
-      `WindowProxy`, and 320px/390px viewport E2E checks: 3 Chromium tests.
-- [x] Public showcase bundle privacy gate passed: five text assets scanned for
-      operator secrets and private loopback service endpoints.
-- [x] Chromium showcase E2E: public journey and real `WindowProxy` popup
-      handshake passed.
-- [x] Undeployed Chromium E2E: multiple injected v4 wallets rendered safely,
-      duplicate-RDNS warning appeared, and the user-selected connector was the
-      only connector contacted.
-- [x] Node health and Proof Server `8.1.0`/`V2` endpoints responded locally.
-- [x] Local Undeployed Vite development server at `http://localhost:4173` and
-      built preview at `http://localhost:5177` served the reviewed checkout;
-      Chromium completed the Passport-first journey, synthetic-credential
-      check, runtime-boundary check, 320px/390px mobile overflow regression,
-      and primary CTA/fixed-navigation regression: 6 tests passed.
-- [x] Real local Undeployed transaction lane completed: eligibility issuance
-      transaction `cafcbf7f0f4de47e261cbe9dab7dd04ff28868aa0ce13e9be9f79b351bbc7d76`
-      and private ballot transaction
-      `6fca57dc110332a7ad8897a7fd7caa4f81579a5ec717d2d9d92553db9f46b512`
-      reached block `2942` with `SucceedEntirely`. The voter secret, salt, and
-      choice were ephemeral and are not recorded.
-- [x] Full Linux-native verification exits cleanly from the isolated ext4 WSL
-      checkout: Compact compilation, contract simulators, API (32 tests), CICO
-      (30), and the then-current UI suite (18 files / 95 tests) passed with
-      Linux Node 22.22.0 and Compact compiler 0.31.1. The later browser-only
-      passkey-readiness test is covered by the current Windows UI total above.
-- [x] Opt-in browser-side sponsored-relayer lane completed on the local
-      Undeployed stack at 390px: browser providers initialized, the fixture
-      eligibility was found, the proof was balanced/submitted by the relayer,
-      and the UI rendered a confirmed `Undeployed local` receipt. The fixture
-      secret, vote salt, and choice were not recorded.
-
-## Evidence still required before calling the submission release complete
-
-- [ ] Commit the reviewed worktree and record the exact release SHA.
-- [x] Run the full Linux-native verification path and retain its output.
-- [ ] Verify the real Passport profile flow from the final HTTPS origin.
-- [ ] Confirm CICO registration/approval in the relevant Passport directory.
-- [ ] Test a real Midnight DApp Connector wallet on the selected network.
-- [ ] Confirm the selected wallet's public RDNS/API compatibility; do not infer
-      Gero integration from PassKey authentication alone.
-- [ ] Publish the showcase at HTTPS without exposing private service routes.
-- [ ] Complete eight supervised sessions: four English and four Spanish,
-      across Android and iOS.
-- [ ] Record the two-minute walkthrough and architecture/privacy explanation.
-
-## Local reproduction
-
-Run from the Linux-native WSL checkout:
-
-```bash
-npm ci
-npm run devnet:up
-npm run verify:linux -- demo
-```
-
-For the browser showcase, build and serve the prebuilt artifact:
-
-```bash
-npm run build --workspace midnight-referendum-ui -- --mode showcase
-npm run preview --workspace midnight-referendum-ui -- --host localhost --port 4173 --strictPort
-```
-
-Open `http://localhost:4173`, not `127.0.0.1`. The browser journey is
-wallet-less and synthetic in showcase mode; the local undeployed transaction
-path is a separate development lane.
-
-## Two-minute walkthrough
-
-1. **0:00–0:20 — promise:** open the Passport-first journey and point out the
-   three truth labels. Explain that profile, credential, and vote are separate
-   capabilities.
-2. **0:20–0:45 — consent:** show that the request is only the approved display
-   name. If using the controlled local fixture, label it as a fixture; do not
-   call it Passport approval.
-3. **0:45–1:10 — wallet lesson:** explain that Passport identity and wallet
-   transaction approval have different jobs. Mention passkey-first approval
-   as the target direction, not as a shipped Gero integration.
-4. **1:10–1:40 — eligibility and poll:** create the synthetic credential,
-   choose global or country-shaped participation, and state that nationality
-   verification is not active in this public showcase.
-5. **1:40–2:00 — receipt:** complete the simulated vote and show that the local
-   receipt exposes only the public completion facts, not the choice or profile.
-
-## Privacy-safe user-study record
-
-Record one row per session. Never record names, Passport data, document images,
-wallet addresses, voter secrets, credential openings, political choices, or
-raw screenshots containing them.
+Leave release identity, reviewer, and date fields blank until the evidence is
+deliberately attached to the release record. Never record secrets, voter
+material, raw provider data, document images, or ballot choices.
 
 | Field | Value |
 | --- | --- |
-| Session code | `S-___` |
-| Language | English / Spanish |
-| Device class | Android / iOS; coarse model only |
-| Browser | Chrome / Safari / other |
-| Passport profile time | seconds or `not completed` |
-| Identified live Passport correctly | yes / no |
-| Identified synthetic credential correctly | yes / no |
-| Identified simulated vote correctly | yes / no |
-| Recovery failure | denied / closed / blocked / timeout / none |
-| One comprehension issue | short paraphrase, no personal data |
+| Review checkout / branch | `feat/undeployed-v2-evidence-release` |
+| Release SHA | not assigned |
+| Evidence source SHA | `abdd0a2203fbef909f70f6ddc06681ac1327f457` (tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`) |
+| Manifest digest | `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d` |
+| Sanitized manifest path | `docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` |
+| Sanitized transcript path | `docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json` (human-readable form at `undeployed-v2.transcript.md`) |
+| Runtime environment | Undeployed v2 operator run verified locally |
+| Reviewer | |
+| Review date | |
 
-Wave 1 targets: median approved-profile time under two minutes, at least 80%
-correct live-versus-synthetic identification, and three ranked changes for
-Wave 2.
+## Required gates
 
-## Release boundary
+### Source and privacy boundaries
 
-The official [Midnight Passport SDK](https://github.com/midnightntwrk/midnight-passport-sdk)
-currently describes a planning/spec repository with a reduced beta. This
-prototype therefore keeps the interim profile bridge behind a replaceable port
-and does not claim official C23 integration. The [compatibility matrix](COMPATIBILITY-MATRIX.md)
-and [Wave 1 execution plan](WAVE-1-EXECUTION-PLAN.md) remain the technical
-source of truth for the local stack and deferred gates.
+- [ ] README and this checklist distinguish historical v1, synthetic demo,
+      current Undeployed v2, and Passport/Preview/NFC gates.
+- [ ] No current document claims a Preview transaction, deployed address,
+      release SHA, CI status, test total, hosted URL, video, Passport origin
+      approval, Preview deployment, or physical NFC evidence without a
+      committed source; the committed local Undeployed v2 identifiers stay
+      scoped to that lifecycle and are not restated as Preview evidence.
+- [ ] Browser profile/session fields remain separate from credential and ballot
+      material.
+- [ ] Voter secret, credential opening, witness, choice, salt, raw MRZ/NFC data,
+      and provider proof do not enter logs, public assets, or the relay API.
+- [ ] A receipt is called confirmed only after independent indexer observation.
+
+### Synthetic demo
+
+- [ ] Start the UI with `npm run dev -- --host localhost --port 4173
+      --strictPort`.
+- [ ] Confirm synthetic credential and simulated vote labels remain visible.
+- [ ] Confirm no demo state is described as a real credential, Passport
+      approval, NFC verification, deployed contract, or canonical receipt.
+
+### Undeployed v2 runtime evidence
+
+- Verified locally by the operator: the pinned services and the registry
+  deploy/issue/freeze, referendum deploy/cast/replay rejection/close/reveal/
+  finalize lifecycle completed; the local indexer confirmed the action; and the
+  capability-gated relay passed DUST, concurrency, and restart checks.
+- [ ] Confirm the runner fails closed when local genesis funding is absent.
+- [x] Sanitize and review the generated manifest/transcript; the reviewed
+      evidence is committed at `docs/evidence/undeployed-v2/abdd0a2/`.
+- [x] Deliberately stage and commit only the reviewed public manifest/transcript;
+      keep private env files, keys, voter material, witnesses, raw provider
+      data, and local database state ignored.
+- [ ] Record only public transaction identifiers and indexer observations from
+      the committed manifest; do not copy them into active docs by hand.
+
+### Passport, Preview, and physical evidence
+
+- [ ] Verify the real Passport profile/session from the final approved origin.
+- [ ] Verify any account/network response against the selected environment.
+- [ ] Confirm CICO registration/approval in the relevant Passport directory.
+- [ ] Verify a real provider/credential issuer path; fixture evidence cannot
+      satisfy this gate.
+- [ ] Complete a physical-device/NFC transcript and retention/deletion review.
+- [ ] Run a fresh Preview issue/vote/close/reveal/finalize transcript only after
+      the local v2 gates and independent review are complete; the verified local
+      run does not satisfy this gate.
+- [ ] Record hosted URL, release SHA, CI links, and walkthrough video only when
+      they actually exist and are attached to the release record.
+
+## Handoff
+
+Every completed run must report exactly:
+
+1. changed files;
+2. commands and their observed outcomes;
+3. evidence files and reviewer;
+4. privacy/security invariants checked; and
+5. unresolved risks and the next dependency.
+
+The operator must not infer evidence from source code, test names, screenshots,
+or an unreviewed generated file. See [ENVIRONMENT-ACCEPTANCE.md](ENVIRONMENT-ACCEPTANCE.md),
+[DEPLOYMENT.md](DEPLOYMENT.md), and [ROADMAP.md](ROADMAP.md) for the detailed
+acceptance model.

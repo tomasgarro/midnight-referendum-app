@@ -1,8 +1,9 @@
 # Wave 1 execution plan — local-first Passport referendum showcase
 
 Status: active execution plan for the August 27–September 16, 2026 buildathon
-wave. The local undeployed stack is the next release gate. Vercel and custom
-domain work remain parked until the local evidence is complete. The
+wave. The local Undeployed v2 stack is the next release gate, and its runtime
+evidence is not verified in the current review checkout. Vercel and custom
+domain work remain parked until local evidence is independently reviewed. The
 cryptographic release gates remain in [`ROADMAP.md`](ROADMAP.md), and the
 deployment procedure remains in [`FIRST-PUBLIC-DEPLOYMENT.md`](FIRST-PUBLIC-DEPLOYMENT.md).
 
@@ -76,10 +77,10 @@ this seam and retain the same truth labels and consent rules.
 
 1. Start the pinned local Node, Indexer, and Proof Server stack and capture
    health output.
-2. Regenerate the checked-in Compact assets in Linux/WSL2 and run the contract
-   simulator, API/UI tests, and production build.
-3. Deploy the referendum contract locally, run one private fixture vote, and
-   record the transaction/indexer evidence without exposing a choice.
+2. Regenerate the checked-in Compact assets in Linux/WSL2 and run the repository
+   verification commands; retain observed output for review.
+3. Run `npm run evidence:undeployed:v2`, then review the generated manifest and
+   transcript before treating any transaction/indexer observation as evidence.
 4. Keep the local browser journey on `http://localhost:4173` and verify that
    the UI can explain the three services and the privacy boundary.
 
@@ -189,49 +190,53 @@ synthetic credential or simulated vote.
 
 ## Wave 1 acceptance checklist
 
-- [x] Pinned local Node, Indexer, and Proof Server containers are healthy.
-- [x] Local referendum deployment and a private fixture vote have been
+The boxes below are acceptance criteria, not completed evidence. They are
+intentionally unchecked in this review checkout; check them only after the
+corresponding run is observed and independently reviewed. Do not copy prior
+local test totals, transaction identifiers, release SHAs, CI results, hosted
+URLs, or video references into this plan.
+
+- [ ] Pinned local Node, Indexer, and Proof Server containers are healthy.
+- [ ] Local referendum deployment and a private fixture vote have been
       exercised against the undeployed stack.
-- [x] Compact assets, contract/API/CICO tests, and the production build pass on
+- [ ] Compact assets, contract/API/CICO checks, and the production build pass on
       the Linux/WSL2 path.
-- [x] Biome repository quality check exits successfully; remaining diagnostics
+- [ ] Biome repository quality check exits successfully; remaining diagnostics
       are non-blocking warnings in legacy provider/SDK boundary code.
-- [x] Full Linux-native verification exits cleanly from an ext4 WSL checkout;
-      Compact compilation, contract/API/CICO tests, and the aggregate UI suite
-      passed with Linux Node/npm and Compact 0.31.1.
-- [x] Four-phase mobile progress indicator.
-- [x] Live/synthetic/simulated labels remain visible throughout the showcase.
-- [x] Passport connection requests only the approved profile capability.
-- [x] Passport identity and Midnight wallet approval are explained as separate
+- [ ] Full Linux-native verification exits cleanly from an ext4 WSL checkout;
+      observed output is attached to the reviewed evidence record.
+- [ ] Four-phase mobile progress indicator.
+- [ ] Live/synthetic/simulated labels remain visible throughout the showcase.
+- [ ] Passport connection requests only the approved profile capability.
+- [ ] Passport identity and Midnight wallet approval are explained as separate
       decisions in the mobile journey.
-- [x] DApp Connector v4 permission intent is predeclared with `hintUsage()` and
+- [ ] DApp Connector v4 permission intent is predeclared with `hintUsage()` and
       remains provider-neutral for a future passkey wallet.
-- [x] Multiple compatible injected wallets are user-selectable; connector
+- [ ] Multiple compatible injected wallets are user-selectable; connector
       names/icons are treated as untrusted metadata and duplicate RDNS claims
       produce a visible warning.
-- [x] Showcase mode removes the wallet affordance entirely so Passport remains
+- [ ] Showcase mode removes the wallet affordance entirely so Passport remains
       the only identity entry point in the public learning flow.
-- [x] Local Chromium E2E covers the Passport popup handshake with a real
+- [ ] Local Chromium E2E covers the Passport popup handshake with a controlled
       `WindowProxy` and controlled origin.
-- [x] Local Undeployed Vite smoke covers the functional journey, synthetic
+- [ ] Local Undeployed Vite smoke covers the functional journey, synthetic
       credential label, runtime-boundary check, and 320px/390px mobile overflow
       regression plus the browser wallet chooser, duplicate-RDNS warning, and
-      explicit second-wallet selection plus the fixed-nav CTA regression (6
-      Chromium tests passed).
-- [x] Local prebuilt showcase artifact covers the isolated bilingual journey,
+      explicit second-wallet selection plus the fixed-nav CTA regression.
+- [ ] Local prebuilt showcase artifact covers the isolated bilingual journey,
       real popup `WindowProxy` handshake, and 320px/390px viewport regression
-      (3 Chromium tests passed).
-- [x] Generated showcase bundle passes the privacy gate for operator secret
+      when the controlled run is reviewed.
+- [ ] Generated showcase bundle passes the privacy gate for operator secret
       identifiers and private loopback service endpoints.
-- [x] Opt-in browser-side sponsored-relayer transaction lane reaches a
+- [ ] Opt-in browser-side sponsored-relayer transaction lane reaches a
       confirmed local receipt at 390px without a browser wallet; the wallet
       approval path remains separately provider-backed.
-- [x] Anonymous exploration never creates a live Passport session badge.
-- [x] Stage transitions move focus to the new lesson heading for keyboard and
+- [ ] Anonymous exploration never creates a live Passport session badge.
+- [ ] Stage transitions move focus to the new lesson heading for keyboard and
       switch-access users, with a visible focus treatment.
-- [x] Camera, CICO, Rarimo, relayer, proof, indexer, and contract ports remain
+- [ ] Camera, CICO, Rarimo, relayer, proof, indexer, and contract ports remain
       disabled in showcase mode.
-- [x] English/Spanish language switch persists locally.
+- [ ] English/Spanish language switch persists locally.
 - [ ] Vercel manual workflow completes successfully (parked).
 - [ ] Deployed CSP and deep-link smoke tests pass (parked).
 - [ ] Live Passport popup/embedded flows are verified from the deployed origin

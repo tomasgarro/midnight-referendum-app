@@ -169,7 +169,10 @@ export async function startServer(): Promise<void> {
           submit: (tx) => enqueue(() => wallet.facade.submitTransaction(deserializeFinalized(tx))),
           transactionId: (tx) => {
             try {
-              return deserializeFinalized(tx).identifiers()[0];
+              // WalletFacade.submitTransaction() returns the final identifier.
+              // Balancing can add identifiers, so using the first one creates a
+              // false submission mismatch for the exact transaction submitted.
+              return deserializeFinalized(tx).identifiers().at(-1);
             } catch {
               return undefined;
             }
@@ -199,6 +202,11 @@ export async function startServer(): Promise<void> {
   } else {
     console.log(
       '[relayer] v2 action routes disabled: RELAYER_V2_CAPABILITY_SECRET is not configured',
+    );
+  }
+  if (config.legacyApiEnabled) {
+    console.warn(
+      '[relayer] WARNING: compatibility-only /balance and /submit routes are explicitly enabled',
     );
   }
 
@@ -231,9 +239,22 @@ export async function startServer(): Promise<void> {
             send(response, 503, { synced: false, detail: 'wallet has not produced a state yet' });
             return;
           }
+          const dustAtValue = url.searchParams.get('dustAt');
+          const dustAt = dustAtValue === null ? new Date() : new Date(dustAtValue);
+          const now = Date.now();
+          if (
+            Number.isNaN(dustAt.getTime()) ||
+            dustAt.getTime() > now ||
+            now - dustAt.getTime() > 15 * 60 * 1_000
+          ) {
+            send(response, 400, { error: 'invalid_dust_evaluation_time' });
+            return;
+          }
           send(response, 200, {
             synced: state.isSynced,
             networkId: config.networkId,
+            v2ActionStore: config.v2DatabaseUrl ? 'postgresql' : 'local-file',
+            legacyApiEnabled: config.legacyApiEnabled,
             progress: {
               shielded: state.shielded.progress,
               unshielded: state.unshielded.progress,
@@ -246,7 +267,8 @@ export async function startServer(): Promise<void> {
             unshieldedBalances: Object.fromEntries(
               Object.entries(state.unshielded.balances).map(([k, v]) => [k, v.toString()]),
             ),
-            dustBalance: state.dust.balance(new Date()).toString(),
+            dustBalance: state.dust.balance(dustAt).toString(),
+            dustEvaluationTime: dustAt.toISOString(),
           });
           return;
         }
@@ -268,7 +290,7 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        if (request.method === 'POST' && url.pathname === '/balance') {
+        if (config.legacyApiEnabled && request.method === 'POST' && url.pathname === '/balance') {
           const body = await readJson(request);
           const hex = hexField(body, 'tx');
           const balanced = await enqueue(() => balanceAndFinalize(wallet, deserializeUnbound(hex)));
@@ -276,7 +298,7 @@ export async function startServer(): Promise<void> {
           return;
         }
 
-        if (request.method === 'POST' && url.pathname === '/submit') {
+        if (config.legacyApiEnabled && request.method === 'POST' && url.pathname === '/submit') {
           const body = await readJson(request);
           const hex = hexField(body, 'tx');
           const txId = await enqueue(() =>

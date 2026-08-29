@@ -2,7 +2,11 @@
 
 This is the local-first compatibility contract for the referendum MVP. It is
 deliberately pinned so the app, generated Compact assets, and the three local
-Midnight services do not drift independently.
+Midnight services do not drift independently. It describes target versions and
+procedures. The current branch has an operator-verified local Undeployed v2 run
+against this stack; its sanitized manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/)
+(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
 
 Checked 2026-08-27 against the official [Midnight local-dev standalone
 configuration](https://github.com/midnightntwrk/midnight-local-dev/blob/main/standalone.yml)
@@ -22,7 +26,7 @@ matrix](https://github.com/midnightntwrk/midnight-sdk/blob/main/COMPATIBILITY.md
 | On-chain runtime | `3.0.0` | Direct root pin; must resolve to one shared WASM module |
 | Midnight.js | `4.1.1` family | All `midnight-js-*` packages stay lockstep |
 | DApp Connector API | `4.0.1` | Root/UI dependency; discovery accepts only valid semver on the v4 line, validates the connected network, sanitizes wallet metadata, and presents a choice when multiple compatible connectors are injected |
-| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | Integrated through `PassportSessionPort`; responses are origin/nonce/request/network validated and no profile field becomes eligibility authority |
+| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | Target integration through `PassportSessionPort`; origin approval and a live session remain unverified |
 | Compact toolchain | CLI/compiler `0.31.1`, language `0.23` | Generated assets must be rebuilt with this line |
 | Node.js | `22.22.0` | `.nvmrc` source of truth; run in Linux/WSL2 |
 
@@ -67,11 +71,12 @@ proving, so it must not be replaced by a public or third-party endpoint.
 6. The ignored `managed/` and `ui/public/managed/` assets are generated from
    the checked-in Compact sources. A fresh clone cannot run contract tests or a
    production build until the Linux Compact compiler has regenerated them.
-7. Undeployed uses the real official Passport session/profile flow when the
-   configured origin accepts the CICO origin. A returned official account is
-   labelled with its actual network and is never presented as deployed on the
-   local Undeployed chain. If Passport is unavailable, the capability is
-   unavailable; it does not fall back to a synthetic account.
+7. When configured and independently verified, Undeployed may use the official
+   Passport session/profile flow only when the approved origin accepts the CICO
+   origin. A returned official account must be labelled with its actual network
+   and never presented as deployed on the local Undeployed chain. If Passport
+   is unavailable, the capability is unavailable; it does not fall back to a
+   synthetic account. No such session is asserted by this matrix.
 
 ## Passport integration boundary
 
@@ -137,3 +142,45 @@ assets, a CLI-driven `standalone.yml`, and a browser UI. Its infrastructure
 versions predate this repository's `ledger-v8@8.1.0`/Midnight.js `4.1.1` target.
 The referendum app therefore adopts its separation of app/contract/CLI ideas,
 not its old image tags or package lockfile.
+
+## Dependency audit posture
+
+`npm audit --omit=dev` reports **0 vulnerabilities**. The production dependency
+graph — the API, CICO service, relayer, and the shipped browser bundle — is
+clean.
+
+The full `npm audit`, which includes development tooling, reports 6 low and 4
+moderate findings. All of them resolve to three Vite plugins used only by the
+`ui` workspace's local dev server and its static build step:
+
+| Advisory | Severity | Package | Reached through |
+| --- | --- | --- | --- |
+| GHSA-67mh-4wv8-2f99 | moderate | `esbuild@0.14.54` | `@originjs/vite-plugin-commonjs@1.0.3` |
+| GHSA-848j-6mx2-7j84 | low (x6) | `elliptic@6.6.1` and its `crypto-browserify` chain | `vite-plugin-node-polyfills@0.28.0` |
+| GHSA-w5hq-g745-h8pq | moderate | `uuid@10.0.0` | `vite-plugin-top-level-await@1.6.0` |
+
+These are **accepted, monitored, dev-only risks**, not deferred work. Each of
+the three plugins is already at its latest published version, and none has an
+upstream release that resolves its advisory. `vite-plugin-top-level-await`
+pins `uuid` to an exact `10.0.0`, and `elliptic@6.6.1` is itself the newest
+release, so the advisory is unpatched upstream rather than merely un-upgraded.
+
+`npm audit fix --force` is **not** an acceptable remedy here and must not be
+run: its only proposed change is to downgrade these plugins to years-old
+releases, which carries real breakage risk and no security gain.
+
+The production build path does not use the vulnerable copies. `vite@7.3.6`
+bundles its own current `esbuild`; the vulnerable `esbuild@0.14.54` exists
+solely as the CommonJS transform invoked inside the Vite process. The
+`crypto-browserify`/`elliptic` alias only activates if the module graph imports
+Node's `crypto`, and the relayer, CICO, and API workspaces do not depend on
+`vite-plugin-node-polyfills` at all.
+
+Re-check on each dependency change and before any release:
+
+```bash
+npm audit --omit=dev
+npm audit
+```
+
+Treat any finding that appears under `--omit=dev` as a release blocker.

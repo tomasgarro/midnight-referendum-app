@@ -39,7 +39,7 @@ describe('App', () => {
     expect(
       screen.getByRole('heading', { name: /Tres cosas distintas|Three separate things/i }),
     ).toBeTruthy();
-    expect(screen.getByText(/Passport.*identidad|Passport.*session/i)).toBeTruthy();
+    expect(screen.getByText(/Passport.*identifica|Passport.*session/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Volver a la app|Back to the app/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
   });
@@ -51,7 +51,9 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Consultas para vos' })).toBeTruthy();
     expect(screen.getByText('Credencial lista')).toBeTruthy();
     expect(screen.getByText(/Argentina \(AR\)/i)).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'World' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: /World|Mundo/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     expect(screen.queryByText(/Passport v2|Paso 9|Elegí tu respuesta/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
   });
@@ -60,7 +62,7 @@ describe('App', () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    await user.click(screen.getByRole('tab', { name: 'Countries' }));
+    await user.click(screen.getByRole('tab', { name: /Countries|Países/ }));
     const selector = screen.getByRole('combobox', { name: 'País' });
     expect(selector.querySelectorAll('option').length).toBeGreaterThan(200);
     await user.selectOptions(selector, 'BR');
@@ -100,7 +102,7 @@ describe('App', () => {
     expect(screen.getByText(/Brasil|Brazil/i)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Ir al panel|Go to civic dashboard/i }));
     expect(screen.getByText('Referéndum Cívico')).toBeTruthy();
-    await user.click(screen.getByRole('tab', { name: 'Countries' }));
+    await user.click(screen.getByRole('tab', { name: /Countries|Países/ }));
     expect(screen.getByText('No hay consultas disponibles en este espacio')).toBeTruthy();
     expect(
       screen.queryByRole('heading', { name: 'Tierras rurales y propiedad extranjera' }),
@@ -120,5 +122,16 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
     expect(screen.getByRole('heading', { name: 'Gracias por participar' })).toBeTruthy();
     expect(screen.getByText(/No representa una transacción/i)).toBeTruthy();
+  });
+
+  it('propagates English through the active dashboard and document metadata', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: /Idioma|Language/ }), 'en');
+    await completeDemoCredential(user);
+    expect(screen.getByRole('heading', { name: 'Consultations for you' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'World' })).toBeTruthy();
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toMatch(/Civic Referendum/i);
   });
 });

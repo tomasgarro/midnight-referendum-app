@@ -1,7 +1,15 @@
 # Environment acceptance matrix
 
-Every user-visible claim must match the selected environment. Synthetic data
-can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
+This is the target acceptance matrix, not the runtime transcript. The current
+Undeployed v2 lifecycle has an operator-verified local run, and its sanitized
+manifest/transcript are committed at
+[docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json](evidence/undeployed-v2/abdd0a2/undeployed.manifest.json)
+and
+[docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json](evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json)
+(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
+Every user-visible claim must match the selected environment: local Undeployed
+evidence does not upgrade the synthetic demo, and neither satisfies a Preview,
+Passport, or physical NFC release gate.
 
 | Capability | `demo` | `undeployed` | `preview` |
 | --- | --- | --- | --- |
@@ -17,7 +25,13 @@ can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
 | Receipt | Synthetic and labelled | Canonical only after local indexer observation | Canonical only after independent Preview indexer observation |
 | NFC/passport evidence | Not available or synthetic | Fixture evidence only until physical companion transcript exists | Rarimo/native companion only after physical-device gate; raw document data never enters this web app |
 
-## Required runtime evidence
+## Evidence state and remaining gates
+
+The current local run is verified for the bounded Undeployed v2 lifecycle, and
+its sanitized manifest/transcript are committed as the release evidence for
+that lifecycle; the final Preview release record is still pending. The
+following evidence is required before the corresponding environment may be
+described as live or released.
 
 ### Demo
 
@@ -25,17 +39,33 @@ can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
 - No live, verified, deployed, or canonical wording for fixture results.
 - No production acceptance test consumes demo fixtures.
 
-### Undeployed
+### Undeployed v2 — operator-verified locally; evidence committed
 
-- Network ID `undeployed` and the three local services are healthy: node `9944`,
-  indexer `8088`, and proof server `6300`.
-- A versioned manifest records artifact digests, deployed registry and
-  referendum addresses, transaction IDs, frozen root, indexer observations,
-  and DUST accounting.
-- Registry deploy, issue, freeze, referendum deploy, cast, replay rejection,
-  close, reveal, and finalize are reproducible from a clean checkout.
-- Pending relay work survives browser and service restart; confirmation comes
-  only from the indexer.
+- Verified locally: network ID `undeployed`, node/indexer/proof/PostgreSQL
+  services, registry issue/freeze, referendum deploy/cast/replay rejection/
+  close/reveal/finalize, canonical indexer confirmation, and the capability-
+  gated relay's DUST, concurrency, and restart checks.
+- Committed for the release record: the sanitized manifest and transcript at
+  `docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` and
+  `docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json`
+  (human-readable form at `undeployed-v2.transcript.md`), containing only
+  reviewed public addresses, identifiers, digests, the frozen root, indexer
+  observations, and DUST accounting. Manifest digest
+  `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`.
+- Known limitation of the committed evidence: the three `registry.*` indexer
+  observations (deploy, issue, freeze) were all captured at approximately
+  2026-08-29T14:35:50Z, after the freeze had already completed. Each therefore
+  records the terminal registry state (`frozen: true`, `credentialCount: 1`)
+  rather than the state as of that individual stage. Each observation carries
+  its own `observedAt` timestamp, so this is transparent in the artifact. The
+  referendum observations progress correctly across stages (COMMIT ->
+  REVEAL -> FINALIZED, issuedVotes 0 -> 1, tally 0 -> YES 1).
+- DUST accounting uses a fixed-time valuation model: because DUST accrues over
+  wall-clock time, the before/after balances in the evidence are both
+  valuated at a single bounded reference instant (`valuationAt`); raw later
+  balances can otherwise exceed earlier ones even after DUST was spent.
+- The local result remains separate from Passport approval, a real provider
+  credential, a hosted deployment, and Midnight Preview evidence.
 
 ### Preview
 
@@ -55,4 +85,3 @@ can demonstrate UX, but it cannot satisfy an undeployed or Preview release gate.
 - Submission without indexer confirmation remains pending.
 - Unknown environment/provider capability is reported as unavailable, not
   inferred or fabricated.
-

@@ -4,6 +4,23 @@
 # midnight-local-dev standalone.yml. Keep all three services on the same
 # compatibility line; do not mix these with the older RPS sample images.
 services:
+  postgres:
+    container_name: referendum-undeployed-postgres
+    image: postgres:16-alpine
+    ports:
+      - '127.0.0.1:5433:5432'
+    environment:
+      POSTGRES_DB: v2_evidence
+      POSTGRES_USER: v2_evidence
+      POSTGRES_PASSWORD: v2_evidence
+    volumes:
+      - undeployed-v2-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U v2_evidence -d v2_evidence']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
   proof-server:
     container_name: referendum-undeployed-proof-server
     image: midnightntwrk/proof-server:8.1.0
@@ -60,3 +77,6 @@ services:
     environment:
       CFG_PRESET: dev
       SIDECHAIN_BLOCK_BENEFICIARY: 04bcf7ad3be7a5c790460be82a713af570f22e0f801f6659ab8e84a52be6969e
+
+volumes:
+  undeployed-v2-postgres:

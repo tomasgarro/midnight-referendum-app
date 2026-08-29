@@ -110,7 +110,18 @@ describe('v2 walletless action service', () => {
 
     resolver.resolve.mockResolvedValue(receipt);
     await expect(service.getReceipt('action-1')).resolves.toEqual(receipt);
-    expect((await store.get('action-1'))?.status).toBe('confirmed');
+    expect(await store.get('action-1')).toMatchObject({
+      status: 'confirmed',
+      transitions: [
+        'authorized',
+        'validated',
+        'dust_reserved',
+        'finalized',
+        'submitted',
+        'indexer_pending',
+        'confirmed',
+      ],
+    });
     expect(resolver.resolve).toHaveBeenCalledWith(
       expect.objectContaining({
         transactionId: 'tx-1',
