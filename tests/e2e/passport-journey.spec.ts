@@ -7,6 +7,10 @@ const runtime = process.env.CICO_E2E_MODE === 'runtime';
 test('completes Passport onboarding, then creates a choice-free simulated receipt', async ({
   page,
 }) => {
+  // A clean Linux runner cold-loads the Midnight WASM/runtime graph before this
+  // longest journey. Keep retries disabled, but give the full path enough time
+  // to exercise onboarding, credential issuance, voting, and the receipt.
+  test.setTimeout(120_000);
   test.skip(showcase, 'The deployed public artifact uses the live Passport showcase path.');
   const journey = new PassportJourneyPage(page);
 
