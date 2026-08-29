@@ -48,7 +48,7 @@ try {
   if (!proofServerReused) composeServices.push('proof-server');
   command(
     'docker',
-    ['compose', '-f', composeFile, 'up', '-d', ...composeServices],
+    ['compose', '-f', composeFile, 'up', '-d', '--force-recreate', ...composeServices],
     'Docker services',
   );
   record('proof-server-source', {
@@ -271,7 +271,7 @@ async function startRelay({ requireDust = false } = {}) {
   child.stderr?.on('data', (chunk) => appendRelayOutput(chunk));
   child.once('exit', (code) => {
     if (relayProcess === child && code && code !== 0) {
-      run.relayFailure = redact(relayOutput);
+      run.relayFailure = { code: 'relay_process_failed', exitCode: code };
     }
   });
   await waitForRelayReady(requireDust);
@@ -497,8 +497,16 @@ function command(executable, args, label, extraEnv = {}) {
     windowsHide: true,
     maxBuffer: 16 * 1024 * 1024,
   });
-  record(label, redact(`${result.stdout ?? ''}\n${result.stderr ?? ''}`));
-  if (result.error || result.status !== 0) throw new Error(`${label} failed`);
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+  if (result.error || result.status !== 0) {
+    record(label, {
+      status: 'failed',
+      exitCode: result.status ?? null,
+      code: commandFailureCode(label, output),
+    });
+    throw new Error(`${label} failed`);
+  }
+  record(label, safeCommandOutput(output));
   return result;
 }
 
@@ -520,8 +528,33 @@ async function commandAsync(executable, args, label, extraEnv = {}) {
     child.once('error', reject);
     child.once('exit', (code) => resolveExit(code));
   });
-  record(label, redact(output));
-  if (status !== 0) throw new Error(`${label} failed`);
+  if (status !== 0) {
+    record(label, {
+      status: 'failed',
+      exitCode: status,
+      code: commandFailureCode(label, output),
+    });
+    throw new Error(`${label} failed`);
+  }
+  record(label, safeCommandOutput(output));
+}
+
+function commandFailureCode(label, output) {
+  if (label === 'complete manifest validation') return 'manifest_validation_failed';
+  const invalidTransaction = /Invalid Transaction: Custom error:\s*(\d+)/iu.exec(output);
+  if (invalidTransaction?.[1]) return `invalid_transaction_${invalidTransaction[1]}`;
+  if (/SubmissionError|Transaction submission failed/iu.test(output)) {
+    return 'transaction_submission_failed';
+  }
+  if (/timed?\s*out|timeout/iu.test(output)) return 'command_timeout';
+  return 'command_failed';
+}
+
+function safeCommandOutput(output) {
+  if (/\btxData\s*:|\bUint8Array\s*\(|midnight:transaction\[/iu.test(output)) {
+    return { status: 'completed', output: 'suppressed_sensitive_output' };
+  }
+  return redact(output);
 }
 
 async function waitForServices() {
