@@ -1,0 +1,235 @@
+/*
+ * App shell.
+ *
+ * The shell is a bounded flex column -- header, one scrolling route, tab bar.
+ * It used to be a plain block with min-height:100vh and 122px of bottom
+ * padding reserved for a fixed nav, which meant Screen's "pinned" footer was
+ * not pinned at all: on the policy dossier the vote action sat about three
+ * screens below the fold, exactly where it had been before it was moved.
+ *
+ * The header and the tab bar are the frame every screen is read through, so
+ * they are the quietest surfaces in the app: the ground colour, one hairline,
+ * and the accent used once, on the active tab.
+ */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--ground);
+  box-shadow: 0 0 42px rgba(26, 26, 24, 0.06);
+}
+.app-shell > .chrome-header,
+.app-shell > .chrome-nav {
+  flex: none;
+}
+/* Every route is either a plain <main> or a Screen. A <main> scrolls itself; a
+   Screen holds its footer still and scrolls its body instead. */
+.app-shell > main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.app-shell > .sys-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chrome-header {
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--ground);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-body);
+}
+
+.chrome-brand__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.chrome-brand__note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.chrome-identity {
+  position: relative;
+  flex: none;
+}
+.chrome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 160px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chrome-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chrome-chip:hover {
+  background: var(--surface-sunken);
+}
+.chrome-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chrome-chip--on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chrome-popover {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 30;
+  width: min(280px, calc(100vw - var(--space-8)));
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.chrome-popover__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.chrome-popover strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+.chrome-popover p {
+  margin: var(--space-1) 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+.chrome-popover__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px 0 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.chrome-popover__close:hover {
+  background: var(--surface-sunken);
+}
+
+/* ---- tab bar ---- */
+.chrome-nav {
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  background: var(--ground);
+  border-top: 1px solid var(--line);
+}
+.chrome-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: var(--r-input);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chrome-nav__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* The accent's one appearance in the chrome. */
+.chrome-nav__item--active {
+  color: var(--accent);
+}
+
+/* ---- receipt toast ----
+   Lives in the shell because it outlives the screen that created it. */
+.receipt-toast {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: calc(100% - var(--space-8));
+  padding: 0 6px 0 var(--space-3);
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.receipt-toast-open,
+.receipt-toast-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.receipt-toast-open {
+  padding: 10px 2px;
+}
+.receipt-toast-close {
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--r-pill);
+}
+.receipt-toast-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.receipt-toast-open:focus-visible,
+.receipt-toast-close:focus-visible {
+  outline: 2px solid var(--surface);
+  outline-offset: 2px;
+}

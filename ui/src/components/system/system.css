@@ -1,0 +1,535 @@
+/*
+ * System primitives.
+ *
+ * Spec: https://claude.ai/code/artifact/e6ccc025-c494-4565-a99d-c366dac24a09
+ *
+ * Everything here reads from styles/tokens.css. No literal colour, radius, or
+ * duration belongs in this file -- if a value is missing, add a token rather
+ * than a one-off, because one-offs are how the previous stylesheet reached
+ * 4,435 lines.
+ *
+ * Shape lock, stated once: actions are pills, cards 20, inputs 12.
+ * Motion: things done 100+ times a day get none. Press feedback fires on
+ * press-in. Nothing eases in on an entrance.
+ */
+
+/* ============================ Screen ============================ */
+/* A flow screen: scrollable body, actions pinned to the bottom and clear of
+   the home indicator. The footer is not sticky-positioned inside the scroll
+   area -- it is a flex sibling, so it never overlaps the last line of text. */
+.sys-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+.sys-screen__body {
+  flex: 1;
+  min-height: 0;
+  /* The body is the scroller, which is what keeps the footer still. Without
+     this the screen simply grows and the "pinned" actions scroll away. */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  min-width: 0;
+}
+.sys-screen__footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  background: var(--ground);
+}
+.sys-screen--plain {
+  background: var(--surface);
+}
+.sys-screen--plain .sys-screen__footer {
+  background: var(--surface);
+}
+
+/* ============================ StepHeader ============================ */
+/* "Paso 1/4" and a close affordance. Deliberately not a labelled stepper bar:
+   the labels cost a third of the screen and told the user nothing they could
+   act on. */
+.sys-stepheader {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sys-stepheader__count {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.sys-stepheader__spacer {
+  flex: 1;
+}
+.sys-stepheader__btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: var(--r-pill);
+}
+.sys-stepheader__btn--back {
+  margin: -10px 0 -10px -10px;
+}
+.sys-stepheader__btn:hover {
+  background: var(--surface-sunken);
+}
+
+/* ============================ Button ============================ */
+.sys-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 14px var(--space-5);
+  min-height: 48px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  /* Press feedback fires on press-in, so the transition covers the release. */
+  transition:
+    background-color var(--dur-press) var(--ease-out),
+    color var(--dur-press) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+.sys-btn--block {
+  display: flex;
+  width: 100%;
+}
+.sys-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.sys-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sys-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The accent is flat. No gradient, no glow, no accent-tinted shadow. */
+.sys-btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.sys-btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.sys-btn--secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.sys-btn--secondary:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.sys-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+.sys-btn--ghost:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+/* A link is the only correct secondary action on a screen that already has a
+   primary one. Two filled buttons make neither of them the answer. */
+.sys-btn--link {
+  background: transparent;
+  color: var(--accent);
+  min-height: 44px;
+  padding: 10px var(--space-3);
+  font-size: 15px;
+}
+.sys-btn--link:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sys-btn--link:active:not(:disabled) {
+  transform: none;
+}
+
+.sys-btn--danger {
+  background: transparent;
+  color: var(--danger);
+}
+.sys-btn--danger:hover:not(:disabled) {
+  background: var(--danger-wash);
+}
+
+.sys-btn--sm {
+  min-height: 40px;
+  padding: 10px var(--space-4);
+  font-size: 14px;
+}
+
+/* ============================ Card ============================ */
+.sys-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+}
+.sys-card--sunken {
+  background: var(--surface-sunken);
+  border-color: transparent;
+}
+.sys-card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+.sys-card--raised {
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+}
+
+/* ============================ StatRow ============================ */
+/* Label on the left, value on the right. The pattern RariMe's proof request
+   uses instead of a paragraph. */
+.sys-statgroup {
+  display: flex;
+  flex-direction: column;
+}
+.sys-statgroup__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-1);
+}
+.sys-statrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+.sys-statrow:last-child {
+  border-bottom: 0;
+}
+.sys-statrow__key {
+  color: var(--ink-muted);
+  min-width: 0;
+}
+.sys-statrow__value {
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================ CounterRow ============================ */
+.sys-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sys-counter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.sys-counter--live {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ============================ Callout ============================ */
+/* One honest-disclosure component with four tones, replacing the mode strip,
+   the explain panel, the results note and the independent note. */
+.sys-callout {
+  display: flex;
+  gap: var(--space-3);
+  border-left: 3px solid var(--ink-muted);
+  background: var(--surface-sunken);
+  border-radius: 0 var(--r-input) var(--r-input) 0;
+  padding: var(--space-3);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+.sys-callout__icon {
+  flex: none;
+  display: inline-flex;
+  color: currentColor;
+  margin-top: 1px;
+}
+.sys-callout__body {
+  min-width: 0;
+}
+.sys-callout__title {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.sys-callout--positive {
+  border-left-color: var(--positive);
+  background: var(--positive-wash);
+}
+.sys-callout--warning {
+  border-left-color: var(--warning);
+  background: var(--warning-wash);
+}
+.sys-callout--danger {
+  border-left-color: var(--danger);
+  background: var(--danger-wash);
+}
+
+/* ============================ InstructionCard ============================ */
+/* Image, a short title, one sentence. The unit RariMe's passport flow is
+   built from, and the reason it needs no help section. */
+.sys-instruction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sys-instruction__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-card);
+  background: var(--surface-sunken);
+  overflow: hidden;
+  min-height: 180px;
+}
+.sys-instruction__media > img,
+.sys-instruction__media > svg {
+  max-width: 100%;
+  height: auto;
+}
+.sys-instruction__title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 var(--space-2);
+  text-wrap: balance;
+}
+.sys-instruction__body {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+/* ============================ EmptyState ============================ */
+/* One centred line. No illustration, no explanation, no call to action
+   unless there is genuinely something to do. */
+.sys-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 15px;
+}
+
+/* ============================ WaitState ============================ */
+.sys-wait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sys-wait__figures {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.sys-wait__count {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.sys-wait__count-total {
+  font-size: 17px;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+.sys-wait__unit {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.sys-wait__track {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.sys-wait__fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: width var(--dur-sheet) var(--ease-out);
+}
+/* Unknown is a real state, not a zero. An empty track with a dash reads as
+   "we cannot see this", where a 0% bar would read as "nothing has happened". */
+.sys-wait--unknown .sys-wait__count {
+  color: var(--ink-muted);
+}
+
+/* ============================ Sheet ============================ */
+.sys-sheet__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 24, 0.32);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  z-index: 60;
+  animation: sys-fade var(--dur-sheet) var(--ease-out);
+}
+.sys-sheet {
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  box-shadow: var(--shadow-sheet);
+  padding: var(--space-4) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  max-height: 88vh;
+  overflow-y: auto;
+  animation: sys-rise var(--dur-sheet) var(--ease-out);
+  font-family: var(--font-body);
+}
+.sys-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.sys-sheet__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--ink);
+}
+.sys-sheet__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.sys-sheet__close:hover {
+  background: var(--surface-sunken);
+}
+.sys-sheet__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sys-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+@keyframes sys-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* Enters from 0.95 and never from 0 -- a sheet that grows from nothing reads
+   as a popup, not as a surface arriving from the bottom edge. */
+@keyframes sys-rise {
+  from {
+    transform: translateY(6%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sys-sheet__scrim,
+  .sys-sheet {
+    animation: sys-fade 1ms linear;
+  }
+  .sys-btn:active:not(:disabled) {
+    transform: none;
+  }
+  .sys-wait__fill {
+    transition: none;
+  }
+}
+
+/* ============================ Display type ============================ */
+/* The two-tone headline is two lines, ink then accent, both in the display
+   face. The faces never mix inside one line. */
+.sys-display {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 8vw, 34px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+.sys-display__accent {
+  display: block;
+  color: var(--accent);
+}
+.sys-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0;
+}

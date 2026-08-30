@@ -372,7 +372,7 @@ describe('CredentialRootPublisher', () => {
   });
 
   it('publishes an under-sized batch when a referendum enrollment deadline is imminent', async () => {
-    let now = 0;
+    const now = 0;
     const reader = makeReader(
       () => registryState({ currentRoot: { field: 1_000n }, credentialCount: 2n }),
       { [referendumAddressA]: () => referendumState({ enrollmentClosesAtUnix: 500n }) },
@@ -391,5 +391,76 @@ describe('CredentialRootPublisher', () => {
 
     const result = await publisher.publishOnce();
     expect(result).toMatchObject({ published: true, batchSize: 2, belowMinimum: true });
+  });
+
+  describe('getStatus', () => {
+    it('reports the batch as unobserved before the first cycle rather than as empty', () => {
+      const publisher = new CredentialRootPublisher({
+        registryExecutor: makeRegistryExecutor(),
+        registryContractAddress: registryAddress,
+        reader: makeReader(() => registryState({})),
+        referenda: [target(referendumAddressA, makeReferendumExecutor(referendumAddressA))],
+        minBatchSize: 16,
+        maxWaitMs: 900_000,
+        now: () => 1_000,
+      });
+
+      const status = publisher.getStatus();
+      // Null, not 0. "We have not looked" and "nothing has happened" are
+      // different facts, and only the second one is reassuring.
+      expect(status.pendingCount).toBeNull();
+      expect(status.pendingSinceMs).toBeNull();
+      expect(status.publishesNoLaterThanMs).toBeNull();
+      expect(status.lastPublishedAtMs).toBeNull();
+      expect(status).toMatchObject({ minBatchSize: 16, maxWaitMs: 900_000, observedAtMs: 1_000 });
+    });
+
+    it('exposes the pending batch and the deadline it is bounded by', async () => {
+      const now = 5_000;
+      const publisher = new CredentialRootPublisher({
+        registryExecutor: makeRegistryExecutor(),
+        registryContractAddress: registryAddress,
+        reader: makeReader(() =>
+          registryState({ currentRoot: { field: 700n }, credentialCount: 3n }),
+        ),
+        referenda: [target(referendumAddressA, makeReferendumExecutor(referendumAddressA))],
+        minBatchSize: 16,
+        maxWaitMs: 900_000,
+        now: () => now,
+      });
+
+      await publisher.publishOnce();
+      const status = publisher.getStatus();
+
+      expect(status.pendingCount).toBe(3);
+      expect(status.pendingSinceMs).toBe(5_000);
+      // The wait is bounded and the bound is knowable, which is the whole point.
+      expect(status.publishesNoLaterThanMs).toBe(905_000);
+    });
+
+    it('drains the batch and records the publish time once a root goes out', async () => {
+      let now = 0;
+      const publisher = new CredentialRootPublisher({
+        registryExecutor: makeRegistryExecutor(),
+        registryContractAddress: registryAddress,
+        reader: makeReader(() =>
+          registryState({ currentRoot: { field: 800n }, credentialCount: 20n }),
+        ),
+        referenda: [target(referendumAddressA, makeReferendumExecutor(referendumAddressA))],
+        minBatchSize: 16,
+        maxWaitMs: 900_000,
+        now: () => now,
+      });
+
+      now = 42_000;
+      const result = await publisher.publishOnce();
+      expect(result.published).toBe(true);
+
+      const status = publisher.getStatus();
+      expect(status.pendingCount).toBe(0);
+      expect(status.pendingSinceMs).toBeNull();
+      expect(status.publishesNoLaterThanMs).toBeNull();
+      expect(status.lastPublishedAtMs).toBe(42_000);
+    });
   });
 });

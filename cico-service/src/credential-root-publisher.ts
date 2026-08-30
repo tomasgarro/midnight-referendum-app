@@ -104,6 +104,37 @@ export type CredentialRootPublishResult =
   | CredentialRootPublishSkipped
   | CredentialRootPublishSucceeded;
 
+/**
+ * What the publisher can honestly say about the current batch.
+ *
+ * This exists so the UI can explain the wait between enrolling and being able
+ * to vote. Every field is either observed or null -- never a placeholder zero,
+ * because "we have not looked yet" and "nothing has happened" are different
+ * facts and the second one is reassuring in a way the first has not earned.
+ */
+export interface CredentialRootPublisherStatus {
+  /**
+   * Credentials enrolled since the last published root, as of the last
+   * completed cycle. Null before the first cycle has run.
+   */
+  readonly pendingCount: number | null;
+  /** Publishing happens once the batch reaches this size... */
+  readonly minBatchSize: number;
+  /** ...or once an under-sized batch has waited this long, whichever is first. */
+  readonly maxWaitMs: number;
+  /** When the current pending root first appeared. Null when nothing is pending. */
+  readonly pendingSinceMs: number | null;
+  /**
+   * The deadline the wait is bounded by: an under-sized batch publishes anyway
+   * at this point. Null when nothing is pending.
+   */
+  readonly publishesNoLaterThanMs: number | null;
+  /** When the last root was successfully published. Null before the first one. */
+  readonly lastPublishedAtMs: number | null;
+  /** When this snapshot was taken, so a caller can reason about staleness. */
+  readonly observedAtMs: number;
+}
+
 const DEFAULT_MIN_BATCH_SIZE = 16;
 const DEFAULT_MAX_WAIT_MS = 900_000;
 const DEFAULT_INTERVAL_MS = 60_000;
@@ -155,6 +186,9 @@ export class CredentialRootPublisher {
   /** Root field currently waiting to be published (may be below the batch minimum). */
   private pendingRootField: bigint | null = null;
   private pendingSinceMs: number | null = null;
+  /** Batch size seen by the last completed cycle; null before the first one. */
+  private lastObservedBatchSize: number | null = null;
+  private lastPublishedAtMs: number | null = null;
 
   private lastResult: CredentialRootPublishResult | undefined;
   private lastError: unknown;
@@ -217,6 +251,26 @@ export class CredentialRootPublisher {
     return this.lastError;
   }
 
+  /**
+   * A snapshot of the current batch, for the enrollment wait in the UI.
+   *
+   * Read-only: this never triggers a cycle, so it reports what the last cycle
+   * observed rather than what is true right now. `observedAtMs` is included so
+   * a caller can see how fresh that is.
+   */
+  getStatus(): CredentialRootPublisherStatus {
+    return {
+      pendingCount: this.lastObservedBatchSize,
+      minBatchSize: this.minBatchSize,
+      maxWaitMs: this.maxWaitMs,
+      pendingSinceMs: this.pendingSinceMs,
+      publishesNoLaterThanMs:
+        this.pendingSinceMs === null ? null : this.pendingSinceMs + this.maxWaitMs,
+      lastPublishedAtMs: this.lastPublishedAtMs,
+      observedAtMs: this.now(),
+    };
+  }
+
   private async cycle(): Promise<CredentialRootPublishResult> {
     try {
       const result = await this.runCycle();
@@ -237,6 +291,7 @@ export class CredentialRootPublisher {
     const currentRootField = registryState.currentRoot.field;
 
     if (this.lastPublishedRootField !== null && this.lastPublishedRootField === currentRootField) {
+      this.lastObservedBatchSize = 0;
       return { published: false, reason: 'unchanged' };
     }
 
@@ -246,6 +301,7 @@ export class CredentialRootPublisher {
     }
 
     const batchSize = registryState.credentialCount - this.lastPublishedCredentialCount;
+    this.lastObservedBatchSize = Number(batchSize > 0n ? batchSize : 0n);
     if (batchSize <= 0n) {
       return { published: false, reason: 'no-new-credentials' };
     }
@@ -303,6 +359,8 @@ export class CredentialRootPublisher {
     this.lastPublishedCredentialCount = registryState.credentialCount;
     this.pendingRootField = null;
     this.pendingSinceMs = null;
+    this.lastObservedBatchSize = 0;
+    this.lastPublishedAtMs = this.now();
 
     if (belowMinimum) {
       this.logger.warn('credential-root-publisher: published an under-sized batch', {

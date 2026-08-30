@@ -1,0 +1,139 @@
+/*
+ * Warm-light design tokens.
+ *
+ * Spec: https://claude.ai/code/artifact/e6ccc025-c494-4565-a99d-c366dac24a09
+ * Accent decided 2026-08-30: indigo #5B5BD6, flat.
+ *
+ * These tokens are the system the rebuilt views are built on. The legacy
+ * palette in index.css (--sky, --yellow, --muted, ...) is deliberately left
+ * alone: 455 hardcoded hex values still reference the old sky-blue look, and
+ * swapping :root alone would leave the app half-migrated and incoherent.
+ * Views move onto these tokens one at a time; the legacy block is deleted when
+ * the last one lands.
+ *
+ * Three rules travel with this file:
+ *   1. One accent. --accent is the primary action, the active state, and
+ *      progress. Nothing else. No second hue appears on any screen.
+ *   2. The accent is flat. No gradient, no glow, no accent-tinted shadow --
+ *      those are what turn a real product colour into an AI tell.
+ *   3. One grey family, warm. --country-sky is the sole exception and appears
+ *      only on country chips and the flag mark.
+ */
+
+/* Fraunces, weight axis only (100-900), latin subset.
+   U+0000-00FF covers every Spanish accent plus the inverted marks, so the
+   latin-ext subset is not needed unless a language beyond es/en is added. */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  /* ---- surfaces ---- */
+  --ground: #f5f1ec;
+  --surface: #ffffff;
+  --surface-sunken: #ede8e1;
+
+  /* ---- ink ---- */
+  --ink: #1a1a18;
+  --ink-muted: #6b6560;
+  --line: #e2dcd3;
+  --line-strong: #cfc8be;
+
+  /* ---- accent (indigo, flat) ---- */
+  --accent: #5b5bd6;
+  --accent-ink: #ffffff;
+  --accent-hover: #4a4ac4;
+  --accent-wash: #eae8f7;
+
+  /* ---- semantic: state, never emphasis ---- */
+  --positive: #2f855a;
+  --positive-wash: #e3f2ea;
+  --warning: #b45309;
+  --warning-wash: #fbeee0;
+  --danger: #b42318;
+  --danger-wash: #fbe9e7;
+
+  /* ---- identity ----
+     Argentine sky-blue, demoted from page ground to a country cue. */
+  --country-sky: #75aadb;
+
+  /* ---- shape lock: actions pill, cards 20, inputs 12 ---- */
+  --r-pill: 999px;
+  --r-card: 20px;
+  --r-input: 12px;
+
+  /* ---- elevation: warm neutral, never accent-tinted ---- */
+  --shadow-card: 0 1px 2px rgba(26, 26, 24, 0.04), 0 8px 24px rgba(26, 26, 24, 0.06);
+  --shadow-sheet: 0 -8px 32px rgba(26, 26, 24, 0.1);
+
+  /* ---- space: base 4 ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+
+  /* ---- type ---- */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Encode Sans", system-ui, sans-serif;
+
+  /* ---- motion ----
+     The frequency gate comes first: things done 100+ times a day get nothing.
+     These durations are for the tiers that earned an animation. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --dur-press: 120ms;
+  --dur-sheet: 260ms;
+}
+
+/*
+ * Tailwind v4 theme mapping.
+ *
+ * There is no tailwind.config and there was no @theme block, so the semantic
+ * utilities the shadcn components ask for (bg-primary, text-secondary-foreground,
+ * ring-ring, border-input) generated no CSS at all -- Badge and Button have been
+ * rendering without their backgrounds. Mapping them here makes those three
+ * existing usages render coherently on the new palette until the system
+ * primitives replace them.
+ */
+@theme inline {
+  --color-background: var(--ground);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-ink);
+  --color-secondary: var(--surface-sunken);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-sunken);
+  --color-muted-foreground: var(--ink-muted);
+  --color-accent: var(--accent-wash);
+  --color-accent-foreground: var(--accent);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--accent);
+
+  --radius-pill: var(--r-pill);
+  --radius-card: var(--r-card);
+  --radius-input: var(--r-input);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+/* Motion is opt-in per component, but the reduction is global: every spatial
+   animation collapses to a cross-fade, and press feedback stops moving. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 1ms;
+    --dur-sheet: 1ms;
+  }
+}

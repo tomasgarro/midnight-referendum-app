@@ -100,6 +100,9 @@ export async function startCicoService(): Promise<() => Promise<void>> {
           }),
         }
       : {}),
+    // Only offered when a publisher exists. Without referenda there is no batch
+    // to wait for, and the route says so rather than inventing an empty one.
+    ...(rootPublisher ? { enrollmentStatus: () => rootPublisher.getStatus() } : {}),
   });
   try {
     await new Promise<void>((resolve, reject) => {

@@ -2,6 +2,7 @@ import { isoNumericCountry } from 'midnight-referendum-api';
 import { describe, expect, it, vi } from 'vitest';
 import {
   HttpCivicCredentialIssuerPort,
+  HttpEnrollmentStatusPort,
   HttpRarimoVerificationGateway,
 } from '../integration/passport-v2-http-ports';
 
@@ -183,5 +184,50 @@ describe('Passport v2 narrow HTTP boundaries', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'ADAPTER_UNAVAILABLE' });
+  });
+});
+
+describe('HttpEnrollmentStatusPort', () => {
+  const wire = {
+    pendingCount: 12,
+    minBatchSize: 16,
+    maxWaitMs: 900_000,
+    pendingSinceUnixMs: 1_000,
+    publishesNoLaterThanUnixMs: 901_000,
+    lastPublishedAtUnixMs: 500,
+    observedAtUnixMs: 2_000,
+  };
+
+  it('reads the pending batch and the deadline it is bounded by', async () => {
+    const fetcher = vi.fn(async () => json(wire));
+    const port = new HttpEnrollmentStatusPort({ baseUrl: 'https://cico.test', fetcher });
+
+    await expect(port.getStatus()).resolves.toEqual(wire);
+    expect(fetcher.mock.calls[0]?.[0]).toBe('https://cico.test/v1/enrollment/status');
+  });
+
+  it('keeps an unobserved count as null instead of defaulting it to zero', async () => {
+    const fetcher = vi.fn(async () =>
+      json({ ...wire, pendingCount: null, publishesNoLaterThanUnixMs: null }),
+    );
+    const port = new HttpEnrollmentStatusPort({ baseUrl: 'https://cico.test', fetcher });
+
+    const status = await port.getStatus();
+    expect(status.pendingCount).toBeNull();
+    expect(status.publishesNoLaterThanUnixMs).toBeNull();
+  });
+
+  it('rejects a malformed count rather than rendering a wrong number', async () => {
+    const fetcher = vi.fn(async () => json({ ...wire, pendingCount: 'twelve' }));
+    const port = new HttpEnrollmentStatusPort({ baseUrl: 'https://cico.test', fetcher });
+
+    await expect(port.getStatus()).rejects.toMatchObject({ message: 'Invalid pendingCount' });
+  });
+
+  it('surfaces an unavailable service as retryable rather than as a bad request', async () => {
+    const fetcher = vi.fn(async () => json({ message: 'Enrollment status unavailable' }, 503));
+    const port = new HttpEnrollmentStatusPort({ baseUrl: 'https://cico.test', fetcher });
+
+    await expect(port.getStatus()).rejects.toMatchObject({ code: 'ADAPTER_UNAVAILABLE' });
   });
 });

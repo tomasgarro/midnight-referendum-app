@@ -98,6 +98,7 @@ function issuer() {
 async function start(options?: {
   gateway?: RarimoVerificationGateway;
   actionCapabilityIssuer?: import('./action-capability-issuer.js').ActionCapabilityIssuer;
+  enrollmentStatus?: import('./http.js').EnrollmentStatusReader;
 }) {
   const service = createCicoHttpService({
     gateway: options?.gateway ?? gateway(),
@@ -106,6 +107,7 @@ async function start(options?: {
     ...(options?.actionCapabilityIssuer
       ? { actionCapabilityIssuer: options.actionCapabilityIssuer }
       : {}),
+    ...(options?.enrollmentStatus ? { enrollmentStatus: options.enrollmentStatus } : {}),
   });
   servers.push(service);
   await new Promise<void>((resolve) => service.listen(0, '127.0.0.1', resolve));
@@ -266,5 +268,87 @@ describe('CICO HTTP boundary service', () => {
     const payload = await response.json();
     expect(payload).toEqual({ actionCapability: 'signed-capability' });
     expect(JSON.stringify(payload)).not.toContain(body.credentialAuthorization);
+  });
+  describe('GET /v1/enrollment/status', () => {
+    it('reports the pending batch and the deadline the wait is bounded by', async () => {
+      const base = await start({
+        enrollmentStatus: () => ({
+          pendingCount: 12,
+          minBatchSize: 16,
+          maxWaitMs: 900_000,
+          pendingSinceMs: 1_000,
+          publishesNoLaterThanMs: 901_000,
+          lastPublishedAtMs: 500,
+          observedAtMs: 2_000,
+        }),
+      });
+
+      const response = await fetch(`${base}/v1/enrollment/status`, {
+        headers: { origin: browserHeaders.origin },
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        pendingCount: 12,
+        minBatchSize: 16,
+        maxWaitMs: 900_000,
+        pendingSinceUnixMs: 1_000,
+        publishesNoLaterThanUnixMs: 901_000,
+        lastPublishedAtUnixMs: 500,
+        observedAtUnixMs: 2_000,
+      });
+    });
+
+    it('passes an unobserved count through as null rather than coercing it to zero', async () => {
+      const base = await start({
+        enrollmentStatus: () => ({
+          pendingCount: null,
+          minBatchSize: 16,
+          maxWaitMs: 900_000,
+          pendingSinceMs: null,
+          publishesNoLaterThanMs: null,
+          lastPublishedAtMs: null,
+          observedAtMs: 2_000,
+        }),
+      });
+
+      const response = await fetch(`${base}/v1/enrollment/status`, {
+        headers: { origin: browserHeaders.origin },
+      });
+      const body = (await response.json()) as Record<string, unknown>;
+      // The UI distinguishes these: null renders a dash, 0 would render an
+      // empty progress bar and claim we observed no enrolments.
+      expect(body.pendingCount).toBeNull();
+      expect(body.publishesNoLaterThanUnixMs).toBeNull();
+    });
+
+    it('reports unavailable when no referenda are configured', async () => {
+      const base = await start();
+      const response = await fetch(`${base}/v1/enrollment/status`, {
+        headers: { origin: browserHeaders.origin },
+      });
+      expect(response.status).toBe(503);
+    });
+
+    it('still requires a trusted browser origin', async () => {
+      const base = await start({
+        enrollmentStatus: () => ({
+          pendingCount: 1,
+          minBatchSize: 16,
+          maxWaitMs: 900_000,
+          pendingSinceMs: 1,
+          publishesNoLaterThanMs: 2,
+          lastPublishedAtMs: null,
+          observedAtMs: 3,
+        }),
+      });
+      expect((await fetch(`${base}/v1/enrollment/status`)).status).toBe(403);
+      expect(
+        (
+          await fetch(`${base}/v1/enrollment/status`, {
+            headers: { origin: 'https://attacker.example' },
+          })
+        ).status,
+      ).toBe(403);
+    });
   });
 });

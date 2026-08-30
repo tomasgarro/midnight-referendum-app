@@ -76,11 +76,12 @@ const copy = {
     eyebrow: 'Tu primer recorrido',
     language: 'Idioma',
     stages: ['Bienvenida', 'Passport', 'Evidencia', 'Lista'],
-    live: 'PASSPORT EN VIVO',
-    demo: 'PASSPORT DE DEMO',
-    demoEnvironment: 'ENTORNO DE DEMOSTRACIÓN',
-    synthetic: 'CREDENCIAL SINTÉTICA',
-    providerOwned: 'PROVEEDOR RESPONSABLE',
+    live: 'Passport en vivo',
+    demo: 'Passport de demo',
+    demoEnvironment: 'Entorno de demostración',
+    origin: 'Origen',
+    originSynthetic: 'Credencial sintética',
+    providerOwned: 'proveedor responsable',
     beforeStart: 'Antes de empezar',
     welcomeTitle: 'Demostrá que podés votar. Sin demostrar quién sos.',
     welcomeBody:
@@ -169,7 +170,6 @@ const copy = {
       'Holder binding verificado para esta sesión. No mostramos sus bytes ni lo tratamos como un claim de elegibilidad.',
     holderBindingUnsupported:
       'Esta versión de Passport no expone un holder binding verificado. La sesión sigue separada de la credencial.',
-    mascotPlaceholder: 'Espacio para la mascota (próximamente)',
   },
   en: {
     back: 'Back to the app',
@@ -177,11 +177,12 @@ const copy = {
     eyebrow: 'Your first journey',
     language: 'Language',
     stages: ['Welcome', 'Passport', 'Evidence', 'Ready'],
-    live: 'LIVE PASSPORT',
-    demo: 'DEMO PASSPORT',
-    demoEnvironment: 'DEMO ENVIRONMENT',
-    synthetic: 'SYNTHETIC CREDENTIAL',
-    providerOwned: 'PROVIDER-OWNED',
+    live: 'Live Passport',
+    demo: 'Demo Passport',
+    demoEnvironment: 'Demo environment',
+    origin: 'Origin',
+    originSynthetic: 'Synthetic credential',
+    providerOwned: 'provider-owned',
     beforeStart: 'Before you start',
     welcomeTitle: 'Prove you can vote. Without proving who you are.',
     welcomeBody:
@@ -267,7 +268,6 @@ const copy = {
       'Holder binding verified for this session. We do not display its bytes or treat it as an eligibility claim.',
     holderBindingUnsupported:
       'This Passport build does not expose a verified holder binding. The session remains separate from any credential.',
-    mascotPlaceholder: 'Mascot space (coming soon)',
   },
 } as const;
 
@@ -791,10 +791,11 @@ export function UnifiedPassportOnboarding({
               </h2>
               <p>{t.successBody}</p>
               <div className="credential-success-summary">
-                <span className="synthetic-credential-banner">
-                  <ShieldCheck size={16} /> {t.synthetic}
-                </span>
                 <dl>
+                  <div>
+                    <dt>{t.origin}</dt>
+                    <dd>{t.originSynthetic}</dd>
+                  </div>
                   <div>
                     <dt>{t.country}</dt>
                     <dd>
