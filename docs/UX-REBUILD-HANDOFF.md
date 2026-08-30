@@ -204,16 +204,45 @@ Two things that cost time in Step 4 and need not cost it again:
   `sessionStorage['cico-wave1-onboarding-complete'] = '1'`, and delete the
   file afterwards.
 
-Before push, the WSL gate (it refuses to run under Git Bash):
+Before push, the WSL gate. **The one-liner this document used to give here
+does not work on this machine** — it cost three failed runs before Step 4 was
+pushed, each failing for a different reason, none of them code:
+
+1. `bash -lc` is a *login* shell, which does not source `~/.bashrc`, so nvm
+   never loads. `node` then resolves to nothing and the Windows npm on WSL's
+   interpolated PATH wins, and the gate reports *"Windows npm leaked into WSL
+   PATH"* — which reads like a PATH bug but is really "nvm was never loaded".
+2. Stripping `/mnt/c` out of PATH to fix that also removes the only route to
+   the Compact compiler, which lives in `~/.local/bin` (`compact 0.31.1`) and
+   is not on PATH in a non-login shell. The gate then reports *"A working
+   Compact compiler is required"*.
+3. An inline `wsl.exe -- bash -c '...'` mangles quoting across the Git Bash
+   boundary, and a script written by a Windows tool arrives with CRLF, which
+   dies as `set: pipefail: invalid option name` — the `.husky` `Illegal
+   option` trap in a new costume.
+
+So: drive it from a **script file with LF endings**, and load the toolchain
+explicitly. `scripts/verify-linux-wsl.sh` in this repo does exactly that; run
+it from Git Bash as
 
 ```
-wsl -d Ubuntu -- bash -lc 'cd /mnt/c/Users/tomas/Desktop/Midnight/tmp/midnight-referendum-app-review && bash scripts/verify-linux.sh demo'
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -- bash scripts/verify-linux-wsl.sh demo
 ```
 
-Prefix `wsl.exe` from Git Bash with `MSYS_NO_PATHCONV=1`. On `Illegal option`,
-check `git ls-files --eol .husky/` first. On a missing
-`@rollup/rollup-linux-x64-gnu`, a Windows `npm install` wiped the Linux
-platform binaries — re-fetch per `SESSION-HANDOFF.md` §5.
+Two things about reading the result. The run takes **about 12 minutes**, nearly
+all of it the UI suite over `/mnt/c`. And do not pipe it into `tail` to read the
+output: the pipeline's exit status is `tail`'s, so a failed gate reports success.
+Redirect to a file and echo `$?` separately.
+
+What it actually covers, from a clean `compactc` compile: the two Compact
+simulator suites, the undeployed fixture issuer, and the api, cico-service,
+relayer and ui suites — 356 tests, plus the api and relayer builds.
+
+On a missing `@rollup/rollup-linux-x64-gnu`, a Windows `npm install` wiped the
+Linux platform binaries — re-fetch per `SESSION-HANDOFF.md` §5.
+
+Push from WSL too, not from Git Bash: `.husky/pre-push` runs the same gate, and
+it refuses to run outside Linux.
 
 **Not verified anywhere in this branch:** Playwright E2E, and anything on
 Preview. Both are Sol's lane and should be reported as unverified, not assumed.
