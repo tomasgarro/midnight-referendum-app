@@ -1,17 +1,12 @@
 import {
   ArrowRight,
   BookOpen,
-  Check,
   CheckCircle,
   Fingerprint,
   Globe,
   Info,
-  Lock,
-  MagnifyingGlass,
-  ShieldCheck,
   Stamp,
   UserCircle,
-  Wallet,
   X,
 } from '@phosphor-icons/react';
 import type { CivicPassportSession, CredentialSummary } from 'midnight-referendum-api';
@@ -56,21 +51,18 @@ import {
   APP_NETWORK_LABEL,
   CHAIN_RUNTIME_ENABLED,
   type FlowStage,
-  networkLabel,
   ONBOARDING_SESSION_KEY,
   PASSPORT_ORIGIN,
   shouldShowFirstRunOnboarding,
   type Tab,
 } from '@/views/app-runtime';
-import { CopyReceiptButton } from '@/views/CopyReceiptButton';
 import { ExploreView } from '@/views/ExploreView';
 import { PolicyDetailView } from '@/views/PolicyDetailView';
+import { ProfileView } from '@/views/ProfileView';
 import {
   type Choice,
   DEFAULT_POLL,
-  localizePoll,
   POLLS,
-  type Poll,
   toRuntimePolls,
   type VoteReceipt,
 } from '@/views/poll-model';
@@ -101,14 +93,12 @@ function Header({
   onConnectPassport,
   onDismissPassportError,
   locale,
-  onLocaleChange,
 }: {
   passportSession: CivicPassportSession | null;
   passportError: string | null;
   onConnectPassport: () => void;
   onDismissPassportError: () => void;
   locale: CicoLocale;
-  onLocaleChange: (locale: CicoLocale) => void;
 }) {
   const copy = APP_COPY[locale];
   return (
@@ -165,17 +155,6 @@ function Header({
             </button>
           </div>
         ) : null}
-        <label className="app-language-switcher">
-          <span className="sr-only">{copy.language}</span>
-          <select
-            aria-label={copy.language}
-            value={locale}
-            onChange={(event) => onLocaleChange(event.target.value as CicoLocale)}
-          >
-            <option value="en">English</option>
-            <option value="es">Español</option>
-          </select>
-        </label>
       </div>
     </header>
   );
@@ -225,355 +204,6 @@ function _StatusPill({ children }: { children: ReactNode }) {
       <span className="status-dot" />
       {children}
     </span>
-  );
-}
-
-/**
- * Receipt lookup + explanation, folded into the profile from the former
- * standalone Verify tab. Checks only against receipts already loaded for
- * this profile (local-first: see the privacy note rendered alongside the
- * receipt list in ProfileView) — it never queries a third party.
- */
-function ReceiptVerifier({ receipts, locale }: { receipts: VoteReceipt[]; locale: CicoLocale }) {
-  const [query, setQuery] = useState('');
-  const [result, setResult] = useState<'found' | 'missing' | null>(null);
-  const matched = receipts.find((receipt) => receipt.id === query.trim());
-  return (
-    <section className="profile-history verify-section" aria-labelledby="verify-receipt-title">
-      <div className="section-title-row">
-        <div>
-          <p className="eyebrow">
-            {locale === 'es' ? 'Transparencia pública' : 'Public transparency'}
-          </p>
-          <h2 id="verify-receipt-title">
-            {locale === 'es' ? 'Verificá un comprobante' : 'Verify a receipt'}
-          </h2>
-        </div>
-        <ShieldCheck size={22} />
-      </div>
-      <p>
-        {locale === 'es'
-          ? `Buscá el identificador para consultar si fue confirmado en ${networkLabel(locale)}.`
-          : `Search the identifier to see whether it was confirmed on ${networkLabel(locale)}.`}
-      </p>
-      <form
-        className="verify-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setResult(matched ? 'found' : 'missing');
-        }}
-      >
-        <label htmlFor="receipt-id">
-          {locale === 'es' ? 'Identificador del comprobante' : 'Receipt identifier'}
-        </label>
-        <div className="search-control">
-          <MagnifyingGlass size={20} />
-          <input
-            id="receipt-id"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setResult(null);
-            }}
-            placeholder={locale === 'es' ? 'tx-...' : 'tx-...'}
-          />
-          <button type="submit" disabled={!query.trim()}>
-            {locale === 'es' ? 'Buscar' : 'Search'}
-          </button>
-        </div>
-      </form>
-      {result === 'found' && matched ? (
-        <section className="verify-result success" aria-live="polite">
-          <CheckCircle size={28} />
-          <div>
-            <strong>
-              {matched.status === 'confirmed'
-                ? locale === 'es'
-                  ? 'Comprobante confirmado'
-                  : 'Receipt confirmed'
-                : locale === 'es'
-                  ? 'Comprobante simulado'
-                  : 'Simulated receipt'}
-            </strong>
-            <p>
-              {locale === 'es' ? 'La opción permanece privada. ' : 'Your choice remains private. '}
-              {matched.status === 'confirmed'
-                ? locale === 'es'
-                  ? `El registro está confirmado en ${matched.network}.`
-                  : `The record is confirmed on ${matched.network}.`
-                : locale === 'es'
-                  ? 'Este registro local no representa una transacción ni una prueba de voto real.'
-                  : 'This local record is not a transaction or a real vote proof.'}
-            </p>
-            <div className="receipt-actions">
-              <code>{matched.id}</code>
-              <CopyReceiptButton receiptId={matched.id} compact locale={locale} />
-            </div>
-            {matched.explorerUrl ? (
-              <a href={matched.explorerUrl} target="_blank" rel="noreferrer">
-                {locale === 'es' ? 'Abrir en explorer' : 'Open in explorer'}
-              </a>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-      {result === 'missing' ? (
-        <section className="verify-result missing" aria-live="polite">
-          <Info size={24} />
-          <div>
-            <strong>
-              {locale === 'es'
-                ? 'No encontramos ese comprobante'
-                : 'We could not find that receipt'}
-            </strong>
-            <p>
-              {locale === 'es'
-                ? 'Revisá el identificador o esperá la confirmación.'
-                : 'Check the identifier or wait for confirmation.'}
-            </p>
-          </div>
-        </section>
-      ) : null}
-      <section className="verify-explanation">
-        <h2>{locale === 'es' ? '¿Qué podés comprobar?' : 'What can you verify?'}</h2>
-        <ul>
-          <li>
-            <Check size={18} />{' '}
-            {locale === 'es' ? 'Que el comprobante existe.' : 'That the receipt exists.'}
-          </li>
-          <li>
-            <Check size={18} />{' '}
-            {locale === 'es'
-              ? 'Que tiene estado confirmado o simulado.'
-              : 'That it is confirmed or simulated.'}
-          </li>
-          <li>
-            <Check size={18} />{' '}
-            {locale === 'es'
-              ? 'Que no necesitás compartir tus datos personales otra vez.'
-              : 'That you do not need to share personal data again.'}
-          </li>
-        </ul>
-      </section>
-    </section>
-  );
-}
-
-function ProfileView({
-  polls,
-  passportSession,
-  profileId,
-  receipts,
-  walletStatus,
-  onConnectPassport,
-  onReplayOnboarding,
-  locale,
-}: {
-  polls: readonly Poll[];
-  passportSession: CivicPassportSession | null;
-  profileId: string;
-  receipts: VoteReceipt[];
-  walletStatus: string;
-  onConnectPassport: () => void;
-  onReplayOnboarding: () => void;
-  locale: CicoLocale;
-}) {
-  return (
-    <main className="page-content">
-      <section className="profile-hero">
-        <div className="profile-avatar">
-          <UserCircle size={34} weight="duotone" />
-        </div>
-        <p className="eyebrow">{locale === 'es' ? 'Mi identidad' : 'My identity'}</p>
-        <h1>
-          {passportSession?.profile?.displayName ??
-            (locale === 'es' ? 'Tu espacio ciudadano' : 'Your civic space')}
-        </h1>
-        <p>
-          {locale === 'es'
-            ? 'Un perfil para reunir tus comprobantes sin convertir tu identidad Passport en tu voto.'
-            : 'A profile for your receipts that never turns your Passport identity into your vote.'}
-        </p>
-        {passportSession ? (
-          <div className="profile-status">
-            <CheckCircle size={17} />{' '}
-            {locale === 'es' ? 'Passport conectado' : 'Passport connected'}
-          </div>
-        ) : (
-          <button type="button" className="secondary-button" onClick={onConnectPassport}>
-            <Fingerprint size={18} /> {locale === 'es' ? 'Conectar Passport' : 'Connect Passport'}
-          </button>
-        )}
-      </section>
-      <section className="profile-card" aria-labelledby="profile-id-title">
-        <div className="profile-card-heading">
-          <div>
-            <p className="eyebrow">
-              {locale === 'es' ? 'Identificador de perfil' : 'Profile identifier'}
-            </p>
-            <h2 id="profile-id-title">{profileId}</h2>
-          </div>
-          <ShieldCheck size={24} />
-        </div>
-        <p>
-          {locale === 'es'
-            ? 'Es un identificador de presentación específico para esta app. No participa en la elegibilidad, el compromiso ni la marca anónima.'
-            : 'A presentation identifier for this app. It is not part of eligibility, the commitment, or the anonymous marker.'}
-        </p>
-        <div className="profile-connections">
-          <span>
-            <Fingerprint size={17} /> Passport:{' '}
-            {passportSession
-              ? locale === 'es'
-                ? 'conectado'
-                : 'connected'
-              : locale === 'es'
-                ? 'pendiente'
-                : 'pending'}
-          </span>
-          <span>
-            <Wallet size={17} /> Wallet:{' '}
-            {walletStatus === 'connected'
-              ? locale === 'es'
-                ? 'conectada'
-                : 'connected'
-              : locale === 'es'
-                ? 'no conectada'
-                : 'not connected'}
-          </span>
-        </div>
-      </section>
-      <section className="profile-card profile-help-card" aria-labelledby="profile-help-title">
-        <div className="profile-card-heading">
-          <div>
-            <p className="eyebrow">{locale === 'es' ? 'Ayuda' : 'Help'}</p>
-            <h2 id="profile-help-title">
-              {locale === 'es' ? 'Revisar cómo funciona' : 'Review how it works'}
-            </h2>
-          </div>
-          <Info size={24} />
-        </div>
-        <p>
-          {locale === 'es'
-            ? 'Volvé a la explicación de Passport, credenciales y acciones sin cambiar tu identidad ni conectar una wallet.'
-            : 'Review Passport, credential, and action boundaries without changing your identity or connecting a wallet.'}
-        </p>
-        <button type="button" className="secondary-button" onClick={onReplayOnboarding}>
-          {locale === 'es' ? 'Revisar el recorrido' : 'Review the journey'} <ArrowRight size={18} />
-        </button>
-      </section>
-      <section className="profile-history" aria-labelledby="profile-history-title">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">{locale === 'es' ? 'Actividad local' : 'Local activity'}</p>
-            <h2 id="profile-history-title">
-              {locale === 'es'
-                ? `Mis comprobantes ${networkLabel(locale)}`
-                : `My receipts · ${networkLabel(locale)}`}
-            </h2>
-          </div>
-          <span className="profile-count">{receipts.length}</span>
-        </div>
-        <p className="receipt-privacy-note">
-          <Lock size={15} />{' '}
-          {locale === 'es'
-            ? 'Estos comprobantes se guardan cifrados solo en este dispositivo; la red nunca puede vincularlos con vos.'
-            : 'These receipts are stored encrypted on this device only; the network can never link them to you.'}
-        </p>
-        {receipts.length ? (
-          <div className="profile-receipts">
-            {receipts.map((receipt) => (
-              <article className="profile-receipt" key={receipt.id}>
-                <div>
-                  <strong>
-                    {receipt.pollId
-                      ? (() => {
-                          const found = polls.find((poll) => poll.id === receipt.pollId);
-                          return found
-                            ? localizePoll(found, locale).title
-                            : locale === 'es'
-                              ? 'Consulta ciudadana'
-                              : 'Civic consultation';
-                        })()
-                      : locale === 'es'
-                        ? 'Consulta ciudadana'
-                        : 'Civic consultation'}
-                  </strong>
-                  <small>
-                    {new Date(receipt.createdAt).toLocaleDateString('es-AR')} ·{' '}
-                    {receipt.status === 'confirmed'
-                      ? locale === 'es'
-                        ? `Confirmado en ${receipt.network}`
-                        : `Confirmed on ${receipt.network}`
-                      : locale === 'es'
-                        ? `Simulado en ${receipt.network}`
-                        : `Simulated on ${receipt.network}`}
-                  </small>
-                </div>
-                <div className="profile-receipt-actions">
-                  <code>{receipt.id}</code>
-                  <CopyReceiptButton receiptId={receipt.id} compact locale={locale} />
-                  {receipt.explorerUrl ? (
-                    <a
-                      href={receipt.explorerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Abrir ${receipt.id} en explorer`}
-                    >
-                      <ArrowRight size={17} />
-                    </a>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="profile-empty">
-            <p>
-              {locale === 'es'
-                ? 'Todavía no tenés comprobantes guardados en este navegador.'
-                : 'You have no receipts saved in this browser yet.'}
-            </p>
-            <span>
-              {locale === 'es'
-                ? 'Cuando participes, aparecerán acá sin publicar tu elección.'
-                : 'After you participate, they will appear here without publishing your choice.'}
-            </span>
-          </div>
-        )}
-      </section>
-      <ReceiptVerifier receipts={receipts} locale={locale} />
-      <section className="domains-card" aria-labelledby="domains-title">
-        <div className="domains-icon">
-          <Globe size={25} />
-        </div>
-        <div>
-          <p className="eyebrow">{locale === 'es' ? 'Próximamente' : 'Coming soon'}</p>
-          <h2 id="domains-title">
-            {locale === 'es' ? 'Tu identidad .night' : 'Your .night identity'}
-          </h2>
-          <p>
-            {locale === 'es'
-              ? 'Podés registrar un alias en Midnight Domains y usarlo como una identidad legible para tu perfil.'
-              : 'You can register an alias in Midnight Domains and use it as a readable profile identity.'}
-          </p>
-          <a
-            className="text-link"
-            href="https://midnight.domains/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {locale === 'es' ? 'Explorar Midnight Domains' : 'Explore Midnight Domains'}{' '}
-            <ArrowRight size={16} />
-          </a>
-          <small>
-            {locale === 'es'
-              ? 'El registro y el pago requieren una wallet compatible y DUST; todavía no se ejecutan dentro de esta app.'
-              : 'Registration and payment require a compatible wallet and DUST; they do not run inside this app yet.'}
-          </small>
-        </div>
-      </section>
-    </main>
   );
 }
 
@@ -939,6 +569,7 @@ function CivicApp() {
         onConnectPassport={() => void connectPassport()}
         onReplayOnboarding={replayOnboarding}
         locale={locale}
+        onLocaleChange={changeLocale}
       />
     ) : (
       <VotesView
@@ -970,7 +601,6 @@ function CivicApp() {
             onConnectPassport={() => void connectPassport()}
             onDismissPassportError={() => setPassportError(null)}
             locale={locale}
-            onLocaleChange={changeLocale}
           />
           <div className="mode-strip">
             <div className="mode-copy">
