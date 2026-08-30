@@ -18,7 +18,14 @@ import { browserPrivateStateProvider, inMemoryPrivateStateProvider } from '../pr
 import type { REFERENDUM_V2_PRIVATE_STATE_ID, ReferendumV2PrivateState } from './midnight-v2.js';
 import type { ReferendumV2Providers } from './midnight-v2-executors.js';
 
-export type ReferendumV2CircuitKeys = 'castVote' | 'closeVote' | 'revealVote' | 'finalizeVote';
+export type ReferendumV2CircuitKeys =
+  | 'castVote'
+  | 'publishCredentialRoot'
+  | 'revokeCredentialRoot'
+  | 'closeEnrollment'
+  | 'closeVote'
+  | 'revealVote'
+  | 'finalizeVote';
 
 export interface ReferendumV2WalletProviderOptions {
   readonly proofServerUri?: string;
