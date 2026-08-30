@@ -12,8 +12,16 @@ import {
   type ActionCapabilityIssuanceRequest,
   type ActionCapabilityIssuer,
 } from './action-capability-issuer.js';
+import type { CredentialRootPublisherStatus } from './credential-root-publisher.js';
 
 const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
+
+/**
+ * The publisher, narrowed to the one read the enrollment wait needs. Taking a
+ * function rather than the class keeps the HTTP layer from depending on the
+ * publisher's construction, which needs contract executors and secrets.
+ */
+export type EnrollmentStatusReader = () => CredentialRootPublisherStatus;
 
 export interface CicoHttpServiceOptions {
   readonly gateway: RarimoVerificationGateway;
@@ -21,6 +29,8 @@ export interface CicoHttpServiceOptions {
   readonly allowedOrigins: readonly string[];
   readonly maxBodyBytes?: number;
   readonly actionCapabilityIssuer?: ActionCapabilityIssuer;
+  /** Absent when no referenda are configured; the route then reports unavailable. */
+  readonly enrollmentStatus?: EnrollmentStatusReader;
 }
 
 /** Local/hosted HTTP façade. Real Rarimo and Midnight implementations are injected. */
@@ -118,6 +128,24 @@ async function routeRequest(
   if (request.method === 'DELETE' && verificationMatch) {
     await options.gateway.deleteVerification(decodeId(verificationMatch[1]));
     response.writeHead(204).end();
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/v1/enrollment/status') {
+    if (!options.enrollmentStatus) {
+      throw new HttpProblem(503, 'Enrollment status unavailable');
+    }
+    const status = options.enrollmentStatus();
+    sendSafeJson(response, 200, {
+      // Null means "not observed", never zero. The UI renders a dash for it and
+      // must not imply progress the service has not actually seen.
+      pendingCount: status.pendingCount,
+      minBatchSize: status.minBatchSize,
+      maxWaitMs: status.maxWaitMs,
+      pendingSinceUnixMs: status.pendingSinceMs,
+      publishesNoLaterThanUnixMs: status.publishesNoLaterThanMs,
+      lastPublishedAtUnixMs: status.lastPublishedAtMs,
+      observedAtUnixMs: status.observedAtMs,
+    });
     return;
   }
   if (request.method === 'POST' && url.pathname === '/v1/credentials/issuances') {

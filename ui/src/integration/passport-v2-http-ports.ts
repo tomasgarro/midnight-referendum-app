@@ -130,6 +130,61 @@ export class HttpCivicCredentialIssuerPort
   }
 }
 
+/**
+ * What the service can honestly say about the batch a new enrolment is waiting
+ * in. Mirrors GET /v1/enrollment/status.
+ *
+ * `pendingCount` is null when the service has not observed a batch yet. That is
+ * deliberately not zero: the UI renders a dash for it, because an empty
+ * progress bar would claim we saw no enrolments when in fact we saw nothing.
+ */
+export interface EnrollmentStatus {
+  readonly pendingCount: number | null;
+  readonly minBatchSize: number;
+  readonly maxWaitMs: number;
+  readonly pendingSinceUnixMs: number | null;
+  readonly publishesNoLaterThanUnixMs: number | null;
+  readonly lastPublishedAtUnixMs: number | null;
+  readonly observedAtUnixMs: number;
+}
+
+/** Browser client for the enrollment wait. */
+export class HttpEnrollmentStatusPort extends PassportV2HttpBase {
+  async getStatus(): Promise<EnrollmentStatus> {
+    return parseEnrollmentStatus(await this.request('/v1/enrollment/status'));
+  }
+}
+
+function parseEnrollmentStatus(value: unknown): EnrollmentStatus {
+  if (
+    !isRecord(value) ||
+    !Number.isSafeInteger(value.minBatchSize) ||
+    !Number.isSafeInteger(value.maxWaitMs) ||
+    !Number.isSafeInteger(value.observedAtUnixMs)
+  ) {
+    throw invalidResponse('Invalid enrollment status');
+  }
+  return {
+    pendingCount: optionalInteger(value.pendingCount, 'pendingCount'),
+    minBatchSize: value.minBatchSize as number,
+    maxWaitMs: value.maxWaitMs as number,
+    pendingSinceUnixMs: optionalInteger(value.pendingSinceUnixMs, 'pendingSinceUnixMs'),
+    publishesNoLaterThanUnixMs: optionalInteger(
+      value.publishesNoLaterThanUnixMs,
+      'publishesNoLaterThanUnixMs',
+    ),
+    lastPublishedAtUnixMs: optionalInteger(value.lastPublishedAtUnixMs, 'lastPublishedAtUnixMs'),
+    observedAtUnixMs: value.observedAtUnixMs as number,
+  };
+}
+
+/** null passes through; anything that is neither null nor an integer is a fault. */
+function optionalInteger(value: unknown, label: string): number | null {
+  if (value === null || value === undefined) return null;
+  if (!Number.isSafeInteger(value)) throw invalidResponse(`Invalid ${label}`);
+  return value as number;
+}
+
 function validateBaseUrl(value: string): string {
   let url: URL;
   try {
