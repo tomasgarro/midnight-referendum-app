@@ -2,7 +2,6 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
-  Calendar,
   ChartBar,
   Check,
   CheckCircle,
@@ -15,11 +14,9 @@ import {
   Info,
   Lock,
   MagnifyingGlass,
-  Question,
   ShieldCheck,
   Stamp,
   UserCircle,
-  Users,
   Wallet,
   X,
 } from '@phosphor-icons/react';
@@ -75,9 +72,9 @@ import {
 } from '@/views/app-runtime';
 import { CopyReceiptButton } from '@/views/CopyReceiptButton';
 import { HowItWorks } from '@/views/HowItWorks';
+import { PolicyDetailView } from '@/views/PolicyDetailView';
 import {
   type Choice,
-  COUNTRY_POLL_COUNTRIES,
   DEFAULT_POLL,
   localizePoll,
   POLLS,
@@ -230,270 +227,12 @@ function BottomNav({
   );
 }
 
-function StatusPill({ children }: { children: ReactNode }) {
+function _StatusPill({ children }: { children: ReactNode }) {
   return (
     <span className="status-pill">
       <span className="status-dot" />
       {children}
     </span>
-  );
-}
-
-function PolicyDetailView({
-  poll,
-  onBack,
-  onStartVote,
-  credential,
-  onOpenPassportJourney,
-  locale,
-}: {
-  poll: Poll;
-  onBack: () => void;
-  onStartVote: (pollId: string) => void;
-  credential: DemoCredentialSummary | null;
-  onOpenPassportJourney: () => void;
-  locale: CicoLocale;
-}) {
-  const displayPoll = localizePoll(poll, locale);
-  const consultationCountry = poll.runtimeCountryCode ?? COUNTRY_POLL_COUNTRIES.get(poll.id);
-  const runtimePoll = Boolean(poll.runtimeContractAddress);
-  const pollAvailability = getPollAvailability(poll);
-  const consultationCountryName = consultationCountry
-    ? getCountryName(consultationCountry, locale)
-    : null;
-  return (
-    <main className="page-content policy-page">
-      <button type="button" className="back-button" onClick={onBack}>
-        <ArrowLeft size={18} /> {locale === 'es' ? 'Volver a votaciones' : 'Back to consultations'}
-      </button>
-      <div className="policy-status">
-        <StatusPill>
-          {pollAvailability.isOpen
-            ? locale === 'es'
-              ? 'Votación abierta'
-              : 'Voting open'
-            : locale === 'es'
-              ? 'Votación cerrada'
-              : 'Voting closed'}
-        </StatusPill>
-        <span>
-          {runtimePoll
-            ? locale === 'es'
-              ? 'Identidad y reglas del catálogo v2'
-              : 'v2 catalogue identity and rules'
-            : locale === 'es'
-              ? 'Actualizado: 8 de agosto de 2026'
-              : 'Updated: August 8, 2026'}
-        </span>
-      </div>
-      <section className="policy-hero">
-        <p className="eyebrow">{locale === 'es' ? 'Resumen para decidir' : 'Decision summary'}</p>
-        <h1>{displayPoll.title}</h1>
-        <p>{displayPoll.question}</p>
-        <div className="policy-facts">
-          <span>
-            <Calendar size={17} /> {locale === 'es' ? 'Cierra:' : 'Closes:'}{' '}
-            <strong>{displayPoll.deadline}</strong>
-          </span>
-          <span>
-            <Users size={17} />{' '}
-            <strong>
-              {runtimePoll
-                ? locale === 'es'
-                  ? 'Estado en el contrato'
-                  : 'Contract state'
-                : `${displayPoll.eligible} ${locale === 'es' ? 'habilitadas*' : 'eligible*'}`}
-            </strong>
-          </span>
-        </div>
-      </section>
-
-      <section className="policy-section">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">{locale === 'es' ? 'En dos minutos' : 'In two minutes'}</p>
-            <h2>{locale === 'es' ? '¿De qué se trata?' : 'What is it about?'}</h2>
-          </div>
-          <BookOpen size={22} />
-        </div>
-        <p>{displayPoll.whyNow}</p>
-        <div className="evidence-card">
-          <span>{displayPoll.evidenceLabel}</span>
-          <p>{displayPoll.evidence}</p>
-        </div>
-      </section>
-
-      <section className="policy-section policy-frame">
-        <p className="eyebrow">{locale === 'es' ? 'Marco vigente' : 'Current framework'}</p>
-        <p>{displayPoll.legalFrame}</p>
-      </section>
-
-      <section className="policy-section" aria-labelledby="arguments-title">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">{locale === 'es' ? 'Perspectivas' : 'Perspectives'}</p>
-            <h2 id="arguments-title">
-              {locale === 'es' ? 'Argumentos en discusión' : 'Arguments in the discussion'}
-            </h2>
-          </div>
-          <Question size={22} />
-        </div>
-        <p className="policy-section-intro">
-          {locale === 'es'
-            ? 'Son posiciones para evaluar, no recomendaciones del proyecto.'
-            : 'These are positions to evaluate, not recommendations from the project.'}
-        </p>
-        <div className="argument-columns">
-          <article className="argument-card for">
-            <h3>{locale === 'es' ? 'A favor de la propuesta' : 'In favour of the proposal'}</h3>
-            <ul>
-              {displayPoll.argumentsFor.map((item) => (
-                <li key={item}>
-                  <Check size={15} /> {item}
-                </li>
-              ))}
-            </ul>
-          </article>
-          <article className="argument-card against">
-            <h3>
-              {locale === 'es'
-                ? 'A favor de revisar o limitar'
-                : 'In favour of reviewing or limiting it'}
-            </h3>
-            <ul>
-              {displayPoll.argumentsAgainst.map((item) => (
-                <li key={item}>
-                  <Info size={15} /> {item}
-                </li>
-              ))}
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <section className="policy-section uncertainty-card">
-        <p className="eyebrow">{locale === 'es' ? 'Incertidumbre' : 'Uncertainty'}</p>
-        <p>{displayPoll.uncertainty}</p>
-      </section>
-
-      <section className="policy-section" aria-labelledby="outcomes-title">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">
-              {locale === 'es' ? 'Qué expresa cada opción' : 'What each option expresses'}
-            </p>
-            <h2 id="outcomes-title">
-              {locale === 'es' ? 'Tu voto no cambia la ley' : 'Your vote does not change the law'}
-            </h2>
-          </div>
-          <Stamp size={22} />
-        </div>
-        <div className="outcome-list">
-          <div>
-            <strong>{locale === 'es' ? 'Sí' : 'Yes'}</strong>
-            <p>
-              {locale === 'es'
-                ? 'Expresa apoyo a priorizar la propuesta en los términos de esta consulta.'
-                : 'Expresses support for prioritising the proposal on these terms.'}
-            </p>
-          </div>
-          <div>
-            <strong>No</strong>
-            <p>
-              {locale === 'es'
-                ? 'Expresa que no apoyás priorizarla en estos términos.'
-                : 'Expresses that you do not support prioritising it on these terms.'}
-            </p>
-          </div>
-          <div>
-            <strong>{locale === 'es' ? 'Abstención' : 'Abstain'}</strong>
-            <p>
-              {locale === 'es'
-                ? 'Registra que preferís no tomar una posición binaria.'
-                : 'Records that you prefer not to take a binary position.'}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="policy-section eligibility-card">
-        <p className="eyebrow">
-          {runtimePoll
-            ? locale === 'es'
-              ? 'Reglas publicadas'
-              : 'Published rules'
-            : locale === 'es'
-              ? 'Reglas de esta demo'
-              : 'Demo rules'}
-        </p>
-        <p>
-          {runtimePoll
-            ? locale === 'es'
-              ? 'La credencial cívica se comprueba en privado contra la política publicada en este catálogo. El perfil Passport, la evidencia y la elección permanecen separados.'
-              : 'The civic credential is checked privately against the policy published in this catalogue. The Passport profile, evidence, and choice remain separate.'
-            : locale === 'es'
-              ? 'La credencial Passport prueba una regla de elegibilidad sin exponer tu evidencia. En esta experiencia la credencial de fixture representa el país elegido y clase de edad 18+.'
-              : 'The Passport credential proves an eligibility rule without exposing your evidence. In this experience the fixture represents the selected country and an 18+ age class.'}
-          {consultationCountryName
-            ? locale === 'es'
-              ? ` Esta consulta está configurada para ${consultationCountryName}.`
-              : ` This consultation is configured for ${consultationCountryName}.`
-            : ''}{' '}
-          {locale === 'es' ? 'No es un padrón oficial.' : 'This is not an official register.'}
-        </p>
-      </section>
-
-      <section className="policy-section" aria-labelledby="sources-title">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">{locale === 'es' ? 'Para profundizar' : 'Read further'}</p>
-            <h2 id="sources-title">{locale === 'es' ? 'Fuentes primarias' : 'Primary sources'}</h2>
-          </div>
-          <Globe size={22} />
-        </div>
-        <div className="source-list">
-          {poll.sources.map((source) => (
-            <a key={source.href} href={source.href} target="_blank" rel="noreferrer">
-              <span>
-                <strong>{source.label}</strong>
-                <small>{source.detail}</small>
-              </span>
-              <ArrowRight size={17} />
-            </a>
-          ))}
-        </div>
-      </section>
-
-      <p className="independent-note">
-        <Info size={16} />{' '}
-        {runtimePoll
-          ? locale === 'es'
-            ? 'La identidad del contrato y sus resultados públicos se leen desde Midnight; esta consulta no es un referéndum oficial ni tiene efecto legal.'
-            : 'Contract identity and public results are read from Midnight; this consultation is not an official referendum and has no legal effect.'
-          : locale === 'es'
-            ? '* Las personas habilitadas y la participación son cifras simuladas. Esta consulta no es un referéndum oficial ni tiene efecto legal.'
-            : '* Eligible people and participation are simulated figures. This consultation is not an official referendum and has no legal effect.'}
-      </p>
-      <button
-        type="button"
-        className="primary-button yellow"
-        disabled={!pollAvailability.isOpen}
-        onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
-      >
-        <Stamp size={22} />{' '}
-        {pollAvailability.isOpen
-          ? credential
-            ? locale === 'es'
-              ? 'Votar esta consulta'
-              : 'Vote on this consultation'
-            : locale === 'es'
-              ? 'Preparar mi credencial'
-              : 'Prepare my credential'
-          : locale === 'es'
-            ? 'Votación cerrada'
-            : 'Voting closed'}
-      </button>
-    </main>
   );
 }
 

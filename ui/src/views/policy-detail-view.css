@@ -1,0 +1,198 @@
+/*
+ * Policy dossier.
+ *
+ * A reading screen with the action pinned. Section headers are the Eyebrow
+ * primitive on the ground -- one line, no icon -- because nine icon-and-h2
+ * headers made every section claim to be the important one.
+ */
+
+.policy__nav {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) 0;
+}
+
+.policy__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-left: -10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.policy__back:hover {
+  background: var(--surface-sunken);
+}
+.policy__back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.policy__status {
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.policy__status--open {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.policy__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.policy__question {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.policy__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* One measure for every paragraph on the screen. */
+.policy__prose {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.policy__evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.policy__evidence-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.policy__evidence .policy__prose {
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+
+/* Two positions, same ink. Colouring one green and the other blue told the
+   reader which side the project was on. */
+.policy__args {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.policy__args-label {
+  margin: 0 0 var(--space-2);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.policy__list {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.policy__options {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.policy__options dt {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.policy__options dd {
+  margin: 0 0 var(--space-3);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.policy__options dd:last-child {
+  margin-bottom: 0;
+}
+
+.policy__sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.policy__sources a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+.policy__sources li:last-child a {
+  border-bottom: 0;
+}
+.policy__sources a:hover {
+  background: var(--surface-sunken);
+}
+.policy__sources a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.policy__sources strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.policy__sources small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 560px) {
+  .policy__args {
+    flex-direction: row;
+  }
+  .policy__args > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
