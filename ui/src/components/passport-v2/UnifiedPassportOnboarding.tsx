@@ -16,6 +16,7 @@ import type {
   PassportSessionPort,
 } from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { CapybaraMascot } from '@/components/mascot';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import type { OnboardingStage } from '@/integration/civic-state';
 import {
@@ -458,14 +459,12 @@ export function UnifiedPassportOnboarding({
             {t.welcomeTitle}
           </h2>
           <p>{t.welcomeBody}</p>
-          <div
-            className="mascot-reserved-slot"
-            data-mascot="future-capybara"
-            role="img"
-            aria-label={t.mascotPlaceholder}
-          >
-            <span aria-hidden="true">🦫</span>
-          </div>
+          <CapybaraMascot
+            variant="waving"
+            alt={locale === 'es' ? 'Carpincho saludando' : 'Capybara waving hello'}
+            size="lg"
+            priority
+          />
           <button
             className="passport-action-button primary"
             onClick={() => setStage('privacy')}
@@ -777,14 +776,15 @@ export function UnifiedPassportOnboarding({
               <div className="credential-success-icon" aria-hidden="true">
                 <Check size={42} />
               </div>
-              <div
-                className="mascot-reserved-slot"
-                data-mascot="future-capybara"
-                role="img"
-                aria-label={t.mascotPlaceholder}
-              >
-                <span aria-hidden="true">🦫</span>
-              </div>
+              <CapybaraMascot
+                variant="achievement"
+                alt={
+                  locale === 'es'
+                    ? 'Carpincho con una pequeña bandera en una colina'
+                    : 'Capybara holding a small flag on a hill'
+                }
+                size="lg"
+              />
               <p className="eyebrow">{t.successStep}</p>
               <h2 id="onboarding-success-title" ref={headingRef} tabIndex={-1}>
                 {t.successTitle}

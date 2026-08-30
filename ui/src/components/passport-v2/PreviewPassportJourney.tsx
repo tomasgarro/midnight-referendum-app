@@ -20,6 +20,7 @@ import type {
   PassportSessionPort,
 } from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { CapybaraMascot } from '@/components/mascot';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { type CicoLocale, persistLocale } from '@/integration/locale';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
@@ -508,7 +509,7 @@ export function PreviewPassportJourney({
           <div className="credential-success-icon" aria-hidden="true">
             <Check size={42} />
           </div>
-          <div className="mascot-reserved-slot" data-mascot="future-capybara" aria-hidden="true" />
+          <CapybaraMascot variant="achievement" decorative size="lg" />
           <p className="eyebrow">
             {en ? 'Step 3 · credential created' : 'Paso 3 · credencial creada'}
           </p>
