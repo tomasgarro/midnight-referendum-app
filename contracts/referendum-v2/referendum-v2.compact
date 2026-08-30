@@ -14,19 +14,45 @@ export enum Phase {
   FINALIZED,
 }
 
-// These sealed values bind the referendum to one exact frozen registry
+// These sealed values bind the referendum to one exact registry
 // configuration. They are public metadata, never private voter inputs.
 export sealed ledger registryId: Bytes<32>;
 export sealed ledger issuerId: Bytes<32>;
 export sealed ledger credentialEpoch: Uint<64>;
-export sealed ledger frozenCredentialRoot: MerkleTreeDigest;
+// The registry root as it stood at deployment. Retained for provenance so an
+// auditor can see the cohort this referendum opened with.
+export sealed ledger initialCredentialRoot: MerkleTreeDigest;
 // Domain-separated hash of the exact registry contract address selected by
 // the operator. The address itself is not needed by the voting circuit, but
 // retaining its binding prevents an address/root mismatch in public runtime
 // configuration from being silently treated as the same registry.
 export sealed ledger registryContractBinding: Bytes<32>;
+// The registry address in the clear. The binding hash above cannot be checked
+// from chain data alone because its preimage format lives off-chain, so an
+// auditor could not confirm that a root attestation targeted THIS registry
+// rather than a look-alike an attacker deployed and filled with fabricated
+// credentials. The address is public metadata and leaks nothing.
+export sealed ledger registryContract: ContractAddress;
 export sealed ledger eventId: Bytes<32>;
 export sealed ledger organizerKey: Bytes<32>;
+// Narrow, single-purpose authority that may admit newly enrolled voters by
+// publishing a later registry root. It is deliberately NOT the organizer key:
+// the issuing service runs continuously and must never be able to close
+// voting or trigger the reveal.
+export sealed ledger rootPublisherKey: Bytes<32>;
+
+// Published enrollment/voting schedule, enforced on-chain via blockTime.
+// The organizer cannot accept a vote before it opens, cannot accept one after
+// it closes, and cannot close the vote early. Enrollment has its own earlier
+// deadline so the electorate can settle before voting ends.
+export sealed ledger opensAtUnix: Uint<64>;
+export sealed ledger enrollmentClosesAtUnix: Uint<64>;
+export sealed ledger closesAtUnix: Uint<64>;
+// The reveal window also needs a published end. revealVote writes into the
+// public tally, so without this the organizer could watch the running result
+// and finalize at the moment it suited them, permanently stranding every
+// ballot not yet revealed.
+export sealed ledger revealClosesAtUnix: Uint<64>;
 
 export sealed ledger countryPolicy: Bytes<32>;
 export sealed ledger countryPolicyEnabled: Boolean;
@@ -35,7 +61,51 @@ export sealed ledger requireAdult: Boolean;
 // Organizer-selected validity cutoff for credential expiry checks.
 export sealed ledger validityReference: Uint<64>;
 
-export ledger ballotCommitments: HistoricMerkleTree<10, Bytes<32>>;
+// Registry roots this referendum will accept a membership proof against.
+// Enrollment stays open while voting runs, so the issuer publishes each later
+// root here as new voters are admitted.
+//
+// Accepting earlier roots is safe because the credential registry is
+// append-only: the membership set behind any historic root is a subset of the
+// current one, so an older root can never admit somebody the newest root
+// would reject. Keeping them also prevents a race where the root advances
+// between a voter generating a proof and submitting it.
+//
+// KNOWN LIMITATION, deliberate and documented. This contract CANNOT verify
+// that an admitted root actually belongs to the credential registry: Midnight
+// does not yet support cross-contract calls, so publishCredentialRoot trusts
+// its caller for the root's provenance. A holder of rootPublisherSecret could
+// therefore admit a root from a tree it built itself and vote with fabricated
+// credentials.
+//
+// This is mitigated, not eliminated. For every admitted root the operator
+// must also call attestCurrentRoot on the credential registry, whose assertion
+// is permanent on-chain proof that the root really was that registry's. The
+// two calls cannot share a transaction (Midnight has no cross-contract calls
+// and merging requires one side to hold no contract calls), so the pairing is
+// by transaction reference, recorded in the deployment manifest and checkable
+// against registryContract below.
+//
+// Be precise about who this protects against. It does NOT grant new power to
+// a party that already controls issuance — that party could always decide the
+// electorate. It DOES let a compromised publisher key bypass the registry's
+// audit trail entirely, which under this design's own threat model is a new
+// party gaining control. Detection is an off-chain audit step, not an
+// on-chain guarantee.
+export ledger acceptedCredentialRoots: Set<MerkleTreeDigest>;
+// Revocation must be permanent. Without this the publisher could simply
+// re-publish a root the organizer had just removed, which would make
+// revocation useless against the one threat it exists for: a compromised
+// publisher key that admitted a fabricated root.
+export ledger revokedCredentialRoots: Set<MerkleTreeDigest>;
+// Stops admitting new voters without closing voting itself.
+export ledger enrollmentClosed: Boolean;
+
+// Depth 16 deliberately matches the credential registry's capacity. While the
+// electorate was frozen before deployment the operator could check the cohort
+// fitted; with enrollment open during voting nothing bounds admissions, so a
+// smaller ballot tree would silently disenfranchise later voters.
+export ledger ballotCommitments: HistoricMerkleTree<16, Bytes<32>>;
 export ledger spentVoteNullifiers: Set<Bytes<32>>;
 export ledger revealedCommitments: Set<Bytes<32>>;
 export ledger tally: Map<Choice, Uint<32>>;
@@ -44,6 +114,7 @@ export ledger closed: Boolean;
 export ledger issuedVotes: Counter;
 
 witness organizerSecret(): Bytes<32>;
+witness rootPublisherSecret(): Bytes<32>;
 witness voterSecret(): Bytes<32>;
 witness holderBinding(): Bytes<32>;
 witness holderBlind(): Bytes<32>;
@@ -56,7 +127,7 @@ witness credentialValidUntil(): Uint<64>;
 witness voterPath(): MerkleTreePath<16, Bytes<32>>;
 witness voterChoice(): Choice;
 witness voteSalt(): Bytes<32>;
-witness revealPath(): MerkleTreePath<10, Bytes<32>>;
+witness revealPath(): MerkleTreePath<16, Bytes<32>>;
 
 circuit roleKey(domain: Bytes<32>, secret: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([domain, secret]);
@@ -97,25 +168,65 @@ constructor(
   initialRegistryId: Bytes<32>,
   initialIssuerId: Bytes<32>,
   initialCredentialEpoch: Uint<64>,
-  initialFrozenCredentialRoot: MerkleTreeDigest,
+  initialRootValue: MerkleTreeDigest,
   initialRegistryContractBinding: Bytes<32>,
+  initialRegistryContract: ContractAddress,
   initialEventId: Bytes<32>,
   initialOrganizerKey: Bytes<32>,
+  initialRootPublisherKey: Bytes<32>,
   initialCountryPolicy: Bytes<32>,
   initialCountryPolicyEnabled: Boolean,
   initialMinimumAssurance: Uint<8>,
   initialRequireAdult: Boolean,
   initialValidityReference: Uint<64>,
+  initialOpensAtUnix: Uint<64>,
+  initialEnrollmentClosesAtUnix: Uint<64>,
+  initialClosesAtUnix: Uint<64>,
+  initialRevealClosesAtUnix: Uint<64>,
 ) {
+  // A same-key misconfiguration would not be dangerous — the two roleKey
+  // domains differ, so no single secret satisfies both — but it would silently
+  // brick enrollment until the first publish attempt failed. Reject it here.
+  assert(
+    disclose(initialOrganizerKey != initialRootPublisherKey),
+    "The organizer and root publisher must be different keys"
+  );
+  assert(
+    disclose(initialOpensAtUnix <= initialEnrollmentClosesAtUnix),
+    "Enrollment cannot close before voting opens"
+  );
+  assert(
+    disclose(initialEnrollmentClosesAtUnix <= initialClosesAtUnix),
+    "Voting cannot close before enrollment closes"
+  );
+  // Strict: with opensAt == closesAt, castVote would require blockTimeGte(X)
+  // and blockTimeLt(X) simultaneously, so no vote could ever be cast. The
+  // fields are sealed, so that typo would be unrecoverable.
+  assert(
+    disclose(initialOpensAtUnix < initialClosesAtUnix),
+    "The voting window must be non-empty"
+  );
+  assert(
+    disclose(initialClosesAtUnix < initialRevealClosesAtUnix),
+    "The reveal window must be non-empty"
+  );
   registryId = disclose(initialRegistryId);
   issuerId = disclose(initialIssuerId);
   credentialEpoch = disclose(initialCredentialEpoch);
-  frozenCredentialRoot = disclose(initialFrozenCredentialRoot);
+  initialCredentialRoot = disclose(initialRootValue);
+  acceptedCredentialRoots.insert(disclose(initialRootValue));
+  enrollmentClosed = false;
   registryContractBinding = disclose(initialRegistryContractBinding);
+  registryContract = disclose(initialRegistryContract);
   eventId = disclose(initialEventId);
   // Constructor arguments are public transaction data. The organizer derives
   // this authorization key locally; its secret remains a private witness.
   organizerKey = disclose(initialOrganizerKey);
+  rootPublisherKey = disclose(initialRootPublisherKey);
+  opensAtUnix = disclose(initialOpensAtUnix);
+  enrollmentClosesAtUnix = disclose(initialEnrollmentClosesAtUnix);
+  closesAtUnix = disclose(initialClosesAtUnix);
+  revealClosesAtUnix = disclose(initialRevealClosesAtUnix);
   countryPolicy = disclose(initialCountryPolicy);
   countryPolicyEnabled = disclose(initialCountryPolicyEnabled);
   minimumAssurance = disclose(initialMinimumAssurance);
@@ -129,11 +240,13 @@ constructor(
   closed = false;
 }
 
-// The credential path is checked directly against the exact frozen root
-// supplied at deployment; the referendum does not copy registry leaves.
+// The credential path is checked against the set of accepted registry roots;
+// the referendum does not copy registry leaves.
 export circuit castVote(): [] {
   assert(phase == Phase.COMMIT, "Voting is not in the commit phase");
   assert(!closed, "Voting is closed");
+  assert(blockTimeGte(opensAtUnix), "Voting has not opened yet");
+  assert(blockTimeLt(closesAtUnix), "Voting has closed");
 
   assert(
     disclose(holderBindingFromVoter() == holderBinding()),
@@ -144,7 +257,9 @@ export circuit castVote(): [] {
   const path = voterPath();
   assert(disclose(path.leaf == leaf), "Credential policy not satisfied");
   assert(
-    disclose(merkleTreePathRoot<16, Bytes<32>>(path) == frozenCredentialRoot),
+    acceptedCredentialRoots.member(
+      disclose(merkleTreePathRoot<16, Bytes<32>>(path))
+    ),
     "Credential policy not satisfied"
   );
   assert(
@@ -193,7 +308,48 @@ export circuit castVote(): [] {
   issuedVotes.increment(1);
 }
 
-export circuit closeVote(): [] {
+// Admits voters who enrolled after deployment by accepting a later registry
+// root. Authorized by the narrow root-publisher role, never the organizer.
+export circuit publishCredentialRoot(root: MerkleTreeDigest): [] {
+  assert(
+    roleKey(
+      pad(32, "cico:ref-v2:root-publisher:"),
+      rootPublisherSecret()
+    ) == rootPublisherKey,
+    "Root publisher authorization failed"
+  );
+  assert(phase == Phase.COMMIT, "Enrollment is not in the commit phase");
+  assert(!closed, "Voting is closed");
+  assert(!enrollmentClosed, "Enrollment is closed");
+  assert(blockTimeLt(enrollmentClosesAtUnix), "Enrollment has closed");
+  assert(
+    !acceptedCredentialRoots.member(disclose(root)),
+    "This credential root is already accepted"
+  );
+  assert(
+    !revokedCredentialRoots.member(disclose(root)),
+    "This credential root has been revoked"
+  );
+  acceptedCredentialRoots.insert(disclose(root));
+}
+
+// Undoes a bad admission: a root published from the wrong registry, or an
+// operator error. Organizer-only, deliberately not the publisher, so the key
+// that admits voters is never the key that removes them. Revocation is
+// permanent — a revoked root can never be re-published.
+//
+// This does NOT help against a credential later found fraudulent: because the
+// registry is append-only, that leaf appears in every subsequent legitimate
+// root too, so revoking one root achieves nothing and revoking all of them
+// would disenfranchise everyone enrolled since. Revocation genuinely works
+// only for a root from a foreign tree.
+//
+// Confined to the enrollment window. Afterwards the batch of voters uniquely
+// dependent on a given root is precisely identifiable, so a late revocation
+// would be a precision instrument for disenfranchising them. A bad root found
+// after enrollment closes must force a redeployment, not a silent edit of the
+// electorate mid-vote.
+export circuit revokeCredentialRoot(root: MerkleTreeDigest): [] {
   assert(
     roleKey(
       pad(32, "cico:referendum-v2:organizer:"),
@@ -201,8 +357,49 @@ export circuit closeVote(): [] {
     ) == organizerKey,
     "Organizer authorization failed"
   );
+  assert(
+    blockTimeLt(enrollmentClosesAtUnix),
+    "Roots cannot be revoked after enrollment closes"
+  );
+  assert(
+    acceptedCredentialRoots.member(disclose(root)),
+    "This credential root is not accepted"
+  );
+  revokedCredentialRoots.insert(disclose(root));
+  acceptedCredentialRoots.remove(disclose(root));
+  // The deployment root is revocable like any other — it has the weakest
+  // provenance of all, since nothing attested it. What must never happen is
+  // an empty electorate, so that is the invariant enforced instead.
+  assert(
+    !acceptedCredentialRoots.isEmpty(),
+    "The last accepted root cannot be revoked"
+  );
+}
+
+// Stops admitting new voters while leaving voting open, so a published
+// enrollment deadline can be honoured independently of the voting deadline.
+export circuit closeEnrollment(): [] {
+  assert(
+    roleKey(
+      pad(32, "cico:referendum-v2:organizer:"),
+      organizerSecret()
+    ) == organizerKey,
+    "Organizer authorization failed"
+  );
+  assert(!enrollmentClosed, "Enrollment is already closed");
+  enrollmentClosed = true;
+}
+
+// Permissionless. The blockTime gate alone fully determines when this is
+// legal, so an authorization check would add no safety — only a liveness
+// dependency, letting an organizer who declines (or loses their key) trap
+// every ballot in COMMIT forever.
+export circuit closeVote(): [] {
   assert(phase == Phase.COMMIT, "The referendum is not in the commit phase");
   assert(!closed, "The referendum is already closed");
+  // The organizer cannot end voting ahead of the published deadline, so a
+  // cohort cannot be disenfranchised by closing early.
+  assert(blockTimeGte(closesAtUnix), "Voting cannot close before its deadline");
   phase = Phase.REVEAL;
   closed = true;
 }
@@ -215,7 +412,7 @@ export circuit revealVote(choice: Choice, salt: Bytes<32>): [] {
   const path = revealPath();
   assert(disclose(path.leaf == commitment), "The reveal is invalid");
   assert(
-    ballotCommitments.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+    ballotCommitments.checkRoot(disclose(merkleTreePathRoot<16, Bytes<32>>(path))),
     "The reveal is invalid"
   );
   assert(
@@ -228,15 +425,17 @@ export circuit revealVote(choice: Choice, salt: Bytes<32>): [] {
   tally.insert(disclose(choice), currentTally + 1 as Uint<32>);
 }
 
+// Permissionless and time-gated, for the same reason as closeVote and one
+// more: revealVote writes into the public tally, so an organizer able to
+// finalize at will could watch the running result and stop the count at the
+// moment it favoured them, permanently stranding unrevealed ballots. The
+// published deadline, not a key, decides when the count ends.
 export circuit finalizeVote(): [] {
-  assert(
-    roleKey(
-      pad(32, "cico:referendum-v2:organizer:"),
-      organizerSecret()
-    ) == organizerKey,
-    "Organizer authorization failed"
-  );
   assert(phase == Phase.REVEAL, "The referendum is not in the reveal phase");
   assert(closed, "The referendum is not closed");
+  assert(
+    blockTimeGte(revealClosesAtUnix),
+    "The reveal window is still open"
+  );
   phase = Phase.FINALIZED;
 }

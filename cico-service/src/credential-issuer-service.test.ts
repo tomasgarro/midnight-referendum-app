@@ -62,6 +62,7 @@ function makeService(options?: {
       return receipt;
     }),
     freeze: vi.fn(),
+    attestRegistryRoot: vi.fn(),
   };
   const claims = new Map<string, string>();
   const evidenceAuthorizations: EvidenceAuthorizationStore = {

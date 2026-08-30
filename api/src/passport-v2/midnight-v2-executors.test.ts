@@ -65,11 +65,16 @@ const referendumConfig = {
   registry: frozenRegistry,
   eventId: new Uint8Array(32).fill(9),
   organizerKey: new Uint8Array(32).fill(8),
+  rootPublisherKey: new Uint8Array(32).fill(10),
   countryPolicy: new Uint8Array(32).fill(4),
   countryPolicyEnabled: true,
   minimumAssurance: 2n,
   requireAdult: true,
   validityReference: 99n,
+  opensAtUnix: 10n,
+  enrollmentClosesAtUnix: 20n,
+  closesAtUnix: 30n,
+  revealClosesAtUnix: 40n,
   network: 'preview' as const,
 };
 
@@ -89,8 +94,24 @@ function fakeDependencies() {
         calls.push('freeze');
         return response();
       },
+      attestCurrentRoot: async () => {
+        calls.push('attestCurrentRoot');
+        return response();
+      },
       castVote: async () => {
         calls.push('castVote');
+        return response();
+      },
+      publishCredentialRoot: async () => {
+        calls.push('publishCredentialRoot');
+        return response();
+      },
+      revokeCredentialRoot: async () => {
+        calls.push('revokeCredentialRoot');
+        return response();
+      },
+      closeEnrollment: async () => {
+        calls.push('closeEnrollment');
         return response();
       },
       closeVote: async () => {
@@ -150,13 +171,19 @@ describe('Midnight v2 executors', () => {
       frozenRegistry.credentialEpoch,
       frozenRegistry.frozenRoot,
       frozenRegistry.registryContractBinding,
+      { bytes: new Uint8Array(32).fill(0xab) },
       referendumConfig.eventId,
       referendumConfig.organizerKey,
+      referendumConfig.rootPublisherKey,
       referendumConfig.countryPolicy,
       true,
       2n,
       true,
       99n,
+      10n,
+      20n,
+      30n,
+      40n,
     ]);
   });
 
@@ -209,11 +236,15 @@ describe('Midnight v2 executors', () => {
     );
     const deployment = await executor.deploy(registryPrivateState);
     const credentialReceipt = await executor.addCredential();
+    const attestReceipt = await executor.attestRegistryRoot({ field: 99n });
     expect(deployment.contractAddress).toBe('contract-address');
     expect(deployment.receipt.circuit).toBe('deploy');
     expect(credentialReceipt.circuit).toBe('addCredential');
-    expect(fake.calls).toEqual(['addCredential']);
-    expect(JSON.stringify([deployment, credentialReceipt])).not.toContain('must-not-escape');
+    expect(attestReceipt.circuit).toBe('attestCurrentRoot');
+    expect(fake.calls).toEqual(['addCredential', 'attestCurrentRoot']);
+    expect(JSON.stringify([deployment, credentialReceipt, attestReceipt])).not.toContain(
+      'must-not-escape',
+    );
   });
 
   it('joins and executes the referendum circuit surface with public receipts', async () => {
@@ -225,17 +256,31 @@ describe('Midnight v2 executors', () => {
     await executor.join(contractAddress, referendumPrivateState);
     const receipts = [
       await executor.castVote(),
+      await executor.publishCredentialRoot({ field: 101n }),
+      await executor.revokeCredentialRoot({ field: 102n }),
+      await executor.closeEnrollment(),
       await executor.closeVote(),
       await executor.revealVote('YES', new Uint8Array(32).fill(1)),
       await executor.finalizeVote(),
     ];
     expect(receipts.map((receipt) => receipt.circuit)).toEqual([
       'castVote',
+      'publishCredentialRoot',
+      'revokeCredentialRoot',
+      'closeEnrollment',
       'closeVote',
       'revealVote',
       'finalizeVote',
     ]);
-    expect(fake.calls).toEqual(['castVote', 'closeVote', 'revealVote', 'finalizeVote']);
+    expect(fake.calls).toEqual([
+      'castVote',
+      'publishCredentialRoot',
+      'revokeCredentialRoot',
+      'closeEnrollment',
+      'closeVote',
+      'revealVote',
+      'finalizeVote',
+    ]);
     expect(JSON.stringify(receipts)).not.toContain('must-not-escape');
     expect(fake.joinOptions()).toMatchObject({ contractAddress });
   });

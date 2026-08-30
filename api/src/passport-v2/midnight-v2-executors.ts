@@ -48,11 +48,17 @@ export interface ReferendumV2ExecutorConfig {
   readonly eventId: Uint8Array;
   /** Public role key derived from the private organizer secret. */
   readonly organizerKey: Uint8Array;
+  /** Public role key derived from the private root-publisher secret; must differ from organizerKey. */
+  readonly rootPublisherKey: Uint8Array;
   readonly countryPolicy: Uint8Array;
   readonly countryPolicyEnabled: boolean;
   readonly minimumAssurance: bigint;
   readonly requireAdult: boolean;
   readonly validityReference: bigint;
+  readonly opensAtUnix: bigint;
+  readonly enrollmentClosesAtUnix: bigint;
+  readonly closesAtUnix: bigint;
+  readonly revealClosesAtUnix: bigint;
   readonly network?: MidnightRuntimeNetwork;
   readonly explorerBaseUrl?: string;
 }
@@ -79,12 +85,16 @@ export interface CredentialRegistryV1Executor {
   ): Promise<void>;
   addCredential(): Promise<CanonicalReceipt>;
   freeze(candidateRoot: MerkleTreeDigest): Promise<CanonicalReceipt>;
+  attestRegistryRoot(root: MerkleTreeDigest): Promise<CanonicalReceipt>;
 }
 
 export interface ReferendumV2Executor {
   deploy(initialPrivateState: ReferendumV2PrivateState): Promise<V2DeploymentReceipt>;
   join(contractAddress: string, initialPrivateState: ReferendumV2PrivateState): Promise<void>;
   castVote(): Promise<CanonicalReceipt>;
+  publishCredentialRoot(root: MerkleTreeDigest): Promise<CanonicalReceipt>;
+  revokeCredentialRoot(root: MerkleTreeDigest): Promise<CanonicalReceipt>;
+  closeEnrollment(): Promise<CanonicalReceipt>;
   closeVote(): Promise<CanonicalReceipt>;
   revealVote(choice: VoteChoice, salt: Uint8Array): Promise<CanonicalReceipt>;
   finalizeVote(): Promise<CanonicalReceipt>;
@@ -117,6 +127,17 @@ function requireRoot(value: MerkleTreeDigest, label: string): MerkleTreeDigest {
   return { field: value.field };
 }
 
+/** Raw ContractAddress bytes for the ledger's `registryContract` field; not a hash. */
+function contractAddressBytesFromHex(address: string, label: string): { bytes: Uint8Array } {
+  const normalized = address.trim().replace(/^0x/u, '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/u.test(normalized)) {
+    throw new Error(`${label} must be exactly 32-byte hexadecimal data`);
+  }
+  return {
+    bytes: Uint8Array.from(normalized.match(/.{2}/gu) ?? [], (byte) => Number.parseInt(byte, 16)),
+  };
+}
+
 function requireSupportedNetwork(
   network: MidnightRuntimeNetwork | undefined,
 ): 'preview' | 'devnet' | 'undeployed' {
@@ -146,12 +167,18 @@ export function referendumV2ConstructorArgs(
   bigint,
   MerkleTreeDigest,
   Uint8Array,
+  { bytes: Uint8Array },
+  Uint8Array,
   Uint8Array,
   Uint8Array,
   Uint8Array,
   boolean,
   bigint,
   boolean,
+  bigint,
+  bigint,
+  bigint,
+  bigint,
   bigint,
 ] {
   if (!config.registry.registryContractAddress.trim()) {
@@ -166,7 +193,7 @@ export function referendumV2ConstructorArgs(
       'registry.credentialEpoch',
       64,
     ),
-    frozenCredentialRoot: requireRoot(config.registry.frozenRoot, 'registry.frozenRoot'),
+    initialCredentialRoot: requireRoot(config.registry.frozenRoot, 'registry.frozenRoot'),
     registryContractBinding: requireBytes32(
       config.registry.registryContractBinding,
       'registry.registryContractBinding',
@@ -174,20 +201,44 @@ export function referendumV2ConstructorArgs(
   };
   assertReferendumRegistryBinding(config.registry, binding);
 
+  const rootPublisherKey = requireBytes32(config.rootPublisherKey, 'rootPublisherKey');
+  const organizerKey = requireBytes32(config.organizerKey, 'organizerKey');
+  if (equalBytes32(rootPublisherKey, organizerKey)) {
+    throw new Error('rootPublisherKey must differ from organizerKey');
+  }
+
   return [
     binding.registryId,
     binding.issuerId,
     binding.credentialEpoch,
-    binding.frozenCredentialRoot,
+    binding.initialCredentialRoot,
     binding.registryContractBinding,
+    contractAddressBytesFromHex(
+      config.registry.registryContractAddress,
+      'registry.registryContractAddress',
+    ),
     requireBytes32(config.eventId, 'eventId'),
-    requireBytes32(config.organizerKey, 'organizerKey'),
+    organizerKey,
+    rootPublisherKey,
     requireBytes32(config.countryPolicy, 'countryPolicy'),
     config.countryPolicyEnabled,
     requireUnsigned(config.minimumAssurance, 'minimumAssurance', 8),
     config.requireAdult,
     requireUnsigned(config.validityReference, 'validityReference', 64),
+    requireUnsigned(config.opensAtUnix, 'opensAtUnix', 64),
+    requireUnsigned(config.enrollmentClosesAtUnix, 'enrollmentClosesAtUnix', 64),
+    requireUnsigned(config.closesAtUnix, 'closesAtUnix', 64),
+    requireUnsigned(config.revealClosesAtUnix, 'revealClosesAtUnix', 64),
   ];
+}
+
+function equalBytes32(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= (left[index] ?? 0) ^ (right[index] ?? 0);
+  }
+  return difference === 0;
 }
 
 function explorerUrl(baseUrl: string | undefined, transactionId: string): string | undefined {
@@ -312,6 +363,12 @@ export function createCredentialRegistryV1Executor(
       );
       return receipt(result.public, 'freeze');
     },
+    async attestRegistryRoot(root) {
+      const result = await requireJoined(contract, 'Credential registry').callTx.attestCurrentRoot(
+        requireRoot(root, 'root'),
+      );
+      return receipt(result.public, 'attestCurrentRoot');
+    },
   };
 }
 
@@ -365,6 +422,22 @@ export function createReferendumV2Executor(
     async castVote() {
       const result = await requireJoined(contract, 'Referendum').callTx.castVote();
       return receipt(result.public, 'castVote');
+    },
+    async publishCredentialRoot(root) {
+      const result = await requireJoined(contract, 'Referendum').callTx.publishCredentialRoot(
+        requireRoot(root, 'root'),
+      );
+      return receipt(result.public, 'publishCredentialRoot');
+    },
+    async revokeCredentialRoot(root) {
+      const result = await requireJoined(contract, 'Referendum').callTx.revokeCredentialRoot(
+        requireRoot(root, 'root'),
+      );
+      return receipt(result.public, 'revokeCredentialRoot');
+    },
+    async closeEnrollment() {
+      const result = await requireJoined(contract, 'Referendum').callTx.closeEnrollment();
+      return receipt(result.public, 'closeEnrollment');
     },
     async closeVote() {
       const result = await requireJoined(contract, 'Referendum').callTx.closeVote();

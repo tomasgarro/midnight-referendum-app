@@ -35,6 +35,13 @@ interface ReferendumWireEntry {
   readonly contractAddress?: unknown;
   readonly eventIdHex?: unknown;
   readonly organizerKeyHex?: unknown;
+  /** Narrow authority that admits later registry roots; never the organizer. */
+  readonly rootPublisherKeyHex?: unknown;
+  /** On-chain enforced schedule, as decimal unix-second strings. */
+  readonly opensAtUnix?: unknown;
+  readonly enrollmentClosesAtUnix?: unknown;
+  readonly closesAtUnix?: unknown;
+  readonly revealClosesAtUnix?: unknown;
   readonly countryPolicy?: unknown;
   readonly minimumAssurance?: unknown;
   readonly requireAdult?: unknown;
@@ -163,6 +170,14 @@ function parseReferendum(
       registry,
       eventId: bytes32(entry.eventIdHex, `referendum ${index} event ID`),
       organizerKey: bytes32(entry.organizerKeyHex, `referendum ${index} organizer key`),
+      rootPublisherKey: bytes32(
+        entry.rootPublisherKeyHex,
+        `referendum ${index} root publisher key`,
+      ),
+      opensAtUnix: unsignedBigInt(entry.opensAtUnix, 64),
+      enrollmentClosesAtUnix: unsignedBigInt(entry.enrollmentClosesAtUnix, 64),
+      closesAtUnix: unsignedBigInt(entry.closesAtUnix, 64),
+      revealClosesAtUnix: unsignedBigInt(entry.revealClosesAtUnix, 64),
       countryPolicy,
       countryPolicyEnabled: entry.countryPolicy !== null,
       minimumAssurance,

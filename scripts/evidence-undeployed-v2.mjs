@@ -197,12 +197,13 @@ function assertCleanCheckout() {
 
 function generateRunEnvironment() {
   const secret = () => randomBytes(32).toString('hex');
-  const values = Array.from({ length: 10 }, secret);
+  const values = Array.from({ length: 11 }, secret);
   const [
     relayerSeed,
     actionSecret,
     issuerSecret,
     organizerSecret,
+    rootPublisherSecret,
     holderSecret,
     holderBlind,
     credentialBlind,
@@ -238,6 +239,17 @@ function generateRunEnvironment() {
       V2_CREDENTIAL_EPOCH: '1',
       V2_ISSUER_ROLE_SECRET_HEX: issuerSecret,
       V2_ORGANIZER_ROLE_SECRET_HEX: organizerSecret,
+      V2_ROOT_PUBLISHER_ROLE_SECRET_HEX: rootPublisherSecret,
+      // The referendum enforces its schedule on-chain, so a bounded evidence
+      // run needs a schedule it can actually outlive. Voting opens immediately
+      // and the whole lifecycle completes inside about two minutes; the deploy
+      // script waits out each deadline because of V2_WAIT_FOR_SCHEDULE.
+      V2_OPENS_AT_UNIX: String(Math.floor(now / 1000) - 10),
+      V2_ENROLLMENT_CLOSES_AT_UNIX: String(Math.floor(now / 1000) + 45),
+      V2_CLOSES_AT_UNIX: String(Math.floor(now / 1000) + 60),
+      V2_REVEAL_CLOSES_AT_UNIX: String(Math.floor(now / 1000) + 90),
+      V2_WAIT_FOR_SCHEDULE: 'true',
+      V2_ENROLLMENT_MODEL: 'open',
       V2_FIXTURE_HOLDER_SECRET_HEX: holderSecret,
       V2_FIXTURE_HOLDER_BLIND_HEX: holderBlind,
       V2_FIXTURE_CREDENTIAL_BLIND_HEX: credentialBlind,

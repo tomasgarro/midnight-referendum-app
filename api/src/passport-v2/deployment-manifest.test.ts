@@ -66,14 +66,23 @@ function manifest(
       frozenRootField: null,
       credentialCount: null,
       frozen: false,
+      enrollmentModel: 'open',
     },
     referenda: [
       {
         referendumId: 'fixture:referendum',
         contractAddress: null,
         registryContractBindingHex: null,
+        registryContractAddress: null,
         eventIdHex: '03'.repeat(32),
         organizerKeyHex: '04'.repeat(32),
+        rootPublisherKeyHex: '05'.repeat(32),
+        initialRootField: '10',
+        acceptedRoots: ['10'],
+        opensAtUnix: '1000',
+        enrollmentClosesAtUnix: '2000',
+        closesAtUnix: '3000',
+        revealClosesAtUnix: '4000',
         countryPolicy: null,
         minimumAssurance: '2',
         requireAdult: true,
@@ -175,12 +184,14 @@ function completeManifest(
       frozenRootField: '10',
       credentialCount: '1',
       frozen: true,
+      enrollmentModel: 'frozen',
     },
     referenda: [
       {
         ...manifest().referenda[0],
         contractAddress: referendumAddress,
         registryContractBindingHex: binding,
+        registryContractAddress: registryAddress,
       },
     ],
     action: {
@@ -251,6 +262,74 @@ function completeManifest(
     ...candidate,
     manifestDigest: createHash('sha256').update(stableJson(digestInput), 'utf8').digest('hex'),
   };
+}
+
+/**
+ * Builds a complete, open-enrollment manifest whose referendum has admitted
+ * one extra registry root ('20') after deployment, backed by a
+ * `referendum.publish-root` step and a separate `registry.attest` step (they
+ * cannot share a transaction: the referendum and registry are different
+ * contracts and transaction merging requires one side to have no contract
+ * calls).
+ */
+function openEnrollmentManifest(
+  overridePublishRoot: Partial<PassportV2DeploymentStep> = {},
+  overrideAttest: Partial<PassportV2DeploymentStep> = {},
+): PassportV2DeploymentManifest {
+  const registryAddress = 'aa'.repeat(32);
+  const referendumAddress = 'bb'.repeat(32);
+  const base = completeManifest();
+  const publishReceipt: CanonicalReceipt = {
+    status: 'confirmed',
+    action: 'vote',
+    network: 'undeployed',
+    transactionId: 'publish-root-tx',
+    transactionHash: 'publish-root-tx-hash',
+    contractAddress: referendumAddress,
+    circuit: 'publishRoot',
+    blockHeight: 10,
+    blockHash: 'publish-root-block',
+    blockTimestamp: '2026-08-28T00:20:00.000Z',
+  };
+  const attestReceipt: CanonicalReceipt = {
+    status: 'confirmed',
+    action: 'credential',
+    network: 'undeployed',
+    transactionId: 'registry-attest-tx',
+    transactionHash: 'registry-attest-tx-hash',
+    contractAddress: registryAddress,
+    circuit: 'attestCurrentRoot',
+    blockHeight: 9,
+    blockHash: 'registry-attest-block',
+    blockTimestamp: '2026-08-28T00:19:00.000Z',
+  };
+  const publishStep: PassportV2DeploymentStep = {
+    id: 'referendum.publish-root',
+    status: 'confirmed',
+    completedAt: '2026-08-28T00:20:00.000Z',
+    receipt: publishReceipt,
+    details: { rootField: '20' },
+    attestationTransactionId: attestReceipt.transactionId,
+    ...overridePublishRoot,
+  };
+  const attestStep: PassportV2DeploymentStep = {
+    id: 'registry.attest',
+    status: 'confirmed',
+    completedAt: '2026-08-28T00:19:00.000Z',
+    receipt: attestReceipt,
+    details: { rootField: '20' },
+    ...overrideAttest,
+  };
+  const steps = [
+    ...base.transcript.steps.filter((step) => step.id !== 'registry.freeze'),
+    publishStep,
+    attestStep,
+  ];
+  return completeManifest({
+    registry: { ...base.registry, frozen: false, frozenRootField: null, enrollmentModel: 'open' },
+    referenda: [{ ...base.referenda[0], acceptedRoots: ['10', '20'] }],
+    transcript: { steps, observations: base.transcript.observations },
+  });
 }
 
 function bytesToHex(value: Uint8Array): string {
@@ -433,5 +512,230 @@ describe('Passport v2 deployment manifest', () => {
         }),
       ),
     ).toThrow('query strings');
+  });
+
+  it('accepts a complete open-enrollment manifest with an attested published root', () => {
+    expect(() => validatePassportV2DeploymentManifest(openEnrollmentManifest())).not.toThrow();
+  });
+
+  it('rejects a published root with no attestation', () => {
+    const value = openEnrollmentManifest({ attestationTransactionId: undefined });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'missing a registry.attest attestation',
+    );
+  });
+
+  it('rejects an attestation that reuses the publish-root transaction instead of a separate registry.attest transaction', () => {
+    const base = openEnrollmentManifest();
+    const publishStep = base.transcript.steps.find((step) => step.id === 'referendum.publish-root');
+    if (!publishStep?.receipt) throw new Error('test fixture publish-root step is missing');
+    const value = openEnrollmentManifest({
+      attestationTransactionId: publishStep.receipt.transactionId,
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'must be a separate registry.attest transaction',
+    );
+  });
+
+  it('rejects a published root whose registry.attest step attests a different root or registry', () => {
+    const wrongRoot = openEnrollmentManifest({}, { details: { rootField: '99' } });
+    expect(() => validatePassportV2DeploymentManifest(wrongRoot)).toThrow(
+      'no matching registry.attest transcript step',
+    );
+
+    const wrongContract = openEnrollmentManifest(
+      {},
+      {
+        receipt: {
+          status: 'confirmed',
+          action: 'credential',
+          network: 'undeployed',
+          transactionId: 'registry-attest-tx',
+          transactionHash: 'registry-attest-tx-hash',
+          contractAddress: 'cc'.repeat(32),
+          circuit: 'attestCurrentRoot',
+          blockHeight: 9,
+          blockHash: 'registry-attest-block',
+          blockTimestamp: '2026-08-28T00:19:00.000Z',
+        },
+      },
+    );
+    expect(() => validatePassportV2DeploymentManifest(wrongContract)).toThrow(
+      'no matching registry.attest transcript step',
+    );
+  });
+
+  it('rejects a rootPublisherKeyHex equal to the organizerKeyHex', () => {
+    const value = manifest({
+      referenda: [{ ...manifest().referenda[0], rootPublisherKeyHex: '04'.repeat(32) }],
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'rootPublisherKeyHex must not equal organizerKeyHex',
+    );
+  });
+
+  it('rejects out-of-order referendum schedule values', () => {
+    const value = manifest({
+      referenda: [
+        { ...manifest().referenda[0], opensAtUnix: '2000', enrollmentClosesAtUnix: '1000' },
+      ],
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'opensAtUnix <= enrollmentClosesAtUnix <= closesAtUnix',
+    );
+
+    const value2 = manifest({
+      referenda: [
+        {
+          ...manifest().referenda[0],
+          enrollmentClosesAtUnix: '3000',
+          closesAtUnix: '2000',
+          revealClosesAtUnix: '5000',
+        },
+      ],
+    });
+    expect(() => validatePassportV2DeploymentManifest(value2)).toThrow(
+      'opensAtUnix <= enrollmentClosesAtUnix <= closesAtUnix',
+    );
+  });
+
+  it('rejects degenerate voting and reveal windows that would brick the referendum', () => {
+    // The contract's own constructor asserts these strictly. Equal values
+    // deploy happily and then make voting (or the reveal) impossible forever,
+    // on sealed fields, so the manifest must refuse them too.
+    const sameVotingWindow = manifest({
+      referenda: [
+        {
+          ...manifest().referenda[0],
+          opensAtUnix: '3000',
+          enrollmentClosesAtUnix: '3000',
+          closesAtUnix: '3000',
+          revealClosesAtUnix: '4000',
+        },
+      ],
+    });
+    expect(() => validatePassportV2DeploymentManifest(sameVotingWindow)).toThrow(
+      'opensAtUnix < closesAtUnix',
+    );
+
+    const sameRevealWindow = manifest({
+      referenda: [
+        {
+          ...manifest().referenda[0],
+          revealClosesAtUnix: '3000',
+        },
+      ],
+    });
+    expect(() => validatePassportV2DeploymentManifest(sameRevealWindow)).toThrow(
+      'closesAtUnix < revealClosesAtUnix',
+    );
+  });
+
+  it('rejects acceptedRoots missing initialRootField', () => {
+    const value = manifest({
+      referenda: [
+        { ...manifest().referenda[0], initialRootField: '10', acceptedRoots: ['11', '12'] },
+      ],
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'acceptedRoots must contain initialRootField',
+    );
+  });
+
+  it('rejects duplicate entries in acceptedRoots', () => {
+    const value = manifest({
+      referenda: [
+        { ...manifest().referenda[0], initialRootField: '10', acceptedRoots: ['10', '10'] },
+      ],
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'acceptedRoots must not contain duplicates',
+    );
+  });
+
+  it('rejects an empty acceptedRoots array', () => {
+    const value = manifest({
+      referenda: [{ ...manifest().referenda[0], acceptedRoots: [] }],
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'acceptedRoots must be non-empty',
+    );
+  });
+
+  it('requires a recognized enrollmentModel', () => {
+    const value = manifest({
+      registry: { ...manifest().registry, enrollmentModel: 'archived' as never },
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'enrollmentModel must be "open" or "frozen"',
+    );
+  });
+
+  it('rejects an open enrollmentModel that is actually frozen', () => {
+    const value = manifest({
+      registry: { ...manifest().registry, enrollmentModel: 'open', frozen: true },
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'open enrollmentModel must not be frozen',
+    );
+
+    const value2 = manifest({
+      registry: {
+        ...manifest().registry,
+        enrollmentModel: 'open',
+        frozen: false,
+        frozenRootField: '5',
+      },
+    });
+    expect(() => validatePassportV2DeploymentManifest(value2)).toThrow(
+      'open enrollmentModel must not carry a frozenRootField',
+    );
+  });
+
+  it('rejects a frozen enrollmentModel that is not actually frozen', () => {
+    const value = manifest({
+      registry: { ...manifest().registry, enrollmentModel: 'frozen', frozen: false },
+    });
+    expect(() => validatePassportV2DeploymentManifest(value)).toThrow(
+      'frozen enrollmentModel must be frozen',
+    );
+  });
+
+  it('rejects a complete open-enrollment manifest that still records a registry.freeze step', () => {
+    const value = openEnrollmentManifest();
+    const withFreeze = {
+      ...value,
+      transcript: {
+        ...value.transcript,
+        steps: [
+          ...value.transcript.steps,
+          {
+            id: 'registry.freeze' as const,
+            status: 'confirmed' as const,
+            completedAt: '2026-08-28T00:21:00.000Z',
+          },
+        ],
+      },
+    };
+    expect(() => validatePassportV2DeploymentManifest(withFreeze)).toThrow(
+      'open enrollmentModel must not record a registry.freeze step',
+    );
+  });
+
+  it('requires each referendum to carry a registryContractAddress matching the registry', () => {
+    const original = completeManifest();
+    const wrongAddress = completeManifest({
+      referenda: [{ ...original.referenda[0], registryContractAddress: 'ee'.repeat(32) }],
+    });
+    expect(() => validatePassportV2DeploymentManifest(wrongAddress)).toThrow(
+      'registryContractAddress does not match the registry',
+    );
+
+    const missingAddress = completeManifest({
+      referenda: [{ ...original.referenda[0], registryContractAddress: null }],
+    });
+    expect(() => validatePassportV2DeploymentManifest(missingAddress)).toThrow(
+      'missing fixture:referendum registryContractAddress',
+    );
   });
 });

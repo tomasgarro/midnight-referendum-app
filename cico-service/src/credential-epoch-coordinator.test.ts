@@ -43,6 +43,7 @@ function executor(onFreeze: (field: bigint) => void): CredentialRegistryV1Execut
     deploy: vi.fn(),
     join: vi.fn().mockResolvedValue(undefined),
     addCredential: vi.fn(),
+    attestRegistryRoot: vi.fn(),
     freeze: vi.fn(async (root) => {
       onFreeze(root.field);
       return freezeReceipt;

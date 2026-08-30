@@ -43,14 +43,14 @@ describe('Passport v2 compiled bindings', () => {
       registryId,
       issuerId,
       credentialEpoch: 7n,
-      frozenCredentialRoot: { field: 99n },
+      initialCredentialRoot: { field: 99n },
       registryContractBinding: deriveRegistryContractBinding(registryAddress),
     };
     expect(() => assertReferendumRegistryBinding(reference, binding)).not.toThrow();
     expect(() =>
       assertReferendumRegistryBinding(reference, {
         ...binding,
-        frozenCredentialRoot: { field: 100n },
+        initialCredentialRoot: { field: 100n },
       }),
     ).toThrow('canonical frozen registry root');
     expect(() =>
@@ -92,7 +92,7 @@ describe('Passport v2 compiled bindings', () => {
       registryId: reference.registryId,
       issuerId: reference.issuerId,
       credentialEpoch: reference.credentialEpoch,
-      frozenCredentialRoot: reference.frozenRoot,
+      initialCredentialRoot: reference.frozenRoot,
       registryContractBinding: reference.registryContractBinding,
     };
     expect(() => assertReferendumRegistryBinding(reference, binding)).not.toThrow();

@@ -26,6 +26,7 @@ export interface CredentialRegistryV1PrivateState {
 export interface ReferendumV2PrivateState {
   readonly role: 'voter' | 'organizer';
   readonly organizerSecret?: Uint8Array;
+  readonly rootPublisherSecret?: Uint8Array;
   readonly voterSecret?: Uint8Array;
   readonly holderBinding?: Uint8Array;
   readonly holderBlind?: Uint8Array;
@@ -56,10 +57,25 @@ export interface ReferendumV2State {
   readonly registryId: Uint8Array;
   readonly issuerId: Uint8Array;
   readonly credentialEpoch: bigint;
-  readonly frozenCredentialRoot: MerkleTreeDigest;
+  /** Sealed provenance root observed at deployment; not necessarily still accepted. */
+  readonly initialCredentialRoot: MerkleTreeDigest;
+  /** Every registry root this referendum currently accepts voters against. */
+  readonly acceptedCredentialRoots: readonly MerkleTreeDigest[];
+  /** Roots the organizer has revoked; a revoked root no longer admits new votes. */
+  readonly revokedCredentialRoots: readonly MerkleTreeDigest[];
+  /** True once the organizer has permanently closed enrollment. */
+  readonly enrollmentClosed: boolean;
   readonly registryContractBinding: Uint8Array;
+  /** Raw registry contract address bytes, as recorded on the referendum ledger. */
+  readonly registryContract: Uint8Array;
   readonly eventId: Uint8Array;
   readonly organizerKey: Uint8Array;
+  /** Public key authorized to publish/revoke accepted credential roots. */
+  readonly rootPublisherKey: Uint8Array;
+  readonly opensAtUnix: bigint;
+  readonly enrollmentClosesAtUnix: bigint;
+  readonly closesAtUnix: bigint;
+  readonly revealClosesAtUnix: bigint;
   readonly phase: 'COMMIT' | 'REVEAL' | 'FINALIZED';
   readonly closed: boolean;
   /** Number of accepted commitments; this is separate from revealed tally. */
@@ -86,7 +102,8 @@ export interface ReferendumV2RegistryBinding {
   readonly registryId: Uint8Array;
   readonly issuerId: Uint8Array;
   readonly credentialEpoch: bigint;
-  readonly frozenCredentialRoot: MerkleTreeDigest;
+  /** Sealed provenance root the referendum was deployed against. */
+  readonly initialCredentialRoot: MerkleTreeDigest;
   readonly registryContractBinding: Uint8Array;
 }
 
@@ -110,6 +127,10 @@ const referendumWitnesses: GeneratedReferendumV2.Witnesses<ReferendumV2PrivateSt
   organizerSecret: (context) => [
     context.privateState,
     requireBytes(context.privateState, 'organizerSecret'),
+  ],
+  rootPublisherSecret: (context) => [
+    context.privateState,
+    requireBytes(context.privateState, 'rootPublisherSecret'),
   ],
   voterSecret: (context) => [
     context.privateState,
@@ -219,10 +240,19 @@ export function parseReferendumV2(data: ChargedState): ReferendumV2State {
     registryId: ledger.registryId,
     issuerId: ledger.issuerId,
     credentialEpoch: ledger.credentialEpoch,
-    frozenCredentialRoot: ledger.frozenCredentialRoot,
+    initialCredentialRoot: ledger.initialCredentialRoot,
+    acceptedCredentialRoots: [...ledger.acceptedCredentialRoots],
+    revokedCredentialRoots: [...ledger.revokedCredentialRoots],
+    enrollmentClosed: ledger.enrollmentClosed,
     registryContractBinding: ledger.registryContractBinding,
+    registryContract: ledger.registryContract.bytes,
     eventId: ledger.eventId,
     organizerKey: ledger.organizerKey,
+    rootPublisherKey: ledger.rootPublisherKey,
+    opensAtUnix: ledger.opensAtUnix,
+    enrollmentClosesAtUnix: ledger.enrollmentClosesAtUnix,
+    closesAtUnix: ledger.closesAtUnix,
+    revealClosesAtUnix: ledger.revealClosesAtUnix,
     phase,
     closed: ledger.closed,
     issuedVotes: ledger.issuedVotes,
@@ -272,7 +302,7 @@ export function assertReferendumRegistryBinding(
   if (reference.credentialEpoch !== binding.credentialEpoch) {
     throw new Error('Referendum credential epoch does not match the frozen registry');
   }
-  if (reference.frozenRoot.field !== binding.frozenCredentialRoot.field) {
+  if (reference.frozenRoot.field !== binding.initialCredentialRoot.field) {
     throw new Error('Referendum root does not match the canonical frozen registry root');
   }
   const expectedRegistryContractBinding = deriveRegistryContractBinding(
@@ -291,6 +321,7 @@ function requireBytes(
   state: ReferendumV2PrivateState,
   key:
     | 'organizerSecret'
+    | 'rootPublisherSecret'
     | 'voterSecret'
     | 'holderBinding'
     | 'holderBlind'
