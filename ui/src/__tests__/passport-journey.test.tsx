@@ -32,7 +32,10 @@ describe('PassportJourney', () => {
     await user.click(screen.getByRole('button', { name: /Use this country/i }));
 
     expect(screen.getByRole('heading', { name: 'Your credential is ready' })).toBeTruthy();
-    expect(screen.getAllByText('SYNTHETIC CREDENTIAL').length).toBeGreaterThanOrEqual(1);
+    // The uppercase SYNTHETIC CREDENTIAL banner is now a row in the summary
+    // it used to shout above: whether a credential is synthetic is a value,
+    // like its country and its issuer, not a flag.
+    expect(screen.getAllByText('Synthetic credential').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/Choose your scope|Elegí un espacio/i)).toBeNull();
     expect(screen.queryByText(/Generate local proof|Generando prueba/i)).toBeNull();
 

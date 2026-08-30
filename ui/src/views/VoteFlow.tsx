@@ -5,6 +5,7 @@ import {
   Callout,
   Card,
   Display,
+  Eyebrow,
   Screen,
   Sheet,
   StatGroup,
@@ -400,7 +401,12 @@ export function VoteFlow({
           </Button>
         }
       >
-        <Display>{displayPoll.question}</Display>
+        {/* The consultation questions are 20-30 words of policy prose. In
+            display type that is nine lines and the options fall below the
+            fold, so the question gets its own smaller size and the title
+            above it carries the context Display would have. */}
+        <Eyebrow>{displayPoll.title}</Eyebrow>
+        <h1 className="flow__question">{displayPoll.question}</h1>
         <fieldset className="flow__choices">
           <legend className="sr-only">{copy.chooseLabel}</legend>
           {options.map((option) => {

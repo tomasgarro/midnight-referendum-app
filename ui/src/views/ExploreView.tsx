@@ -135,12 +135,14 @@ export function ExploreView({
   return (
     <main className="explore">
       <header className="explore__hero">
-        <div className="explore__hero-copy">
-          <Eyebrow>{copy.welcome}</Eyebrow>
-          <Display>{copy.title}</Display>
+        <Eyebrow>{copy.welcome}</Eyebrow>
+        {/* The headline gets the full measure. Sharing the row with the mascot
+            broke a six-word headline over five lines at 320px. */}
+        <Display>{copy.title}</Display>
+        <div className="explore__hero-foot">
           <p className="explore__lead">{copy.lead}</p>
+          <img className="explore__mascot" src="/assets/gaucho-waving.png" alt={copy.mascotAlt} />
         </div>
-        <img className="explore__mascot" src="/assets/gaucho-waving.png" alt={copy.mascotAlt} />
       </header>
 
       <section className="explore__section" aria-labelledby="library-title">

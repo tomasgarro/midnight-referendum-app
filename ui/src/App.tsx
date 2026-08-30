@@ -1,21 +1,11 @@
-import {
-  ArrowRight,
-  BookOpen,
-  CheckCircle,
-  Fingerprint,
-  Globe,
-  Info,
-  Stamp,
-  UserCircle,
-  X,
-} from '@phosphor-icons/react';
+import { ArrowRight, CheckCircle, X } from '@phosphor-icons/react';
 import type { CivicPassportSession, CredentialSummary } from 'midnight-referendum-api';
 import {
   browserCivicCredentialVault,
   MidnightCivicActionAdapter,
   RarimoCivicCredentialAdapter,
 } from 'midnight-referendum-api';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PassportJourney } from '@/components/passport-v2/PassportJourney';
 import type { PreviewPassportJourneyPorts } from '@/components/passport-v2/PreviewPassportJourney';
 import { useWallet } from '@/hooks/use-wallet';
@@ -33,7 +23,6 @@ import { getPollAvailability } from '@/integration/poll-lifecycle';
 import {
   findRuntimeReferendum,
   getPreviewReadiness,
-  getPublicReadiness,
   resolvePassportV2ActionRoute,
 } from '@/integration/preview';
 import { deriveProfileId, deriveReceiptProfileKey } from '@/integration/profile';
@@ -46,7 +35,6 @@ import {
 } from '@/providers/midnight-providers';
 import { WalletProvider } from '@/providers/wallet-context';
 import {
-  APP_COPY,
   APP_MODE,
   APP_NETWORK_LABEL,
   CHAIN_RUNTIME_ENABLED,
@@ -56,6 +44,7 @@ import {
   shouldShowFirstRunOnboarding,
   type Tab,
 } from '@/views/app-runtime';
+import { AppHeader, BottomNav } from '@/views/Chrome';
 import { ExploreView } from '@/views/ExploreView';
 import { PolicyDetailView } from '@/views/PolicyDetailView';
 import { ProfileView } from '@/views/ProfileView';
@@ -85,126 +74,6 @@ function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary 
     epoch: String(summary.credentialEpoch),
     validUntil: summary.validUntil,
   };
-}
-
-function Header({
-  passportSession,
-  passportError,
-  onConnectPassport,
-  onDismissPassportError,
-  locale,
-}: {
-  passportSession: CivicPassportSession | null;
-  passportError: string | null;
-  onConnectPassport: () => void;
-  onDismissPassportError: () => void;
-  locale: CicoLocale;
-}) {
-  const copy = APP_COPY[locale];
-  return (
-    <header className="site-header">
-      <div className="brand-lockup">
-        <span className="brand-mark" aria-hidden="true">
-          <Globe size={24} weight="duotone" />
-        </span>
-        <div>
-          <p className="brand-name">{copy.brand}</p>
-          <p className="brand-note">{copy.brandNote}</p>
-        </div>
-      </div>
-      <div className="wallet-area">
-        <button
-          type="button"
-          className={`wallet-chip ${passportSession ? 'connected' : ''}`}
-          onClick={onConnectPassport}
-          title={
-            passportError ??
-            (locale === 'es'
-              ? 'Identidad pública de Midnight Passport'
-              : 'Public Midnight Passport identity')
-          }
-          aria-label={
-            passportSession
-              ? locale === 'es'
-                ? 'Abrir Midnight Passport'
-                : 'Open Midnight Passport'
-              : locale === 'es'
-                ? 'Conectar Midnight Passport'
-                : 'Connect Midnight Passport'
-          }
-        >
-          <Fingerprint size={14} weight="bold" />{' '}
-          <span>{passportSession?.profile?.displayName ?? 'Passport'}</span>
-        </button>
-        {passportError ? (
-          <div className="wallet-status-popover" role="alert">
-            <button
-              type="button"
-              className="popover-close"
-              onClick={onDismissPassportError}
-              aria-label="Cerrar aviso"
-            >
-              <X size={15} />
-            </button>
-            <strong>
-              {locale === 'es' ? 'No se pudo conectar Passport' : 'Passport could not connect'}
-            </strong>
-            <p>{passportError}</p>
-            <button type="button" className="popover-action" onClick={onConnectPassport}>
-              {locale === 'es' ? 'Reintentar' : 'Try again'}
-            </button>
-          </div>
-        ) : null}
-      </div>
-    </header>
-  );
-}
-
-function BottomNav({
-  tab,
-  onChange,
-  locale,
-}: {
-  tab: Tab;
-  onChange: (tab: Tab) => void;
-  locale: CicoLocale;
-}) {
-  const copy = APP_COPY[locale];
-  const items = [
-    { id: 'explore' as const, label: copy.nav.explore, Icon: BookOpen },
-    { id: 'votes' as const, label: copy.nav.votes, Icon: Stamp },
-    { id: 'profile' as const, label: copy.nav.profile, Icon: UserCircle },
-  ];
-  return (
-    <nav
-      className="bottom-nav"
-      aria-label={locale === 'es' ? 'Navegación principal' : 'Primary navigation'}
-    >
-      {items.map(({ id, label, Icon }) => (
-        <button
-          type="button"
-          key={id}
-          className={`nav-item ${tab === id ? 'active' : ''}`}
-          onClick={() => onChange(id)}
-          aria-current={tab === id ? 'page' : undefined}
-        >
-          <span className="nav-icon">
-            <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
-          </span>
-          <span>{label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function _StatusPill({ children }: { children: ReactNode }) {
-  return (
-    <span className="status-pill">
-      <span className="status-dot" />
-      {children}
-    </span>
-  );
 }
 
 function CivicApp() {
@@ -251,8 +120,6 @@ function CivicApp() {
   };
   const { status: walletStatus, dustBalance } = useWallet();
   const {
-    publicReadReady,
-    publicReadError,
     referendumV2Providers,
     referendumV2ActionContext,
     isReady,
@@ -371,12 +238,6 @@ function CivicApp() {
     relayerMode: RELAYER_MODE,
     v2RuntimeConfigured: CHAIN_RUNTIME_ENABLED,
     credentialVerified: credential?.kind === 'verified-credential',
-  });
-  const publicReadiness = getPublicReadiness({
-    appMode: APP_MODE === 'preview' ? 'preview' : APP_MODE === 'undeployed' ? 'undeployed' : 'demo',
-    contractAddress: runtimeContractAddress,
-    publicProviderReady: publicReadReady,
-    publicProviderError: publicReadError,
   });
   useEffect(() => {
     let active = true;
@@ -593,42 +454,20 @@ function CivicApp() {
   };
   return (
     <div className="app-shell">
+      {/* The mode strip is gone. It sat under the header on every screen
+          announcing the network label and a line of mode help, plus a
+          <details> the user had to open to learn whether anything was wrong.
+          Readiness now surfaces where it is actionable: an unreadable
+          contract is a warning in ResultsPanel, and a blocked submission is a
+          danger Callout inside the confirm sheet. */}
       {!passportJourneyOpen ? (
-        <>
-          <Header
-            passportSession={passportSession}
-            passportError={passportError}
-            onConnectPassport={() => void connectPassport()}
-            onDismissPassportError={() => setPassportError(null)}
-            locale={locale}
-          />
-          <div className="mode-strip">
-            <div className="mode-copy">
-              <span>
-                <span className="status-dot" />
-                {publicReadiness.label}
-              </span>
-              <span className="mode-help">
-                {passportSession
-                  ? 'Passport conectado · acción real separada'
-                  : APP_MODE === 'showcase'
-                    ? 'Passport en vivo · credencial pendiente'
-                    : APP_MODE === 'undeployed'
-                      ? 'Passport oficial · contratos v2 en la red local'
-                      : 'Recorrido educativo · wallet solo para una acción real'}
-              </span>
-            </div>
-            <details className="mode-details">
-              <summary aria-label="Qué significa este estado">
-                <Info size={14} />
-                <span>Info</span>
-              </summary>
-              <p>
-                {publicReadiness.message} {previewReadiness.message}
-              </p>
-            </details>
-          </div>
-        </>
+        <AppHeader
+          passportSession={passportSession}
+          passportError={passportError}
+          onConnectPassport={() => void connectPassport()}
+          onDismissPassportError={() => setPassportError(null)}
+          locale={locale}
+        />
       ) : null}
       {passportJourneyOpen ? (
         <PassportJourney
@@ -709,7 +548,11 @@ function CivicApp() {
           locale={locale}
         />
       ) : null}
-      {receipt && receiptToastVisible ? (
+      {/* The toast exists so a receipt created in the flow is still reachable
+          after the user navigates away. On the receipt screen itself it is a
+          second control pointing at the same place as the screen's own primary
+          action, so it stays hidden there. */}
+      {receipt && receiptToastVisible && flowStage !== 'receipt' ? (
         <div className="receipt-toast" role="status">
           <button
             type="button"
@@ -720,13 +563,15 @@ function CivicApp() {
               setTab('profile');
             }}
           >
-            <CheckCircle size={18} /> Último comprobante listo <ArrowRight size={16} />
+            <CheckCircle size={18} />{' '}
+            {locale === 'es' ? 'Último comprobante listo' : 'Latest receipt ready'}{' '}
+            <ArrowRight size={16} />
           </button>
           <button
             type="button"
             className="receipt-toast-close"
             onClick={() => setReceiptToastVisible(false)}
-            aria-label="Cerrar notificación"
+            aria-label={locale === 'es' ? 'Cerrar notificación' : 'Dismiss notification'}
           >
             <X size={15} />
           </button>

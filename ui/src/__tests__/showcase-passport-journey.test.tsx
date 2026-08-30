@@ -41,7 +41,7 @@ describe('Passport-first public showcase', () => {
       />,
     );
 
-    expect(screen.getByText(/LIVE PASSPORT · PROVIDER-OWNED/i)).toBeTruthy();
+    expect(screen.getByText(/Live Passport · provider-owned/i)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Get started/i }));
     await user.click(screen.getByRole('button', { name: /Continue/i }));
     await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
@@ -54,7 +54,9 @@ describe('Passport-first public showcase', () => {
     expect(
       screen.getByRole('heading', { name: 'The credential is not connected yet' }),
     ).toBeTruthy();
-    expect(screen.queryByText(/SYNTHETIC CREDENTIAL/i)).toBeNull();
+    // The guarantee is unchanged: a live journey never presents a synthetic
+    // credential. Only the wording of the thing it must not show has changed.
+    expect(screen.queryByText(/Synthetic credential/i)).toBeNull();
     await user.click(screen.getByRole('button', { name: /Explore World/i }));
     expect(onCredentialReady).not.toHaveBeenCalled();
   });

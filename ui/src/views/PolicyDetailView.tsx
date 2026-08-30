@@ -145,14 +145,18 @@ export function PolicyDetailView({
           </span>
         </div>
       }
+      /* A closed consultation gets no footer. A disabled button repeating the
+         status chip is a duplicate label for one intent, and a washed-out
+         accent shape still reads as an action. */
       footer={
-        <Button
-          block
-          disabled={!isOpen}
-          onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
-        >
-          {isOpen ? (credential ? copy.vote : copy.prepare) : copy.closed}
-        </Button>
+        isOpen ? (
+          <Button
+            block
+            onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
+          >
+            {credential ? copy.vote : copy.prepare}
+          </Button>
+        ) : undefined
       }
     >
       <header className="policy__hero">

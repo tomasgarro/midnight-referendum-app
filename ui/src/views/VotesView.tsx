@@ -178,11 +178,7 @@ export function VotesView({
       <header className="votes__head">
         <Eyebrow>{copy.eyebrow}</Eyebrow>
         <Display>{copy.title}</Display>
-        <CounterRow
-          counters={[
-            { id: 'open', label: copy.available, count: openPollCount, live: openPollCount > 0 },
-          ]}
-        />
+        <CounterRow counters={[{ id: 'open', label: copy.available, count: openPollCount }]} />
       </header>
 
       {credential ? (
@@ -302,13 +298,16 @@ export function VotesView({
                   <h2 className="poll__title">{displayPoll.title}</h2>
                   <p className="poll__body">{displayPoll.description}</p>
                   <div className="poll__actions">
-                    <Button
-                      size="sm"
-                      disabled={!isOpen}
-                      onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
-                    >
-                      {isOpen ? (credential ? copy.vote : copy.prepare) : copy.closed}
-                    </Button>
+                    {isOpen ? (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          credential ? onStartVote(poll.id) : onOpenPassportJourney()
+                        }
+                      >
+                        {credential ? copy.vote : copy.prepare}
+                      </Button>
+                    ) : null}
                     <Button variant="link" size="sm" onClick={() => onOpenPolicy(poll.id)}>
                       {copy.read}
                     </Button>
