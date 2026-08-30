@@ -72,6 +72,7 @@ import {
   useMidnightProviders,
 } from '@/providers/midnight-providers';
 import { WalletProvider } from '@/providers/wallet-context';
+import { HowItWorks } from '@/views/HowItWorks';
 
 type Tab = 'explore' | 'votes' | 'profile';
 type Choice = VoteReveal['choice'];
@@ -1646,33 +1647,6 @@ const PRIVATE_DATA = [
   'La relación entre tu identidad y tu voto, siempre.',
 ];
 
-const FAQ = [
-  {
-    q: '¿Qué estamos construyendo?',
-    a: 'Un prototipo de consulta ciudadana sobre Midnight, una red donde se puede demostrar algo sin revelar los datos que lo respaldan. Sirve para mostrar que se puede votar de forma anónima y verificable a la vez.',
-  },
-  {
-    q: '¿Pueden saber qué voté?',
-    a: 'No mientras la votación está abierta: tu elección viaja como un compromiso cifrado que ni el equipo ni la red pueden abrir. Al cerrar se publican únicamente los totales, sin ninguna forma de volver desde un total hasta una persona.',
-  },
-  {
-    q: '¿Cómo evitan que alguien vote dos veces?',
-    a: 'Cada persona habilitada genera una marca única e irrepetible para esta consulta, derivada de un secreto que solo vive en tu dispositivo. Si esa marca ya figura, el contrato rechaza el segundo voto. La marca no permite averiguar de quién es.',
-  },
-  {
-    q: '¿Qué pasa con mi evidencia?',
-    a: 'La evidencia se procesa mediante el proveedor configurado y se convierte en claims mínimos. Esta app no muestra ni conserva material crudo; si el proveedor no está configurado, la acción se bloquea.',
-  },
-  {
-    q: '¿Es un referéndum oficial?',
-    a: 'No. Es un prototipo independiente hecho para un hackathon. No tiene validez legal ni vínculo con ningún organismo público.',
-  },
-  {
-    q: '¿Qué NO puede prometer todavía?',
-    a: 'La credencial prueba únicamente la regla publicada por su emisor. No mostramos una atestación como garantía de autenticidad, no inventamos un proveedor y el contrato debe verificarse por sus fuentes públicas.',
-  },
-];
-
 const GLOSSARY = [
   {
     term: 'Compromiso',
@@ -1735,32 +1709,6 @@ const PRIVATE_DATA_EN = [
   'Your choice while voting is open.',
   'The relationship between your identity and your vote, always.',
 ];
-const FAQ_EN = [
-  {
-    q: 'What are we building?',
-    a: 'An independent civic consultation prototype on Midnight. It demonstrates how a response can be private and publicly verifiable at the same time.',
-  },
-  {
-    q: 'Can you see what I voted?',
-    a: 'Not while voting is open: your choice travels as an encrypted commitment that neither the team nor the network can open. After closing, only totals are published.',
-  },
-  {
-    q: 'How do you prevent a second vote?',
-    a: 'Each eligible person produces a unique marker for this consultation. If it is already present, the contract rejects a second vote without revealing who cast the first.',
-  },
-  {
-    q: 'What happens to my evidence?',
-    a: 'Evidence is processed by the configured provider and reduced to minimal claims. This app does not display or retain raw material; if the provider is unavailable, the action is blocked.',
-  },
-  {
-    q: 'Is this an official referendum?',
-    a: 'No. It is an independent prototype for a hackathon. It has no legal validity or connection to a public authority.',
-  },
-  {
-    q: 'What can it not promise yet?',
-    a: 'A credential only proves the rule published by its issuer. We do not present an attestation as a guarantee of authenticity, invent a provider, or hide the public contract evidence.',
-  },
-];
 const GLOSSARY_EN = [
   {
     term: 'Commitment',
@@ -1810,8 +1758,6 @@ function ExploreView({
           private: 'Nunca sale de tu teléfono',
           stages: 'Etapas',
           timelineTitle: 'De tu voto al resultado',
-          faq: 'Preguntas frecuentes',
-          faqTitle: 'Entendé la propuesta',
           glossary: 'En criollo',
           independent:
             'Prototipo independiente para hackathon. No es un referéndum oficial ni tiene validez legal.',
@@ -1841,8 +1787,6 @@ function ExploreView({
           private: 'Never leaves your device',
           stages: 'Stages',
           timelineTitle: 'From your vote to the result',
-          faq: 'Frequently asked questions',
-          faqTitle: 'Understand the proposal',
           glossary: 'In plain terms',
           independent:
             'Independent hackathon prototype. It is not an official referendum and has no legal validity.',
@@ -1856,7 +1800,6 @@ function ExploreView({
   const separationItems = locale === 'es' ? SEPARATION : SEPARATION_EN;
   const publicData = locale === 'es' ? PUBLIC_DATA : PUBLIC_DATA_EN;
   const privateData = locale === 'es' ? PRIVATE_DATA : PRIVATE_DATA_EN;
-  const faqItems = locale === 'es' ? FAQ : FAQ_EN;
   const glossaryItems = locale === 'es' ? GLOSSARY : GLOSSARY_EN;
   return (
     <main className="page-content">
@@ -2028,26 +1971,7 @@ function ExploreView({
         </ol>
       </section>
 
-      <section className="faq-section" aria-labelledby="faq-title">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">{copy.faq}</p>
-            <h2 id="faq-title">{copy.faqTitle}</h2>
-          </div>
-          <Question size={24} />
-        </div>
-        <div className="faq-list">
-          {faqItems.map(({ q, a }) => (
-            <details className="faq-item" key={q}>
-              <summary>
-                <span>{q}</span>
-                <ArrowRight size={18} />
-              </summary>
-              <p>{a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      <HowItWorks locale={locale} />
 
       <section className="glossary-section" aria-labelledby="glossary-title">
         <h2 id="glossary-title">{copy.glossary}</h2>

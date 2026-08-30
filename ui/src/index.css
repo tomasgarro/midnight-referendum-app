@@ -720,45 +720,6 @@ h2 {
   font-size: 12px;
   line-height: 1.45;
 }
-.faq-section {
-  margin-top: 29px;
-}
-.faq-list {
-  border-top: 1px solid var(--legacy-line);
-  margin-top: 13px;
-}
-.faq-item {
-  border-bottom: 1px solid var(--legacy-line);
-}
-.faq-item summary {
-  list-style: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 16px 2px;
-  color: var(--legacy-ink);
-  font-size: 13px;
-  font-weight: 700;
-}
-.faq-item summary::-webkit-details-marker {
-  display: none;
-}
-.faq-item summary svg {
-  color: #4388cf;
-  transition: transform 0.15s ease;
-  flex: 0 0 auto;
-}
-.faq-item[open] summary svg {
-  transform: rotate(90deg);
-}
-.faq-item p {
-  margin: -3px 22px 16px 2px;
-  color: #536680;
-  font-size: 13px;
-  line-height: 1.55;
-}
 .independent-note {
   margin: 22px 0 0;
   display: flex;
