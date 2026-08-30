@@ -12,7 +12,7 @@ export class PassportJourneyPage {
       name: /Comenzar|Get started/i,
     });
     this.journeyHeading = page.getByRole('heading', {
-      name: /A clearer way to participate|Una forma más clara/i,
+      name: /Prove you can vote|Demostrá que podés votar/i,
     });
     this.credentialHeading = page.getByRole('heading', {
       name: /Your credential is ready|Tu credencial está lista/i,
