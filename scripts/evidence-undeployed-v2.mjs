@@ -516,6 +516,7 @@ function command(executable, args, label, extraEnv = {}) {
       exitCode: result.status ?? null,
       code: commandFailureCode(label, output),
     });
+    reportFailure(label, output);
     throw new Error(`${label} failed`);
   }
   record(label, safeCommandOutput(output));
@@ -546,9 +547,25 @@ async function commandAsync(executable, args, label, extraEnv = {}) {
       exitCode: status,
       code: commandFailureCode(label, output),
     });
+    reportFailure(label, output);
     throw new Error(`${label} failed`);
   }
   record(label, safeCommandOutput(output));
+}
+
+/**
+ * A failed step records only a coarse failure code, because the transcript is
+ * committed evidence and raw subprocess output can carry sensitive material.
+ * That left failures undiagnosable, so print the SANITIZED output to stderr
+ * for the operator while the transcript keeps only the code.
+ */
+function reportFailure(label, output) {
+  const safe = safeCommandOutput(output);
+  const text = typeof safe === 'string' ? safe : (safe?.output ?? 'suppressed_sensitive_output');
+  const tail = text.split('\n').slice(-60).join('\n');
+  console.error(`--- ${label} failed; sanitized output follows ---`);
+  console.error(tail);
+  console.error(`--- end ${label} output ---`);
 }
 
 function commandFailureCode(label, output) {
