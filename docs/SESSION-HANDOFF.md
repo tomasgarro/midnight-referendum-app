@@ -202,15 +202,17 @@ machine changes, not repo changes**:
 
 2. **Linux platform binaries added to `node_modules`.** The tree was installed
    from Windows, so it carries only win32 native binaries. Running the Linux
-   gate against it failed first on rollup, then on esbuild. Three packages were
-   extracted in place, alongside the existing win32 ones rather than replacing
-   them:
+   gate against it failed on rollup, then esbuild, then biome — each one only
+   surfacing after the previous was fixed. Four packages were extracted in
+   place, alongside the existing win32 ones rather than replacing them:
 
    - `node_modules/@rollup/rollup-linux-x64-gnu` @ 4.62.4
    - `node_modules/esbuild-linux-64` @ 0.14.54
    - `node_modules/vite/node_modules/@esbuild/linux-x64` @ 0.28.1
      (Vite bundles its own esbuild at a different version than the root one —
      0.28.1 vs 0.14.54 — so both are needed.)
+   - `node_modules/@biomejs/cli-linux-x64` @ 2.5.10, needed by the hook's
+     `npm run quality` step rather than by `verify-linux.sh` itself.
 
    These are untracked and invisible to git. **A clean `npm install` from
    Windows will remove them and the gate will start failing again** with
@@ -223,6 +225,25 @@ The durable fix is a separate Linux-side `npm install`, which would mean a
 second `node_modules` tree or a checkout inside the WSL filesystem rather than
 on `/mnt/c`. That is also the fix for speed: the gate runs the whole suite
 across the Windows mount, which is slow enough to be worth avoiding.
+
+**The hook must run inside WSL, not Git Bash.** Installing Linux Node does not
+make `git push` from Git Bash work: the hook still executes there, where
+`uname -s` is `MINGW64` and the script refuses to run. The push itself has to be
+issued from WSL, with the Windows credential manager supplied explicitly:
+
+```
+git -c credential.helper="/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe" push -u origin <branch>
+```
+
+**A third gotcha, and a real one:** `.husky/pre-push` and `.husky/pre-commit`
+were sitting in the working tree with CRLF line endings, so `dash` — which WSL
+git uses to run hooks — died with "Illegal option -", choking on the trailing
+carriage return after `set -e`. The index holds LF and `.gitattributes`
+already says `* text=auto eol=lf`, so this is a local working-tree
+corruption from some Windows-side tool, not a repo defect;
+rewriting the two files as LF fixed it and produced no diff. If the hook ever
+fails under WSL with `Illegal option`, check `git ls-files --eol .husky/` before
+looking anywhere else.
 
 Running the gate by hand, rather than through the hook:
 
