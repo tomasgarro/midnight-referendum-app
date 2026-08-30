@@ -1,0 +1,89 @@
+/*
+ * Results panel.
+ *
+ * The tally bar is the same track/fill idiom as WaitState -- one bar shape in
+ * the app, not a styled <progress> here and a div there. Every fill is the
+ * accent: the option labels carry the difference, and colouring Yes green and
+ * No red would state a preference the project does not have.
+ */
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.results__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.results__note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.results__eligible {
+  margin: var(--space-2) 0 0;
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+.results__eligible strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.results__tally {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.results__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 6px;
+}
+
+.results__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.results__figure {
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.results__track {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.results__fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.results__total {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
