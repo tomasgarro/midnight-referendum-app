@@ -16,7 +16,9 @@ describe('PassportJourney', () => {
     const onClose = vi.fn();
     render(<PassportJourney mode="demo" onClose={onClose} onCredentialReady={onCredentialReady} />);
 
-    expect(screen.getByRole('heading', { name: 'A clearer way to participate' })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Prove you can vote. Without proving who you are.' }),
+    ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Get started/i }));
     expect(
       screen.getByRole('heading', { name: 'Three separate things, one simple experience' }),

@@ -81,9 +81,9 @@ const copy = {
     synthetic: 'CREDENCIAL SINTÉTICA',
     providerOwned: 'PROVEEDOR RESPONSABLE',
     beforeStart: 'Antes de empezar',
-    welcomeTitle: 'Una forma más clara de participar',
+    welcomeTitle: 'Demostrá que podés votar. Sin demostrar quién sos.',
     welcomeBody:
-      'Explorá consultas públicas con una identidad separada de cada respuesta. Primero te contamos cómo funciona; después decidís si querés conectar Passport.',
+      'En estas consultas públicas, tu identidad y tu respuesta viajan separadas. Primero te mostramos cómo funciona; después decidís si querés conectar Passport.',
     start: 'Comenzar',
     explore: 'Explorar sin conectar',
     privacyEyebrow: 'Privacidad en tres partes',
@@ -91,21 +91,18 @@ const copy = {
     privacyBody:
       'Passport identifica tu sesión. Una credencial demuestra una regla de elegibilidad. Tu respuesta cívica queda separada de ambas.',
     privacyItems: [
-      [
-        'Passport',
-        'Crea y administra tu identidad. Solo recibe los campos de perfil que apruebes.',
-      ],
+      ['Passport', 'Es tu inicio de sesión seguro. Solo recibe los campos de perfil que apruebes.'],
       [
         'Credencial',
-        'Un proveedor verifica evidencia y emite claims mínimos, sin conservar tu documento.',
+        'Un proveedor confirma tu evidencia y entrega los datos mínimos, sin conservar tu documento.',
       ],
       ['Respuesta', 'Tu elección o acción nunca se convierte en tu identidad Passport.'],
     ],
     continue: 'Continuar',
     passportStep: 'Paso 1 · consentimiento',
-    passportTitle: 'Conectá Midnight Passport',
+    passportTitle: 'Conectá tu Passport',
     passportBody:
-      'Passport crea y administra tu identidad. CICO solo recibe los campos de perfil que apruebes; no crea una cuenta Passport dentro de esta app.',
+      'Passport es tu inicio de sesión seguro: crea y administra tu identidad. CICO solo recibe los campos de perfil que apruebes; no creamos una cuenta Passport dentro de esta app.',
     requested: 'Se solicita',
     requestedValue: 'Sesión y perfil aprobado',
     notRequested: 'No se solicita',
@@ -122,26 +119,26 @@ const copy = {
     approvedValue: 'Sesión Passport y nombre visible',
     walletTitle: 'La wallet viene después',
     walletBody:
-      'Passport gestiona identidad. El proveedor gestiona evidencia. La wallet solo aprueba una acción real de Midnight. El recorrido demo no necesita wallet.',
+      'Passport gestiona tu identidad. El proveedor gestiona la evidencia. Una wallet solo aparece más adelante, para aprobar una acción real. Este recorrido de demo no la necesita.',
     eligibilityStep: 'Paso 3 · elegibilidad',
     eligibilityTitle: 'Prepará una credencial, no un voto',
     eligibilityBody:
-      'En el futuro, un handoff seguro podrá llevarte a un teléfono con NFC para verificar tu pasaporte. Hoy recorreremos estados honestos de demo: no leemos un documento ni generamos una atestación real.',
+      'Más adelante vas a poder usar un teléfono con NFC para verificar tu documento de forma segura. Por ahora, esto es una demostración: no leemos ningún documento real ni generamos una prueba real.',
     evidenceSteps: [
-      ['Solicitud preparada', 'Se crea un vínculo temporal con este navegador.'],
+      ['Pedido preparado', 'Se crea un vínculo temporal con este navegador.'],
       [
-        'Handoff NFC / QR',
-        'El dispositivo compatible verifica la evidencia fuera de esta interfaz.',
+        'Verificación con NFC o QR',
+        'Un dispositivo compatible confirma la evidencia fuera de esta pantalla.',
       ],
-      ['Claims mínimos', 'El emisor conserva solo lo necesario para la regla de elegibilidad.'],
+      ['Datos mínimos', 'El emisor guarda solo lo necesario para confirmar que sos elegible.'],
     ],
     future: 'DEMO · SIN LECTURA NFC NI PRUEBA REAL',
     prepare: 'Preparar credencial',
-    countryStep: 'Paso 4 · fixture de prueba',
+    countryStep: 'Paso 4 · país de prueba',
     countryTitle: 'Elegí el país de esta demo',
     countryBody:
       'La selección solo configura una credencial sintética para probar la experiencia. No es una nacionalidad real, no se guarda como identidad y podés cambiarla cuando quieras.',
-    countryLabel: 'País del fixture',
+    countryLabel: 'País de prueba',
     countryHelp:
       'Buscá por nombre o código ISO. En una integración real, el proveedor devolverá el país verificado.',
     useCountry: 'Usar este país',
@@ -149,10 +146,10 @@ const copy = {
     successTitle: 'Tu credencial está lista',
     successBody:
       'La credencial sintética te permite explorar el panel y ver qué espacios estarían disponibles. No prueba que un documento real haya sido verificado.',
-    country: 'País del fixture',
+    country: 'País de prueba',
     age: 'Clase de edad',
     issuer: 'Emisor',
-    issuerValue: 'CICO demo · fixture',
+    issuerValue: 'CICO demo · prueba',
     dashboard: 'Ir al panel cívico',
     privacy: 'Tu documento, secreto de voto y elección no aparecen en esta credencial.',
     unavailableTitle: 'La credencial todavía no está conectada',
@@ -171,6 +168,7 @@ const copy = {
       'Holder binding verificado para esta sesión. No mostramos sus bytes ni lo tratamos como un claim de elegibilidad.',
     holderBindingUnsupported:
       'Esta versión de Passport no expone un holder binding verificado. La sesión sigue separada de la credencial.',
+    mascotPlaceholder: 'Espacio para la mascota (próximamente)',
   },
   en: {
     back: 'Back to the app',
@@ -184,9 +182,9 @@ const copy = {
     synthetic: 'SYNTHETIC CREDENTIAL',
     providerOwned: 'PROVIDER-OWNED',
     beforeStart: 'Before you start',
-    welcomeTitle: 'A clearer way to participate',
+    welcomeTitle: 'Prove you can vote. Without proving who you are.',
     welcomeBody:
-      'Explore public consultations with an identity kept separate from every response. We will explain the boundary first, then you decide whether to connect Passport.',
+      'In these public consultations, your identity and your response travel separately. We will show you how it works first, then you decide whether to connect Passport.',
     start: 'Get started',
     explore: 'Explore without connecting',
     privacyEyebrow: 'Privacy in three parts',
@@ -194,21 +192,18 @@ const copy = {
     privacyBody:
       'Passport identifies your session. A credential proves an eligibility rule. Your civic response stays separate from both.',
     privacyItems: [
-      [
-        'Passport',
-        'Creates and manages your identity. It receives only the profile fields you approve.',
-      ],
+      ['Passport', 'Your secure sign-in. It receives only the profile fields you approve.'],
       [
         'Credential',
-        'A provider verifies evidence and issues minimal claims without keeping your document.',
+        'A provider confirms your evidence and hands over minimal data, without keeping your document.',
       ],
       ['Response', 'Your choice or civic action never becomes your Passport identity.'],
     ],
     continue: 'Continue',
     passportStep: 'Step 1 · consent',
-    passportTitle: 'Continue with Midnight Passport',
+    passportTitle: 'Connect your Passport',
     passportBody:
-      'Passport creates and manages your identity. CICO receives only the profile fields you approve; this app never creates a Passport account internally.',
+      'Passport is your secure sign-in: it creates and manages your identity. CICO receives only the profile fields you approve; this app never creates a Passport account internally.',
     requested: 'Requested',
     requestedValue: 'Session and approved profile',
     notRequested: 'Not requested',
@@ -225,23 +220,23 @@ const copy = {
     approvedValue: 'Passport session and display name',
     walletTitle: 'The wallet comes later',
     walletBody:
-      'Passport handles identity. A provider handles evidence. A wallet only approves a real Midnight action. The demo journey needs no wallet.',
+      'Passport handles your identity. A provider handles the evidence. A wallet only shows up later, to approve a real action. This demo journey needs no wallet.',
     eligibilityStep: 'Step 3 · eligibility',
     eligibilityTitle: 'Prepare a credential, not a vote',
     eligibilityBody:
-      'In the future, a secure handoff can take you to an NFC-capable phone to verify your passport. Today we walk through honest demo states: no document is read and no real attestation is generated.',
+      'Later on, you will be able to use an NFC-enabled phone to verify your document securely. For now, this is a demo: no real document is read and nothing real is generated.',
     evidenceSteps: [
-      ['Request prepared', 'A temporary browser binding is created.'],
-      ['NFC / QR handoff', 'A compatible device verifies evidence outside this interface.'],
-      ['Minimal claims', 'The issuer keeps only what the eligibility rule needs.'],
+      ['Request prepared', 'A temporary link is created with this browser.'],
+      ['NFC or QR check', 'A compatible device confirms the evidence outside this screen.'],
+      ['Minimal data', 'The issuer keeps only what is needed to confirm you are eligible.'],
     ],
     future: 'DEMO · NO NFC READ OR REAL PROOF',
     prepare: 'Prepare credential',
-    countryStep: 'Step 4 · test fixture',
+    countryStep: 'Step 4 · test country',
     countryTitle: 'Choose this demo’s country',
     countryBody:
       'This selection only configures a synthetic credential for testing the experience. It is not a real nationality, is not saved as identity, and can be changed at any time.',
-    countryLabel: 'Fixture country',
+    countryLabel: 'Test country',
     countryHelp:
       'Search by name or ISO code. In a real integration, the provider returns the verified country.',
     useCountry: 'Use this country',
@@ -249,10 +244,10 @@ const copy = {
     successTitle: 'Your credential is ready',
     successBody:
       'The synthetic credential lets you explore the dashboard and see which areas would be available. It does not prove a real document was verified.',
-    country: 'Fixture country',
+    country: 'Test country',
     age: 'Age class',
     issuer: 'Issuer',
-    issuerValue: 'CICO demo · fixture',
+    issuerValue: 'CICO demo · test',
     dashboard: 'Go to civic dashboard',
     privacy: 'Your document, voting secret, and choice do not appear in this credential.',
     unavailableTitle: 'The credential is not connected yet',
@@ -271,6 +266,7 @@ const copy = {
       'Holder binding verified for this session. We do not display its bytes or treat it as an eligibility claim.',
     holderBindingUnsupported:
       'This Passport build does not expose a verified holder binding. The session remains separate from any credential.',
+    mascotPlaceholder: 'Mascot space (coming soon)',
   },
 } as const;
 
@@ -462,7 +458,14 @@ export function UnifiedPassportOnboarding({
             {t.welcomeTitle}
           </h2>
           <p>{t.welcomeBody}</p>
-          <div className="mascot-reserved-slot" data-mascot="future-capybara" aria-hidden="true" />
+          <div
+            className="mascot-reserved-slot"
+            data-mascot="future-capybara"
+            role="img"
+            aria-label={t.mascotPlaceholder}
+          >
+            <span aria-hidden="true">🦫</span>
+          </div>
           <button
             className="passport-action-button primary"
             onClick={() => setStage('privacy')}
@@ -777,8 +780,11 @@ export function UnifiedPassportOnboarding({
               <div
                 className="mascot-reserved-slot"
                 data-mascot="future-capybara"
-                aria-hidden="true"
-              />
+                role="img"
+                aria-label={t.mascotPlaceholder}
+              >
+                <span aria-hidden="true">🦫</span>
+              </div>
               <p className="eyebrow">{t.successStep}</p>
               <h2 id="onboarding-success-title" ref={headingRef} tabIndex={-1}>
                 {t.successTitle}
