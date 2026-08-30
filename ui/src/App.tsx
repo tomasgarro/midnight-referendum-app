@@ -73,7 +73,7 @@ import {
 } from '@/providers/midnight-providers';
 import { WalletProvider } from '@/providers/wallet-context';
 
-type Tab = 'understand' | 'votes' | 'verify' | 'profile';
+type Tab = 'explore' | 'votes' | 'profile';
 type Choice = VoteReveal['choice'];
 type FlowStage = 'verify' | 'eligible' | 'choose' | 'review' | 'processing' | 'receipt';
 
@@ -112,14 +112,14 @@ const APP_COPY = {
     brand: 'Referéndum Cívico',
     brandNote: 'Prototipo independiente',
     language: 'Idioma',
-    nav: { understand: 'Entendé', votes: 'Votaciones', verify: 'Verificá', profile: 'Mi perfil' },
+    nav: { explore: 'Explorá', votes: 'Votá', profile: 'Mi perfil' },
     network: { undeployed: 'Local no desplegado', preview: 'Preview', demo: 'Demo local' },
   },
   en: {
     brand: 'Civic Referendum',
     brandNote: 'Independent prototype',
     language: 'Language',
-    nav: { understand: 'Learn', votes: 'Consultations', verify: 'Verify', profile: 'Profile' },
+    nav: { explore: 'Explore', votes: 'Vote', profile: 'Profile' },
     network: { undeployed: 'Undeployed local', preview: 'Preview', demo: 'Local demo' },
   },
 } as const;
@@ -753,9 +753,8 @@ function BottomNav({
 }) {
   const copy = APP_COPY[locale];
   const items = [
-    { id: 'understand' as const, label: copy.nav.understand, Icon: BookOpen },
+    { id: 'explore' as const, label: copy.nav.explore, Icon: BookOpen },
     { id: 'votes' as const, label: copy.nav.votes, Icon: Stamp },
-    { id: 'verify' as const, label: copy.nav.verify, Icon: ShieldCheck },
     { id: 'profile' as const, label: copy.nav.profile, Icon: UserCircle },
   ];
   return (
@@ -1778,12 +1777,14 @@ const GLOSSARY_EN = [
   },
 ];
 
-function UnderstandView({
+function ExploreView({
   polls,
+  publicContractAddress,
   onOpenPolicy,
   locale,
 }: {
   polls: readonly Poll[];
+  publicContractAddress: string | null;
   onOpenPolicy: (pollId: string) => void;
   locale: CicoLocale;
 }) {
@@ -1815,6 +1816,10 @@ function UnderstandView({
           independent:
             'Prototipo independiente para hackathon. No es un referéndum oficial ni tiene validez legal.',
           read: 'Consulta, fuentes y consecuencias posibles',
+          resultsEyebrow: 'Resultados públicos',
+          resultsTitle: 'Lo que cualquiera puede leer, sin iniciar sesión',
+          resultsLead:
+            'Estos totales se leen en vivo desde el estado público del contrato. No hace falta credencial ni wallet para verlos.',
         }
       : {
           welcome: 'Welcome',
@@ -1842,6 +1847,10 @@ function UnderstandView({
           independent:
             'Independent hackathon prototype. It is not an official referendum and has no legal validity.',
           read: 'Consultation, sources, and possible consequences',
+          resultsEyebrow: 'Public results',
+          resultsTitle: 'What anyone can read, without signing in',
+          resultsLead:
+            'These totals are read live from the contract public state. No credential or wallet is needed to view them.',
         };
   const howItems = locale === 'es' ? HOW_IT_WORKS : HOW_IT_WORKS_EN;
   const separationItems = locale === 'es' ? SEPARATION : SEPARATION_EN;
@@ -2052,33 +2061,74 @@ function UnderstandView({
         </dl>
       </section>
 
+      <section className="results-section" aria-labelledby="public-results-title">
+        <div className="section-title-row">
+          <div>
+            <p className="eyebrow">{copy.resultsEyebrow}</p>
+            <h2 id="public-results-title">{copy.resultsTitle}</h2>
+          </div>
+          <ChartBar size={22} />
+        </div>
+        <p className="section-lead">{copy.resultsLead}</p>
+        {polls.some((poll) => poll.runtimeContractAddress) ? (
+          polls
+            .filter((poll) => poll.runtimeContractAddress)
+            .map((poll) => (
+              <ResultsPanel
+                key={`explore-results-${poll.id}`}
+                contractAddress={poll.runtimeContractAddress ?? null}
+                title={localizePoll(poll, locale).title}
+                locale={locale}
+              />
+            ))
+        ) : (
+          <ResultsPanel contractAddress={publicContractAddress} locale={locale} />
+        )}
+      </section>
+
+      {/*
+       * TODO(product): "Suggest a consultation" entry point.
+       * Explore will later let anyone propose a new consultation for review.
+       * Intentionally not built yet — placeholder only, per the wave-2 nav
+       * consolidation scope. When implemented, keep it public (no credential
+       * required to submit a suggestion) and separate from the private
+       * voting/eligibility path.
+       */}
+
       <p className="independent-note">
         <Info size={16} /> {copy.independent}
       </p>
     </main>
   );
 }
-
-function VerifyView({ receipts, locale }: { receipts: VoteReceipt[]; locale: CicoLocale }) {
+/**
+ * Receipt lookup + explanation, folded into the profile from the former
+ * standalone Verify tab. Checks only against receipts already loaded for
+ * this profile (local-first: see the privacy note rendered alongside the
+ * receipt list in ProfileView) — it never queries a third party.
+ */
+function ReceiptVerifier({ receipts, locale }: { receipts: VoteReceipt[]; locale: CicoLocale }) {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<'found' | 'missing' | null>(null);
   const matched = receipts.find((receipt) => receipt.id === query.trim());
   return (
-    <main className="page-content">
-      <section className="verify-hero">
-        <div className="verify-icon">
-          <ShieldCheck size={32} />
+    <section className="profile-history verify-section" aria-labelledby="verify-receipt-title">
+      <div className="section-title-row">
+        <div>
+          <p className="eyebrow">
+            {locale === 'es' ? 'Transparencia pública' : 'Public transparency'}
+          </p>
+          <h2 id="verify-receipt-title">
+            {locale === 'es' ? 'Verificá un comprobante' : 'Verify a receipt'}
+          </h2>
         </div>
-        <p className="eyebrow">
-          {locale === 'es' ? 'Transparencia pública' : 'Public transparency'}
-        </p>
-        <h1>{locale === 'es' ? 'Verificá un comprobante' : 'Verify a receipt'}</h1>
-        <p>
-          {locale === 'es'
-            ? `Buscá el identificador para consultar si fue confirmado en ${networkLabel(locale)}.`
-            : `Search the identifier to see whether it was confirmed on ${networkLabel(locale)}.`}
-        </p>
-      </section>
+        <ShieldCheck size={22} />
+      </div>
+      <p>
+        {locale === 'es'
+          ? `Buscá el identificador para consultar si fue confirmado en ${networkLabel(locale)}.`
+          : `Search the identifier to see whether it was confirmed on ${networkLabel(locale)}.`}
+      </p>
       <form
         className="verify-form"
         onSubmit={(event) => {
@@ -2178,7 +2228,7 @@ function VerifyView({ receipts, locale }: { receipts: VoteReceipt[]; locale: Cic
           </li>
         </ul>
       </section>
-    </main>
+    </section>
   );
 }
 
@@ -2297,6 +2347,12 @@ function ProfileView({
           </div>
           <span className="profile-count">{receipts.length}</span>
         </div>
+        <p className="receipt-privacy-note">
+          <Lock size={15} />{' '}
+          {locale === 'es'
+            ? 'Estos comprobantes se guardan cifrados solo en este dispositivo; la red nunca puede vincularlos con vos.'
+            : 'These receipts are stored encrypted on this device only; the network can never link them to you.'}
+        </p>
         {receipts.length ? (
           <div className="profile-receipts">
             {receipts.map((receipt) => (
@@ -2359,6 +2415,7 @@ function ProfileView({
           </div>
         )}
       </section>
+      <ReceiptVerifier receipts={receipts} locale={locale} />
       <section className="domains-card" aria-labelledby="domains-title">
         <div className="domains-icon">
           <Globe size={25} />
@@ -2734,7 +2791,7 @@ function VoteFlow({
             <div className="receipt-box-id">
               <strong>
                 {receipt?.id ??
-                  (locale === 'es' ? 'Disponible en Verificá' : 'Available in Verify')}
+                  (locale === 'es' ? 'Disponible en tu perfil' : 'Available in your profile')}
               </strong>
               {receipt ? <CopyReceiptButton receiptId={receipt.id} locale={locale} /> : null}
             </div>
@@ -3108,10 +3165,13 @@ function CivicApp() {
   };
 
   const currentTabContent =
-    tab === 'understand' ? (
-      <UnderstandView polls={polls} onOpenPolicy={setPolicyDetailId} locale={locale} />
-    ) : tab === 'verify' ? (
-      <VerifyView receipts={receipts} locale={locale} />
+    tab === 'explore' ? (
+      <ExploreView
+        polls={polls}
+        publicContractAddress={runtimeContractAddress}
+        onOpenPolicy={setPolicyDetailId}
+        locale={locale}
+      />
     ) : tab === 'profile' ? (
       <ProfileView
         polls={polls}
@@ -3226,7 +3286,7 @@ function CivicApp() {
               onConfirm={() => void confirmVote()}
               onViewReceipt={() => {
                 setFlowStage(null);
-                setTab('verify');
+                setTab('profile');
               }}
               walletStatus={walletStatus}
               passportSession={passportSession}
@@ -3270,7 +3330,7 @@ function CivicApp() {
             onClick={() => {
               setReceiptToastVisible(false);
               setFlowStage(null);
-              setTab('verify');
+              setTab('profile');
             }}
           >
             <CheckCircle size={18} /> Último comprobante listo <ArrowRight size={16} />

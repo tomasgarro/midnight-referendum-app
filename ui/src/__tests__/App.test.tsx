@@ -22,7 +22,7 @@ describe('App', () => {
   it('opens the first visit on Welcome instead of the dashboard', async () => {
     render(<App />);
     expect(
-      await screen.findByRole('heading', { name: /Una forma más clara|A clearer way/i }),
+      await screen.findByRole('heading', { name: /Demostrá que podés votar|Prove you can vote/i }),
     ).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
@@ -80,7 +80,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Mi perfil' }));
     await user.click(screen.getByRole('button', { name: /Revisar el recorrido/i }));
     expect(
-      screen.getByRole('heading', { name: /Una forma más clara|A clearer way/i }),
+      screen.getByRole('heading', { name: /Demostrá que podés votar|Prove you can vote/i }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: /Volver a la app|Back to the app/i })).toBeTruthy();
   });
@@ -95,7 +95,7 @@ describe('App', () => {
     await user.click(
       screen.getByRole('button', { name: /Preparar credencial|Prepare credential/i }),
     );
-    const country = screen.getByRole('combobox', { name: /País del fixture|Fixture country/i });
+    const country = screen.getByRole('combobox', { name: /País de prueba|Test country/i });
     await user.clear(country);
     await user.type(country, 'Brasil (BR)');
     await user.click(screen.getByRole('button', { name: /Usar este país|Use this country/i }));
@@ -133,5 +133,52 @@ describe('App', () => {
     expect(screen.getByRole('tab', { name: 'World' })).toBeTruthy();
     expect(document.documentElement.lang).toBe('en');
     expect(document.title).toMatch(/Civic Referendum/i);
+  });
+
+  it('consolidates the bottom navigation into three tabs and drops the separate Verify tab', async () => {
+    window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Explorá' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Votá' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Mi perfil' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Verificá$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Verify$/ })).toBeNull();
+  });
+
+  it('shows public results on Explore without requiring a credential or a Passport session', async () => {
+    window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Explorá' }));
+    expect(
+      screen.getByRole('heading', { name: /Lo que cualquiera puede leer, sin iniciar sesión/i }),
+    ).toBeTruthy();
+    // No credential was ever prepared and no Passport session exists, yet the
+    // public results section renders unconditionally.
+    expect(screen.queryByText('Credencial lista')).toBeNull();
+  });
+
+  it('folds Verify into Mi perfil with an on-device privacy note and a working receipt lookup', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await completeDemoCredential(user);
+    const [voteButton] = screen.getAllByRole('button', { name: /Votá ahora/i });
+    if (!voteButton) throw new Error('Expected at least one available consultation action');
+    await user.click(voteButton);
+    await user.click(screen.getByRole('button', { name: /^Sí/ }));
+    await user.click(screen.getByRole('button', { name: /Revisar mi voto/i }));
+    await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
+    await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
+
+    // Landed on Mi perfil; the former Verify tab no longer exists.
+    expect(screen.queryByRole('button', { name: /^Verificá$/ })).toBeNull();
+    expect(
+      screen.getByText(/cifrados solo en este dispositivo; la red nunca puede vincularlos/i),
+    ).toBeTruthy();
+
+    const input = screen.getByLabelText('Identificador del comprobante');
+    await user.type(input, 'demo-tx-cico-2026-0001');
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    expect(screen.getByText('Comprobante simulado')).toBeTruthy();
   });
 });

@@ -86,6 +86,21 @@ const organizerSecret = bytes32(required('V2_ORGANIZER_ROLE_SECRET_HEX'));
 if (equalBytes(issuerSecret, organizerSecret)) {
   fail('V2 issuer and organizer role secrets must be independent');
 }
+// The root-publisher role authorizes admitting later credential-registry
+// roots into an open-enrollment referendum (see V2_ENROLLMENT_MODEL below).
+// It must be required on Preview, same as issuer/organizer, but a local
+// undeployed run gets a distinct well-known default so it works unconfigured.
+const rootPublisherSecret = bytes32(
+  networkId === 'preview'
+    ? required('V2_ROOT_PUBLISHER_ROLE_SECRET_HEX')
+    : optional('V2_ROOT_PUBLISHER_ROLE_SECRET_HEX', `${'0'.repeat(63)}2`),
+);
+if (equalBytes(rootPublisherSecret, issuerSecret)) {
+  fail('V2 root-publisher role secret must be independent from the issuer role secret');
+}
+if (equalBytes(rootPublisherSecret, organizerSecret)) {
+  fail('V2 root-publisher role secret must be independent from the organizer role secret');
+}
 
 const fixtureHolderSecret = bytes32(required('V2_FIXTURE_HOLDER_SECRET_HEX'));
 const fixtureHolderBlind = bytes32(required('V2_FIXTURE_HOLDER_BLIND_HEX'));
@@ -120,6 +135,78 @@ const minimumAssurance = unsigned(
 );
 if (minimumAssurance > 3n) fail('V2_MINIMUM_ASSURANCE must be a credential assurance code (0..3)');
 const requireAdult = booleanValue(optional('V2_REQUIRE_ADULT', 'true'), 'V2_REQUIRE_ADULT');
+const enrollmentModel = optional('V2_ENROLLMENT_MODEL', 'open');
+// Opt-in blocking wait for on-chain schedule deadlines. Off by default so a
+// real multi-day referendum never makes this script hang.
+const waitForSchedule = optional('V2_WAIT_FOR_SCHEDULE', 'false') === 'true';
+if (!['open', 'frozen'].includes(enrollmentModel)) {
+  fail('V2_ENROLLMENT_MODEL must be open or frozen');
+}
+// The referendum's electorate is no longer frozen before deployment by
+// default: enrollment stays open while voting runs, and later registry
+// roots are admitted by publishing them (see admitRegistryRoot below). A
+// local run gets a sensible schedule anchored on "now" so it works
+// unconfigured; Preview should normally pin explicit values.
+const nowSeconds = BigInt(Math.floor(Date.now() / 1_000));
+const opensAtUnix = unsigned(
+  optional('V2_OPENS_AT_UNIX', nowSeconds.toString()),
+  64,
+  'V2_OPENS_AT_UNIX',
+);
+const enrollmentClosesAtUnix = unsigned(
+  optional('V2_ENROLLMENT_CLOSES_AT_UNIX', (nowSeconds + 24n * 3_600n).toString()),
+  64,
+  'V2_ENROLLMENT_CLOSES_AT_UNIX',
+);
+const closesAtUnix = unsigned(
+  optional('V2_CLOSES_AT_UNIX', (nowSeconds + 48n * 3_600n).toString()),
+  64,
+  'V2_CLOSES_AT_UNIX',
+);
+const revealClosesAtUnix = unsigned(
+  optional('V2_REVEAL_CLOSES_AT_UNIX', (nowSeconds + 72n * 3_600n).toString()),
+  64,
+  'V2_REVEAL_CLOSES_AT_UNIX',
+);
+if (opensAtUnix > enrollmentClosesAtUnix || enrollmentClosesAtUnix > closesAtUnix) {
+  fail(
+    'V2 schedule must satisfy V2_OPENS_AT_UNIX <= V2_ENROLLMENT_CLOSES_AT_UNIX <= V2_CLOSES_AT_UNIX',
+  );
+}
+if (opensAtUnix >= closesAtUnix) {
+  fail('V2_OPENS_AT_UNIX must be strictly before V2_CLOSES_AT_UNIX');
+}
+if (closesAtUnix >= revealClosesAtUnix) {
+  fail('V2_CLOSES_AT_UNIX must be strictly before V2_REVEAL_CLOSES_AT_UNIX');
+}
+
+/**
+ * The referendum enforces its published schedule on-chain, so closeVote and
+ * finalizeVote are rejected before their deadlines. An operator running a real
+ * multi-day referendum must not have this script block for days, so waiting is
+ * opt-in: with V2_WAIT_FOR_SCHEDULE the script sleeps until the deadline (used
+ * by the bounded evidence runner, which deliberately configures short
+ * windows); without it the script stops with a clear message saying when the
+ * action becomes legal.
+ */
+async function awaitScheduleDeadline(deadlineUnix, label) {
+  const nowUnix = BigInt(Math.floor(Date.now() / 1000));
+  if (nowUnix >= deadlineUnix) return;
+  const remaining = Number(deadlineUnix - nowUnix);
+  if (!waitForSchedule) {
+    fail(
+      `${label} is not legal yet: the contract enforces this deadline on-chain and it is ` +
+        `${remaining}s away (${new Date(Number(deadlineUnix) * 1000).toISOString()}). ` +
+        'Re-run after the deadline, or set V2_WAIT_FOR_SCHEDULE=true to wait here.',
+    );
+  }
+  // Overshoot slightly: block timestamps advance in steps, so being exactly at
+  // the boundary can still land in a block just before it.
+  const waitMs = (remaining + 5) * 1000;
+  console.log(`Waiting ${remaining + 5}s for ${label} to become legal on-chain…`);
+  await new Promise((resolve) => setTimeout(resolve, waitMs));
+}
+
 const referendumId = required('V2_REFERENDUM_ID');
 const eventIdHex = normalizeHex(required('V2_EVENT_ID_HEX'));
 const eventId = bytes32(eventIdHex);
@@ -185,6 +272,10 @@ const credentialLeaf = api.deriveCredentialLeaf({
 });
 const issuerKey = api.deriveRoleKey('cico:registry:issuer:', issuerSecret);
 const organizerKey = api.deriveRoleKey('cico:referendum-v2:organizer:', organizerSecret);
+const rootPublisherKey = api.deriveRoleKey('cico:ref-v2:root-publisher:', rootPublisherSecret);
+if (equalBytes(organizerKey, rootPublisherKey)) {
+  fail('V2 organizer and root-publisher keys must be independent');
+}
 const executorNetwork = networkId;
 
 let manifest;
@@ -199,6 +290,12 @@ manifest = loadOrCreateManifest({
   eventIdHex,
   referendumId,
   organizerKeyHex: toHex(organizerKey),
+  rootPublisherKeyHex: toHex(rootPublisherKey),
+  enrollmentModel,
+  opensAtUnix: opensAtUnix.toString(),
+  enrollmentClosesAtUnix: enrollmentClosesAtUnix.toString(),
+  closesAtUnix: closesAtUnix.toString(),
+  revealClosesAtUnix: revealClosesAtUnix.toString(),
   fixtureVoteChoice,
   countryPolicy: countryPolicyText || null,
   minimumAssurance,
@@ -232,6 +329,9 @@ if (equalBytes(issuerSecret, bytes32(relayer.seedHex))) {
 }
 if (equalBytes(organizerSecret, bytes32(relayer.seedHex))) {
   fail('V2 organizer role secret must be independent from the relayer fee key');
+}
+if (equalBytes(rootPublisherSecret, bytes32(relayer.seedHex))) {
+  fail('V2 root-publisher role secret must be independent from the relayer fee key');
 }
 manifest = updateManifest({
   endpoints,
@@ -379,38 +479,95 @@ if (existingCredentialPath) {
 }
 await observe('registry.issue', registryAddress);
 
-if (!registryState.frozen) {
-  const receipt = await registryExecutor.freeze(registryState.currentRoot);
-  recordStep('registry.freeze', 'confirmed', receipt);
-  registryState = await readRegistryState(registryAddress);
-} else {
-  if (registryState.frozenRoot.field !== registryState.currentRoot.field) {
-    fail('Existing registry has a frozen root that is not its current root');
+let rootValue;
+if (enrollmentModel === 'frozen') {
+  // Legacy model: the electorate is frozen before the referendum exists and
+  // its root is pinned for the referendum's lifetime.
+  if (!registryState.frozen) {
+    const receipt = await registryExecutor.freeze(registryState.currentRoot);
+    recordStep('registry.freeze', 'confirmed', receipt);
+    registryState = await readRegistryState(registryAddress);
+  } else {
+    if (registryState.frozenRoot.field !== registryState.currentRoot.field) {
+      fail('Existing registry has a frozen root that is not its current root');
+    }
+    recordStep(
+      'registry.freeze',
+      stepReceipt('registry.freeze') ? 'confirmed' : 'reconciled',
+      stepReceipt('registry.freeze'),
+    );
   }
-  recordStep(
-    'registry.freeze',
-    stepReceipt('registry.freeze') ? 'confirmed' : 'reconciled',
-    stepReceipt('registry.freeze'),
-  );
+  assertRegistryFrozen(registryState);
+  manifest = updateRegistrySnapshot(registryState);
+  await observe('registry.freeze', registryAddress);
+  rootValue = registryState.frozenRoot;
+} else {
+  // Open-enrollment model: the registry stays mutable. New voters can keep
+  // enrolling; the referendum only ever learns about a root through an
+  // attested `registry.attest` transaction (see admitRegistryRoot below).
+  if (registryState.frozen) {
+    fail(
+      'The existing registry is frozen but V2_ENROLLMENT_MODEL is open; use V2_ENROLLMENT_MODEL=frozen or point at a fresh registry',
+    );
+  }
+  manifest = updateRegistrySnapshot(registryState);
+  const referendumEntryBeforeDeploy = manifest.referenda[0];
+  if (referendumEntryBeforeDeploy.contractAddress) {
+    // The referendum already exists: its constructor pinned an initial root
+    // once, permanently. Never recompute it from the (possibly since-drifted)
+    // live registry root; reuse exactly what was deployed.
+    rootValue = { field: BigInt(referendumEntryBeforeDeploy.initialRootField) };
+  } else {
+    // Fresh deploy: attest the current root and use it as the initial root.
+    // The registry and referendum are different contracts, so this attest
+    // and the deploy that follows are necessarily two separate transactions;
+    // the deploy's own initialRegistryContract/initialRootValue constructor
+    // arguments are what an auditor cross-checks against this attestation.
+    const rootField = registryState.currentRoot.field.toString();
+    const existingAttest = findRepeatableStep('registry.attest', rootField);
+    const attestStatus = existingAttest?.receipt ? 'reconciled' : 'confirmed';
+    const attestReceipt =
+      existingAttest?.receipt ??
+      (await registryExecutor.attestRegistryRoot(registryState.currentRoot));
+    recordRepeatableStep('registry.attest', rootField, attestStatus, attestReceipt, { rootField });
+    await observe('registry.attest', registryAddress, undefined, attestReceipt.transactionId);
+    rootValue = registryState.currentRoot;
+    manifest = updateReferendum({ initialRootField: rootField, acceptedRoots: [rootField] });
+  }
 }
-assertRegistryFrozen(registryState);
-manifest = updateRegistrySnapshot(registryState);
-await observe('registry.freeze', registryAddress);
 
-const frozenRegistry = api.createFrozenCredentialRegistryReference(registryAddress, registryState);
+const registryContractBinding = api.deriveRegistryContractBinding(registryAddress);
 manifest = updateRegistry({
   contractAddress: registryAddress,
-  registryContractBindingHex: toHex(frozenRegistry.registryContractBinding),
+  registryContractBindingHex: toHex(registryContractBinding),
 });
+// Field name is `frozenRoot` on FrozenCredentialRegistryReference (see
+// api/src/passport-v2/midnight-v2.ts) even in the open-enrollment case: it is
+// the sealed provenance root the referendum's constructor pins at deploy
+// time (`initialCredentialRoot` on-chain), not a claim that the registry
+// itself is frozen.
+const registryReference = {
+  registryContractAddress: registryAddress,
+  registryContractBinding,
+  registryId,
+  issuerId: issuerIdBytes,
+  credentialEpoch,
+  frozenRoot: rootValue,
+};
 const referendumConfig = {
-  registry: frozenRegistry,
+  registry: registryReference,
   eventId,
   organizerKey,
+  rootPublisherKey,
   countryPolicy: countryPolicy ? api.padBytes32(countryPolicy) : new Uint8Array(32),
   countryPolicyEnabled: countryPolicy !== null,
   minimumAssurance,
   requireAdult,
   validityReference,
+  opensAtUnix,
+  enrollmentClosesAtUnix,
+  closesAtUnix,
+  revealClosesAtUnix,
   network: executorNetwork,
   ...(explorerBaseUrl ? { explorerBaseUrl } : {}),
 };
@@ -419,6 +576,7 @@ if (!existingCredentialPath)
 const referendumPrivateState = {
   role: 'organizer',
   organizerSecret,
+  rootPublisherSecret,
   voterSecret: fixtureHolderSecret,
   holderBinding,
   holderBlind: fixtureHolderBlind,
@@ -452,7 +610,8 @@ if (referendumAddress) {
   referendumReceipt = deployment.receipt;
   manifest = updateReferendum({
     contractAddress: referendumAddress,
-    registryContractBindingHex: toHex(frozenRegistry.registryContractBinding),
+    registryContractBindingHex: toHex(registryContractBinding),
+    registryContractAddress: registryAddress,
   });
   recordStep('referendum.deploy', 'confirmed', referendumReceipt);
 }
@@ -462,8 +621,26 @@ assertReferendumState(referendumState);
 manifest = updateReferendum({
   contractAddress: referendumAddress,
   registryContractBindingHex: toHex(referendumState.registryContractBinding),
+  registryContractAddress: registryAddress,
 });
 await observe('referendum.deploy', registryAddress, referendumAddress);
+
+// Open enrollment can keep admitting voters after this deploy/join call. If
+// the canonical registry has moved past the root this referendum currently
+// accepts (e.g. a separate operator run issued more credentials while this
+// script was not running), publish and attest that later root now so the
+// referendum's acceptedRoots stays a true record of the electorate.
+if (enrollmentModel === 'open') {
+  const latestRegistryState = await readRegistryState(registryAddress);
+  const latestRootField = latestRegistryState.currentRoot.field.toString();
+  const referendumAfterJoin = manifest.referenda[0];
+  if (!referendumAfterJoin.acceptedRoots.includes(latestRootField)) {
+    await admitRegistryRoot(latestRegistryState.currentRoot);
+    manifest = updateReferendum({
+      acceptedRoots: [...manifest.referenda[0].acceptedRoots, latestRootField],
+    });
+  }
+}
 
 if (evidencePhase === 'prepare') {
   await operatorWallet.stop().catch(() => undefined);
@@ -571,7 +748,7 @@ async function findCredentialPathOrNull(_state) {
 /** Record a public-only snapshot at each operator boundary. The indexer is
  * the source of truth for the observation; absence is retained explicitly so
  * a partially available deployment cannot be mistaken for confirmation. */
-async function observe(stage, registryAddressValue, referendumAddressValue) {
+async function observe(stage, registryAddressValue, referendumAddressValue, transactionIdOverride) {
   let registrySnapshot;
   let referendumSnapshot;
   try {
@@ -582,12 +759,15 @@ async function observe(stage, registryAddressValue, referendumAddressValue) {
     // Keep the observation and mark the indexer unavailable below. The next
     // idempotent run can reconcile the same stage from canonical state.
   }
+  // `stepReceipt` returns the first step recorded for `stage`, which is
+  // wrong for a repeatable stage (registry.attest / referendum.publish-root)
+  // that may already have earlier entries for other roots; a caller dealing
+  // with one of those stages must pass the transaction ID explicitly.
+  const observedTransactionId = transactionIdOverride ?? stepReceipt(stage)?.transactionId;
   const observation = {
     stage,
     observedAt: new Date().toISOString(),
-    ...(stepReceipt(stage)?.transactionId
-      ? { transactionId: stepReceipt(stage).transactionId }
-      : {}),
+    ...(observedTransactionId ? { transactionId: observedTransactionId } : {}),
     indexer: {
       available: Boolean(registrySnapshot || referendumSnapshot),
       source: endpoints.indexerHttp,
@@ -688,6 +868,7 @@ async function verifyLifecycle(address, initialState) {
 
   state = await readReferendumState(address);
   if (state.phase === 'COMMIT') {
+    await awaitScheduleDeadline(closesAtUnix, 'closeVote');
     const receipt = await referendumExecutor.closeVote();
     recordStep('lifecycle.close', 'confirmed', receipt);
     state = await readReferendumState(address);
@@ -729,6 +910,7 @@ async function verifyLifecycle(address, initialState) {
 
   state = await readReferendumState(address);
   if (state.phase === 'REVEAL') {
+    await awaitScheduleDeadline(revealClosesAtUnix, 'finalizeVote');
     const receipt = await referendumExecutor.finalizeVote();
     recordStep('lifecycle.finalize', 'confirmed', receipt);
     state = await readReferendumState(address);
@@ -790,21 +972,38 @@ function assertRegistryFrozen(state) {
 
 function assertReferendumState(state) {
   if (!equalBytes(state.registryId, registryId))
-    fail('Referendum registry ID is not bound to the frozen registry');
+    fail('Referendum registry ID is not bound to the registry');
   if (!equalBytes(state.issuerId, issuerIdBytes))
     fail('Referendum issuer ID is not bound to the registry');
   if (state.credentialEpoch !== credentialEpoch)
     fail('Referendum credential epoch is not bound to the registry');
-  if (state.frozenCredentialRoot.field !== registryState.frozenRoot.field)
-    fail('Referendum root is not bound to the frozen registry');
+  // `initialCredentialRoot` is the sealed provenance root pinned at deploy
+  // time (frozen model: the registry's frozen root; open model: the root
+  // that was attested before deploy, whether just now or on an earlier run).
+  if (state.initialCredentialRoot.field !== rootValue.field)
+    fail('Referendum initial root is not bound to the attested/frozen registry root');
+  if (!state.acceptedCredentialRoots.some((root) => root.field === rootValue.field))
+    fail('Referendum does not currently accept its own initial root');
   if (
     !equalBytes(state.registryContractBinding, api.deriveRegistryContractBinding(registryAddress))
   )
     fail('Referendum is not bound to the selected registry contract');
+  if (!equalBytes(state.registryContract, bytes32(registryAddress)))
+    fail('Referendum registry contract address does not match the operator manifest');
   if (!equalBytes(state.eventId, eventId))
     fail('Referendum event ID does not match the operator manifest');
   if (!equalBytes(state.organizerKey, organizerKey))
     fail('Referendum organizer key does not match the operator manifest');
+  if (!equalBytes(state.rootPublisherKey, rootPublisherKey))
+    fail('Referendum root-publisher key does not match the operator manifest');
+  if (state.opensAtUnix !== opensAtUnix)
+    fail('Referendum opensAtUnix does not match the operator manifest');
+  if (state.enrollmentClosesAtUnix !== enrollmentClosesAtUnix)
+    fail('Referendum enrollmentClosesAtUnix does not match the operator manifest');
+  if (state.closesAtUnix !== closesAtUnix)
+    fail('Referendum closesAtUnix does not match the operator manifest');
+  if (state.revealClosesAtUnix !== revealClosesAtUnix)
+    fail('Referendum revealClosesAtUnix does not match the operator manifest');
   if (state.countryPolicyEnabled !== (countryPolicy !== null))
     fail('Referendum country policy flag does not match the operator manifest');
   if (state.minimumAssurance !== minimumAssurance)
@@ -832,7 +1031,10 @@ function loadOrCreateManifest(expected) {
     parsed.dust.beforeObservedAt ??= null;
     parsed.dust.afterObservedAt ??= null;
     parsed.dust.valuationAt ??= null;
-    for (const referendum of parsed.referenda ?? []) referendum.registryContractBindingHex ??= null;
+    for (const referendum of parsed.referenda ?? []) {
+      referendum.registryContractBindingHex ??= null;
+      referendum.registryContractAddress ??= null;
+    }
     api.validatePassportV2DeploymentManifest(parsed);
     assertManifestMatches(parsed, expected);
     return parsed;
@@ -873,14 +1075,28 @@ function loadOrCreateManifest(expected) {
       frozenRootField: null,
       credentialCount: null,
       frozen: false,
+      enrollmentModel: expected.enrollmentModel,
     },
     referenda: [
       {
         referendumId: expected.referendumId,
         contractAddress: null,
         registryContractBindingHex: null,
+        registryContractAddress: null,
         eventIdHex: expected.eventIdHex,
         organizerKeyHex: expected.organizerKeyHex,
+        rootPublisherKeyHex: expected.rootPublisherKeyHex,
+        // Placeholders: the real accepted root is not known until the
+        // registry has been read and (for the open model) attested. Both
+        // fields are schema-required non-nullable strings from the very
+        // first save, so "0" seeds them until updateReferendum overwrites
+        // them with the real value, before the referendum is deployed.
+        initialRootField: '0',
+        acceptedRoots: ['0'],
+        opensAtUnix: expected.opensAtUnix,
+        enrollmentClosesAtUnix: expected.enrollmentClosesAtUnix,
+        closesAtUnix: expected.closesAtUnix,
+        revealClosesAtUnix: expected.revealClosesAtUnix,
         countryPolicy: expected.countryPolicy,
         minimumAssurance: expected.minimumAssurance.toString(),
         requireAdult: expected.requireAdult,
@@ -905,7 +1121,8 @@ function assertManifestMatches(existing, expected) {
     registry.registryIdHex !== expected.registryIdHex ||
     registry.issuerId !== expected.issuerId ||
     registry.issuerIdHex !== expected.issuerIdHex ||
-    registry.credentialEpoch !== expected.credentialEpoch.toString()
+    registry.credentialEpoch !== expected.credentialEpoch.toString() ||
+    registry.enrollmentModel !== expected.enrollmentModel
   ) {
     fail('Existing manifest registry metadata does not match the requested deployment');
   }
@@ -915,6 +1132,11 @@ function assertManifestMatches(existing, expected) {
     referendum.referendumId !== expected.referendumId ||
     referendum.eventIdHex !== expected.eventIdHex ||
     referendum.organizerKeyHex !== expected.organizerKeyHex ||
+    referendum.rootPublisherKeyHex !== expected.rootPublisherKeyHex ||
+    referendum.opensAtUnix !== expected.opensAtUnix ||
+    referendum.enrollmentClosesAtUnix !== expected.enrollmentClosesAtUnix ||
+    referendum.closesAtUnix !== expected.closesAtUnix ||
+    referendum.revealClosesAtUnix !== expected.revealClosesAtUnix ||
     referendum.countryPolicy !== expected.countryPolicy ||
     referendum.minimumAssurance !== expected.minimumAssurance.toString() ||
     referendum.requireAdult !== expected.requireAdult ||
@@ -933,9 +1155,12 @@ function updateRegistry(patch) {
 function updateRegistrySnapshot(state) {
   return updateRegistry({
     currentRootField: state.currentRoot.field.toString(),
-    frozenRootField: state.frozenRoot.field.toString(),
+    // The manifest validator requires an open-enrollment registry to never
+    // report frozen/frozenRootField, regardless of what the ledger itself
+    // currently holds (it may still expose an unused zero-value field).
+    frozenRootField: enrollmentModel === 'frozen' ? state.frozenRoot.field.toString() : null,
     credentialCount: state.credentialCount.toString(),
-    frozen: state.frozen,
+    frozen: enrollmentModel === 'frozen' ? state.frozen : false,
   });
 }
 
@@ -967,6 +1192,89 @@ function recordStep(id, status, receipt, details) {
     },
   };
   saveManifest();
+}
+
+/** Finds a step recorded for a repeatable id, keyed by `details.rootField`. */
+function findRepeatableStep(id, rootField) {
+  return manifest.transcript.steps.find(
+    (step) => step.id === id && step.details?.rootField === rootField,
+  );
+}
+
+/**
+ * Records a step for an id the manifest allows to repeat — `registry.attest`,
+ * `referendum.publish-root`, `referendum.revoke-root` — because a registry
+ * may admit many roots over an open referendum's lifetime, and each root
+ * needs its own attest/publish pair. Unlike `recordStep`, this keys on
+ * (id, rootField) instead of just id, so recording a new root's step never
+ * erases a previous root's step.
+ */
+function recordRepeatableStep(id, rootField, status, receipt, details, attestationTransactionId) {
+  const existing = findRepeatableStep(id, rootField);
+  const others = manifest.transcript.steps.filter(
+    (step) => !(step.id === id && step.details?.rootField === rootField),
+  );
+  const step = {
+    id,
+    status,
+    completedAt: new Date().toISOString(),
+    ...(receipt ? { receipt } : existing?.receipt ? { receipt: existing.receipt } : {}),
+    details: { ...(existing?.details ?? {}), ...(details ?? {}), rootField },
+    ...(attestationTransactionId
+      ? { attestationTransactionId }
+      : existing?.attestationTransactionId
+        ? { attestationTransactionId: existing.attestationTransactionId }
+        : {}),
+  };
+  manifest = {
+    ...manifest,
+    transcript: {
+      steps: [...others, step],
+      observations: manifest.transcript.observations ?? [],
+    },
+  };
+  saveManifest();
+}
+
+/**
+ * Admits a registry root that is being accepted after the referendum's
+ * initial deployment (the initial root itself is attested separately, above,
+ * as part of the deploy flow, and needs no publish-root call because it is
+ * baked directly into the constructor). The registry and referendum are
+ * different contracts and Midnight transaction merging requires one side to
+ * have no contract calls, so the attest and the publish can never share a
+ * transaction: they are always two sequential transactions, linked by the
+ * publish step's `attestationTransactionId` pointing at the attest step's
+ * `receipt.transactionId`, exactly as the manifest validator requires.
+ */
+async function admitRegistryRoot(root) {
+  const rootField = root.field.toString();
+
+  const existingAttest = findRepeatableStep('registry.attest', rootField);
+  const attestStatus = existingAttest?.receipt ? 'reconciled' : 'confirmed';
+  const attestReceipt =
+    existingAttest?.receipt ?? (await registryExecutor.attestRegistryRoot(root));
+  recordRepeatableStep('registry.attest', rootField, attestStatus, attestReceipt, { rootField });
+  await observe('registry.attest', registryAddress, undefined, attestReceipt.transactionId);
+
+  const existingPublish = findRepeatableStep('referendum.publish-root', rootField);
+  const publishStatus = existingPublish?.receipt ? 'reconciled' : 'confirmed';
+  const publishReceipt =
+    existingPublish?.receipt ?? (await referendumExecutor.publishCredentialRoot(root));
+  recordRepeatableStep(
+    'referendum.publish-root',
+    rootField,
+    publishStatus,
+    publishReceipt,
+    { rootField },
+    attestReceipt.transactionId,
+  );
+  await observe(
+    'referendum.publish-root',
+    undefined,
+    referendumAddress,
+    publishReceipt.transactionId,
+  );
 }
 
 function updateManifest(patch) {

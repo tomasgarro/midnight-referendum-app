@@ -60,6 +60,11 @@ const entry: ReferendumV2CatalogEntry = {
     minimumAssurance: 2n,
     requireAdult: true,
     validityReference: 1_777_000_000n,
+    rootPublisherKey: new Uint8Array(32).fill(8),
+    opensAtUnix: 1_777_000_000n,
+    enrollmentClosesAtUnix: 1_777_086_400n,
+    closesAtUnix: 1_777_172_800n,
+    revealClosesAtUnix: 1_777_259_200n,
     network: 'preview',
   },
 };
@@ -116,6 +121,15 @@ function makeExecutor(joined: ReferendumV2PrivateStateCapture): ReferendumV2Exec
       throw new Error('not used');
     },
     async finalizeVote() {
+      throw new Error('not used');
+    },
+    async publishCredentialRoot() {
+      throw new Error('not used');
+    },
+    async revokeCredentialRoot() {
+      throw new Error('not used');
+    },
+    async closeEnrollment() {
       throw new Error('not used');
     },
   };
@@ -265,6 +279,15 @@ describe('Midnight browser civic action adapter', () => {
         throw new Error('not used');
       },
       async finalizeVote() {
+        throw new Error('not used');
+      },
+      async publishCredentialRoot() {
+        throw new Error('not used');
+      },
+      async revokeCredentialRoot() {
+        throw new Error('not used');
+      },
+      async closeEnrollment() {
         throw new Error('not used');
       },
     });

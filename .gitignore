@@ -53,3 +53,8 @@ api/src/generated/credential-registry-v1/
 api/src/generated/referendum-v2/
 ui/public/managed/credential-registry-v1/
 ui/public/managed/referendum-v2/
+
+# Third-party agent skills and local agent state: tooling, not project code.
+.agents/
+.claude/
+skills-lock.json

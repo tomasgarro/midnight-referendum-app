@@ -71,12 +71,27 @@ try {
     throw new Error('Evidence relay must use PostgreSQL with legacy transaction routes disabled');
   }
   record('relay-before-prepare', relayHealth);
+  // The referendum seals its schedule on-chain at deployment, and castVote is
+  // rejected outside it. Anchor the window here rather than at runner startup:
+  // Docker, both compilations and the production build all run first, so a
+  // startup-anchored window is already closed by the time a vote is cast.
+  // Both deploy phases must receive identical values or the resumable manifest
+  // check correctly rejects the mismatch.
+  const scheduleAnchor = Math.floor(Date.now() / 1000);
+  const scheduleEnv = {
+    V2_OPENS_AT_UNIX: String(scheduleAnchor - 10),
+    V2_ENROLLMENT_CLOSES_AT_UNIX: String(scheduleAnchor + 240),
+    V2_CLOSES_AT_UNIX: String(scheduleAnchor + 300),
+    V2_REVEAL_CLOSES_AT_UNIX: String(scheduleAnchor + 360),
+  };
+  record('schedule', { ...scheduleEnv, anchoredAt: isoWholeSecond(scheduleAnchor * 1000) });
   await commandAsync(
     npmCommand(),
     ['run', 'deploy:undeployed'],
     'Registry/referendum preparation',
     {
       V2_EVIDENCE_PHASE: 'prepare',
+      ...scheduleEnv,
     },
   );
   const prepared = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -97,6 +112,7 @@ try {
 
   await commandAsync(npmCommand(), ['run', 'deploy:undeployed'], 'Atomic walletless lifecycle', {
     V2_EVIDENCE_PHASE: 'complete',
+    ...scheduleEnv,
   });
   if (!capturedAction) throw new Error('No POST /v2/actions request crossed the trace proxy');
   const first = await waitForAction(capturedAction.actionId);
@@ -197,12 +213,13 @@ function assertCleanCheckout() {
 
 function generateRunEnvironment() {
   const secret = () => randomBytes(32).toString('hex');
-  const values = Array.from({ length: 10 }, secret);
+  const values = Array.from({ length: 11 }, secret);
   const [
     relayerSeed,
     actionSecret,
     issuerSecret,
     organizerSecret,
+    rootPublisherSecret,
     holderSecret,
     holderBlind,
     credentialBlind,
@@ -238,6 +255,9 @@ function generateRunEnvironment() {
       V2_CREDENTIAL_EPOCH: '1',
       V2_ISSUER_ROLE_SECRET_HEX: issuerSecret,
       V2_ORGANIZER_ROLE_SECRET_HEX: organizerSecret,
+      V2_ROOT_PUBLISHER_ROLE_SECRET_HEX: rootPublisherSecret,
+      V2_WAIT_FOR_SCHEDULE: 'true',
+      V2_ENROLLMENT_MODEL: 'open',
       V2_FIXTURE_HOLDER_SECRET_HEX: holderSecret,
       V2_FIXTURE_HOLDER_BLIND_HEX: holderBlind,
       V2_FIXTURE_CREDENTIAL_BLIND_HEX: credentialBlind,
@@ -504,6 +524,7 @@ function command(executable, args, label, extraEnv = {}) {
       exitCode: result.status ?? null,
       code: commandFailureCode(label, output),
     });
+    reportFailure(label, output);
     throw new Error(`${label} failed`);
   }
   record(label, safeCommandOutput(output));
@@ -534,9 +555,25 @@ async function commandAsync(executable, args, label, extraEnv = {}) {
       exitCode: status,
       code: commandFailureCode(label, output),
     });
+    reportFailure(label, output);
     throw new Error(`${label} failed`);
   }
   record(label, safeCommandOutput(output));
+}
+
+/**
+ * A failed step records only a coarse failure code, because the transcript is
+ * committed evidence and raw subprocess output can carry sensitive material.
+ * That left failures undiagnosable, so print the SANITIZED output to stderr
+ * for the operator while the transcript keeps only the code.
+ */
+function reportFailure(label, output) {
+  const safe = safeCommandOutput(output);
+  const text = typeof safe === 'string' ? safe : (safe?.output ?? 'suppressed_sensitive_output');
+  const tail = text.split('\n').slice(-60).join('\n');
+  console.error(`--- ${label} failed; sanitized output follows ---`);
+  console.error(tail);
+  console.error(`--- end ${label} output ---`);
 }
 
 function commandFailureCode(label, output) {

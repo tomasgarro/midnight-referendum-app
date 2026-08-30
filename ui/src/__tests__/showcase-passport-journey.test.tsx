@@ -70,7 +70,7 @@ describe('Passport-first public showcase', () => {
     await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
     expect((await screen.findByRole('alert')).textContent).toContain('Popup closed');
     expect(screen.queryByRole('button', { name: /Explore without connecting/i })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Continue with Midnight Passport' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Connect your Passport' })).toBeTruthy();
   });
 
   it('keeps the onboarding bilingual through the language switch', async () => {
@@ -78,7 +78,9 @@ describe('Passport-first public showcase', () => {
     render(<PassportJourney mode="showcase" passportPort={passportPort()} onClose={vi.fn()} />);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'es');
 
-    expect(screen.getByRole('heading', { name: 'Una forma más clara de participar' })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Demostrá que podés votar. Sin demostrar quién sos.' }),
+    ).toBeTruthy();
     expect(screen.getByText(/PASSPORT EN VIVO · PROVEEDOR RESPONSABLE/i)).toBeTruthy();
     expect(window.localStorage.getItem('cico-locale')).toBe('es');
     expect(screen.getByRole('list', { name: 'Tu primer recorrido' })).toBeTruthy();

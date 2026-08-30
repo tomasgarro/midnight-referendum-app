@@ -245,7 +245,7 @@ function createCanonicalStateResolver(
         registryId: entry.config.registry.registryId,
         issuerId: entry.config.registry.issuerId,
         credentialEpoch: entry.config.registry.credentialEpoch,
-        frozenCredentialRoot: entry.config.registry.frozenRoot,
+        initialCredentialRoot: entry.config.registry.frozenRoot,
       });
 
       const referendumState = await providers.publicDataProvider.queryContractState(
