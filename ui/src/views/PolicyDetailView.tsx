@@ -65,7 +65,7 @@ const COPY = {
     noBody: 'No apoyás priorizarla en estos términos.',
     abstainBody: 'Preferís no tomar una posición binaria.',
     sources: 'Fuentes primarias',
-    vote: 'Votar esta consulta',
+    vote: 'Votá ahora',
     prepare: 'Preparar mi credencial',
     disclosureTitle: 'Qué es y qué no es esto',
     runtimeDisclosure:
@@ -96,7 +96,7 @@ const COPY = {
     noBody: 'You do not support prioritising it on these terms.',
     abstainBody: 'You prefer not to take a binary position.',
     sources: 'Primary sources',
-    vote: 'Vote on this consultation',
+    vote: 'Vote now',
     prepare: 'Prepare my credential',
     disclosureTitle: 'What this is and is not',
     runtimeDisclosure:

@@ -1,6 +1,9 @@
 # UX rebuild — handoff
 
-Written 2026-08-30. Pick-up document for the session that finishes Step 4.
+Written 2026-08-30. Updated 2026-08-30 when Step 4 landed.
+
+**Step 4 is done.** What follows is the record of it plus what is left in
+Steps 5 and 6.
 
 Branch: `feat/warm-light-design-system`, off `main` at `454bbcf`. Not pushed.
 
@@ -9,20 +12,28 @@ https://claude.ai/code/artifact/e6ccc025-c494-4565-a99d-c366dac24a09
 
 ---
 
-## 1. Do this before anything else
+## 1. Reference research
 
-The Appllama MCP is registered at user scope but a session only loads MCP
-servers at startup. **If `appllama` tools are not in your tool list, stop and
-say so** — Step 4's remaining work is the per-screen visual rebuild, and its
-prime directive is to study 20–30 real screens per screen type before drawing.
-Doing it without the MCP was explicitly declined once.
+Step 4's prime directive was to study real screens before drawing. It was done
+with the Appllama MCP: the choice-card grammar came from Duomo, Cara Care and
+Ayatique; the grouped settings rows from Lifesum (which happens to sit on a
+near-identical cream) and RV LIFE; the detail-screen skeleton and the composed
+empty state from Dwell. Those patterns are cited in the file-level comments of
+the views they shaped, so the reasoning survives without the screenshots.
 
-The skill itself does not need the MCP and is on disk at
+If you pick up Steps 5 or 6 and the MCP is missing from your tool list, note
+that it is registered at user scope and only loads at session start:
+
+```
+claude mcp add --transport http --scope user appllama https://mcp.appllama.io/mcp
+```
+
+The skill itself needs no MCP and is on disk at
 `Desktop/Midnight/.agents/skills/appllama-app-design-skill/` (plus
-`appllama-usage`). Read it. It targets Expo/React Native; this app is Vite +
-React web, so the anti-slop laws, motion frequency gate, navigation semantics
-and the record-and-scrub verification transfer — SF Symbols, Reanimated,
-FlashList and simulator tooling do not.
+`appllama-usage`). It targets Expo/React Native; this app is Vite + React web,
+so the anti-slop laws, motion frequency gate, navigation semantics and the
+verification loop transfer — SF Symbols, Reanimated, FlashList and the
+simulator tooling do not.
 
 ---
 
@@ -34,9 +45,25 @@ FlashList and simulator tooling do not.
 | 3 | `395527b` | Twelve system primitives + 18 tests |
 | 5 (service) | `0ee2b26` | Enrollment batch status: publisher → HTTP → client |
 | 4 (slice) | `9d81def` | FAQ accordion → three-line explainer |
+| 4 | `5c2d6a5` | Poll model, runtime facts and the public-state hook out of App.tsx |
+| 4 | `1a938a1` | ResultsPanel + VotesView |
+| 4 | `b92f6a6` | PolicyDetailView |
+| 4 | `1ab8889` | ExploreView |
+| 4 | `d3ec0f5` | VoteFlow, with review as a Sheet |
+| 4 | `e3082bf` | ProfileView + ReceiptVerifier; language control moved here |
+| 4 | `4419d6e` | Shell on tokens, deletion list, dead-CSS prune |
 
 Suites at the tip: **ui 165/165 (24 files)**, **cico-service 63/63 (9 files)**,
-`tsc` clean on both, biome clean on everything changed.
+`tsc` clean on both, `biome ci --changed` clean.
+
+Counters at the tip, all measured rather than estimated:
+
+| | before Step 4 | now |
+| --- | --- | --- |
+| `App.tsx` | 3,284 lines | 592 |
+| `index.css` | 4,402 lines | 2,413 |
+| `grep -c -- --legacy- ui/src/index.css` | 180 | 91 |
+| hardcoded hex in `index.css` | 455 | 281 |
 
 ### Decisions already made — do not relitigate
 
@@ -56,11 +83,19 @@ Suites at the tip: **ui 165/165 (24 files)**, **cico-service 63/63 (9 files)**,
   the new one lives in `styles/tokens.css`. The prefix is load-bearing —
   both define an ink and a line, and `@import` hoists, so an unprefixed
   legacy block silently overrides the new tokens app-wide.
-  `grep -c -- --legacy- ui/src/index.css` is the migration meter (currently
-  ~173 refs). The legacy `:root` goes when it reaches zero.
-- **455 hardcoded hex values remain** in index.css against 173 token
-  references. Views must be migrated one at a time; a bulk swap leaves the
-  app incoherent at every intermediate commit.
+  `grep -c -- --legacy- ui/src/index.css` is the migration meter (91 refs
+  after Step 4, down from 180). The legacy `:root` goes when it reaches zero,
+  and what is holding it there now is the Passport journey.
+- **281 hardcoded hex values remain** in index.css, all of them inside
+  `passport-*`, `unified-*` and `showcase-*` rules. Migrate a screen at a
+  time; a bulk swap leaves the app incoherent at every intermediate commit.
+- **Dead CSS is worth sweeping mechanically, not by eye.** Step 4 removed 155
+  rule sets by extracting every class in `index.css`, checking each against
+  all of `ui/**/*.{ts,tsx,html}`, and deleting the rules whose every selector
+  was unreferenced. Two traps if you repeat it: comments in this file contain
+  unbalanced braces (`/* Connector between the dots {`), so mask comments
+  before you parse; and rewrite with the file's existing line endings or
+  `biome ci` fails the pre-commit hook on formatting alone.
 - **The shadcn components in `components/ui/` were rendering unstyled** —
   there was no `@theme` block, so `bg-primary` and friends generated no CSS.
   Now mapped onto the new tokens. `card.tsx` is unused and should go with the
@@ -73,39 +108,59 @@ Suites at the tip: **ui 165/165 (24 files)**, **cico-service 63/63 (9 files)**,
 
 ---
 
-## 4. What is left in Step 4
+## 4. Step 4, as built
 
-Move each view out of the 3,360-line `App.tsx` into `ui/src/views/`,
-rebuilding it on the primitives as it moves. `ui/src/views/` exists now with
-`HowItWorks` as the worked example. `App.tsx` should end up holding routing,
-state and `CivicApp` only.
+Every view is out of `App.tsx` and rebuilt on the primitives. `App.tsx` is 592
+lines holding routing, state and `CivicApp`; `ui/src/views/` holds the screens,
+the poll model, the runtime facts and the shell chrome.
 
-Remaining views: `ExploreView`, `PolicyDetailView`, `VotesView`,
-`ProfileView`, `VoteFlow`, `ResultsPanel`, `ReceiptVerifier`.
+`ExploreView` · `PolicyDetailView` · `VotesView` · `ProfileView` · `VoteFlow` ·
+`ResultsPanel` · `ReceiptVerifier` · `Chrome` (header + tab bar) · `HowItWorks`.
 
-Per screen: one idea, one image, one primary action; secondary actions are
-links. Headline ≤ 6 words, body ≤ 2 lines. Decisions become `Sheet`s modelled
-on RariMe's proof request — labelled `StatGroup`s of `StatRow`s, then two
-stacked buttons.
+Deleted as listed: `.mode-strip` / `.mode-details`, `.explain-panel`, the badge
+soup, `t.mascotPlaceholder` in both locales, `.mascot-reserved-slot`, and the
+header language `<select>` (now a Profile row). The dead-CSS sweep took another
+155 rule sets whose every selector is unreferenced anywhere in `ui/`.
 
-Still to delete: `.mode-strip` / `.mode-details`, `.explain-panel`, the badge
-soup (`LIVE PASSPORT` / `SYNTHETIC CREDENTIAL` / `SIMULATED VOTE`),
-`t.mascotPlaceholder` in both locales, `.mascot-reserved-slot`, and the header
-language `<select>` (it becomes a Profile row).
+### Three decisions worth knowing before you change them
 
-**Step 5's UI half** is not done: `WaitState` and `HttpEnrollmentStatusPort`
-both exist, but nothing renders the enrollment wait yet. It needs a polling
-hook and a place in the post-enrolment flow. `pendingCount` is `null` when
-unobserved — render a dash, never a zero.
+- **Review is a Sheet over the choice screen, not a fourth stage.** `FlowStage`
+  still has `'review'`; it renders the `choose` screen with the Sheet open, so
+  dismissing returns to the answer rather than needing a back button.
+- **`Screen`'s footer is only pinned because the shell is bounded.** `.app-shell`
+  is a flex column at `100dvh` and `.sys-screen__body` is the scroller. Before
+  that, `Screen`'s documented "pinned" footer sat wherever the content ended.
+  If you make the shell a plain block again, every flow screen silently loses
+  its action below the fold.
+- **The badge assertions moved with the badges.** `showcase-passport-journey`
+  still asserts a live journey never shows a synthetic credential; it now looks
+  for `Synthetic credential` rather than `SYNTHETIC CREDENTIAL`.
+
+### The slop pre-flight, run
+
+Mechanically, over `views/` and the primitives: distinct accent hues **1**
+(state tokens aside; zero hardcoded hex in either directory) · every radius from
+`--r-pill` / `--r-card` / `--r-input` · emoji in chrome **0** · gradients **0** ·
+duplicate labels **0** after unifying "Votar esta consulta" onto "Votá ahora".
+
+---
+
+## 4b. What is left
+
+**Step 5's UI half** is not done. `WaitState` and `HttpEnrollmentStatusPort`
+both exist and `WaitState` has tests, but nothing renders the enrolment wait
+yet. It needs a polling hook and a place in the post-enrolment flow.
+`pendingCount` is `null` when unobserved — render a dash, never a zero.
 
 **Step 6** — the six mascot PNGs are still ~1 MB each. Re-export as WebP at
-display size, same filenames.
+display size, same filenames. While you are in there: `gaucho-waving.png` has a
+pale-blue plate baked into the artwork, which is the only sky-blue left on
+Explore. Crop it to transparency in the same pass.
 
-### Slop pre-flight, before the screens ship
-
-Mechanical count, not a judgement call: distinct accent hues = 1 · every
-radius from the stated scale · emoji in chrome = 0 · gradients without a
-brand reason = 0 · duplicate labels for one intent = 0.
+**Not touched, and still on the legacy palette:** the Passport journey
+(`components/passport-v2/`). It is the largest remaining block of legacy CSS and
+was outside Step 4's view list. The `--legacy-` meter stops falling until it
+moves.
 
 ---
 
@@ -119,9 +174,35 @@ npx tsc --noEmit -p ui/tsconfig.json
 npm run test --workspace midnight-referendum-ui
 ```
 
+For the per-view loop, run vitest from `ui/` instead — the same suite takes
+about 21s there against 114s through the workspace script, and a single file is
+faster still:
+
+```
+cd ui && npx vitest run src/__tests__/App.test.tsx
+```
+
+The pre-commit hook is `biome ci --changed`, which is stricter than
+`biome check`: it fails on formatting and on `noDescendingSpecificity`, and it
+pulls in every pre-existing finding in any file you touch. Run it before you
+commit rather than discovering it in the hook.
+
 Visual: `preview_start` the `referendum-ui` config, then capture each screen
 at 320 / 390 / 480. Confirm no horizontal body scroll at 320. Do not ask the
 user to check — look, and attach the screenshots.
+
+Two things that cost time in Step 4 and need not cost it again:
+
+- The dev server binds **5199** via `.claude/launch.json` at the *repo root*,
+  not this checkout's copy, and another session may already hold it. Add a
+  second entry on a different port rather than fighting for 5199; `autoPort`
+  does not work here because `npm run dev` ignores `PORT` and falls back to
+  5173, which the preview tool will not open.
+- `ui/.env` pins `VITE_APP_MODE=undeployed`, which lands on the Passport
+  journey with no fixture polls behind it. For a visual pass over the rebuilt
+  views, drop a gitignored `ui/.env.local` with `VITE_APP_MODE=demo`, set
+  `sessionStorage['cico-wave1-onboarding-complete'] = '1'`, and delete the
+  file afterwards.
 
 Before push, the WSL gate (it refuses to run under Git Bash):
 
