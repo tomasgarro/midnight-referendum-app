@@ -1,6 +1,7 @@
 import { ArrowLeft, Fingerprint, Info } from '@phosphor-icons/react';
 import type { CivicPassportSession, PassportSessionPort } from 'midnight-referendum-api';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import type { OnboardingStage } from '@/integration/civic-state';
 import type { CicoLocale } from '@/integration/locale';
 import { PreviewPassportJourney, type PreviewPassportJourneyPorts } from './PreviewPassportJourney';
 import { UnifiedPassportOnboarding } from './UnifiedPassportOnboarding';
@@ -15,6 +16,7 @@ interface PassportJourneyProps {
   previewPorts?: PreviewPassportJourneyPorts;
   onCredentialReady?: (credential: DemoCredentialSummary) => void;
   onPassportConnected?: (session: CivicPassportSession | null) => void;
+  initialStage?: OnboardingStage;
   initialLocale?: CicoLocale;
   onLocaleChange?: (locale: CicoLocale) => void;
 }
@@ -61,6 +63,7 @@ export function PassportJourney({
   previewPorts,
   onCredentialReady,
   onPassportConnected,
+  initialStage,
   initialLocale,
   onLocaleChange,
 }: PassportJourneyProps) {
@@ -92,6 +95,7 @@ export function PassportJourney({
       onCredentialReady={onCredentialReady}
       onPassportConnected={onPassportConnected}
       passportPort={passportPort}
+      initialStage={initialStage}
       initialLocale={initialLocale}
       onLocaleChange={onLocaleChange}
     />

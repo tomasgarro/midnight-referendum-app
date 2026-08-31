@@ -25,10 +25,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(configDirectory, './src'),
       'cross-fetch': path.resolve(configDirectory, './src/integration/browser-fetch.ts'),
-      'isomorphic-ws': path.resolve(
-        configDirectory,
-        './src/integration/browser-websocket.ts',
-      ),
+      'isomorphic-ws': path.resolve(configDirectory, './src/integration/browser-websocket.ts'),
       'object-inspect': path.resolve(
         configDirectory,
         './src/integration/browser-object-inspect.ts',

@@ -73,7 +73,12 @@ export function CountryFlag({ alpha2, size = 'md' }: CountryFlagProps) {
   const emoji = toFlagEmoji(alpha2);
 
   return (
-    <span className="sys-flag" data-size={size} data-mode={supported ? 'emoji' : 'code'}>
+    <span
+      className="sys-flag"
+      data-size={size}
+      data-mode={supported ? 'emoji' : 'code'}
+      aria-hidden="true"
+    >
       {supported && emoji ? emoji : alpha2.toUpperCase()}
     </span>
   );

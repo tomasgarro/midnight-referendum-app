@@ -72,7 +72,9 @@ export function ActivityView({ polls, receipts, locale }: ActivityViewProps) {
                       </span>
                     </div>
                     <time dateTime={receipt.createdAt}>
-                      {new Date(receipt.createdAt).toLocaleString(locale === 'es' ? 'es-AR' : 'en-GB')}
+                      {new Date(receipt.createdAt).toLocaleString(
+                        locale === 'es' ? 'es-AR' : 'en-GB',
+                      )}
                     </time>
                     <code>{receipt.id}</code>
                     <div className="activity-card__actions">
@@ -94,7 +96,9 @@ export function ActivityView({ polls, receipts, locale }: ActivityViewProps) {
       )}
 
       <ReceiptVerifier receipts={receipts} locale={locale} />
-      <span className="sr-only"><Copy /> {copy.copy} · {copy.pending}</span>
+      <span className="sr-only">
+        <Copy /> {copy.copy} · {copy.pending}
+      </span>
     </main>
   );
 }

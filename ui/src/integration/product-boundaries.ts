@@ -9,7 +9,9 @@ export interface IdentitySession {
   };
 }
 
-export type DiscoveryScope = { readonly kind: 'world' } | { readonly kind: 'country'; readonly code: 'FR' | 'AR' };
+export type DiscoveryScope =
+  | { readonly kind: 'world' }
+  | { readonly kind: 'country'; readonly code: 'FR' | 'AR' };
 
 export interface CredentialSummaryItem {
   readonly id: string;

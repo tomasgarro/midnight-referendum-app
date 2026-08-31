@@ -3,19 +3,27 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../App';
 
+/**
+ * The onboarding is one straight line: welcome, what the three things are,
+ * Passport, what Passport shared, the simulated pass, done. The country is
+ * chosen on the eligibility screen rather than on a screen of its own.
+ */
 async function completeDemoCredential(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
   await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
-  // Country choice is now an input on the eligibility screen rather than a
-  // screen of its own, so the journey is one click shorter here.
   await user.click(
-    screen.getByRole('button', { name: /Crear mi credencial|Create my credential/i }),
+    screen.getByRole('button', { name: /Crear mi pase simulado|Create my simulated pass/i }),
   );
   await user.click(
     screen.getByRole('button', { name: /Ver las consultas|See the consultations/i }),
   );
+}
+
+/** The five-position bar renders only once onboarding is behind the reader. */
+function skipOnboarding() {
+  window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
 }
 
 describe('App', () => {
@@ -37,90 +45,138 @@ describe('App', () => {
     render(<App />);
     const user = userEvent.setup();
     expect(screen.queryByRole('button', { name: /Volver a la app|Back to the app/i })).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: /Explorar sin conectar|Explore without connecting/i }),
-    ).toBeNull();
     await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
     expect(
       screen.getByRole('heading', { name: /Qué protege tu voto|What protects your vote/i }),
     ).toBeTruthy();
-    expect(screen.getByText(/Tu ingreso seguro|Your secure sign-in/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Volver a la app|Back to the app/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
   });
 
-  it('completes the Passport-first credential journey without scope, ballot, or wallet discovery', async () => {
+  /**
+   * The confusion this product kept producing was three different things all
+   * called "passport". The privacy stage is where they are separated, so it is
+   * asserted by name: the Midnight account, the physical document, and the
+   * small result that participating actually uses.
+   */
+  it('separates the Midnight account, the physical document and the eligibility pass', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
+
+    expect(screen.getByText('Midnight Passport')).toBeTruthy();
+    expect(screen.getByText('Pasaporte físico')).toBeTruthy();
+    expect(screen.getByText('Pase de elegibilidad')).toBeTruthy();
+    expect(screen.getByText(/No está guardado dentro de Passport/i)).toBeTruthy();
+  });
+
+  it('completes the Passport-first journey without scope, ballot, or wallet discovery', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    expect(screen.getByRole('heading', { name: 'Consultas para vos' })).toBeTruthy();
-    expect(screen.getByText('Credencial lista')).toBeTruthy();
-    expect(screen.getByText(/Argentina \(AR\)/i)).toBeTruthy();
-    expect(screen.getByRole('tab', { name: /World|Mundo/ }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
+    expect(screen.getByRole('heading', { name: /Decisiones que podés explorar/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Global/ }).getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByText(/Passport v2|Paso 9|Elegí tu respuesta/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
   });
 
-  it('supports a global country catalogue with only the credential country unlocked', async () => {
+  it('carries five destinations with Verify as an action rather than a tab', async () => {
+    skipOnboarding();
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Descubrir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Credenciales' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Actividad' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Passport$/ })).toBeTruthy();
+
+    // Verify is reachable, but it is labelled as the thing it does rather than
+    // a place you can be, and it never becomes the current page.
+    const verify = screen.getByRole('button', { name: /Verificar · documento físico/ });
+    expect(verify.getAttribute('aria-current')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Verificar$/ })).toBeNull();
+  });
+
+  /**
+   * Verify is an action for someone who already has an account. Sending a
+   * returning reader back through the welcome screen and a second consent
+   * request was the fastest way to make the button feel like a trap.
+   */
+  it('opens Verify at the document step once Passport is connected', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    await user.click(screen.getByRole('tab', { name: /Countries|Países/ }));
-    const selector = screen.getByRole('combobox', { name: 'País' });
-    expect(selector.querySelectorAll('option').length).toBeGreaterThan(200);
-    await user.selectOptions(selector, 'BR');
-    expect(screen.getByText('Brasil todavía está bloqueado')).toBeTruthy();
-    await user.selectOptions(selector, 'AR');
-    expect(
-      screen.getByRole('heading', { name: 'Tierras rurales y propiedad extranjera' }),
-    ).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /Verificar · documento físico/ }));
+
+    expect(screen.getByRole('heading', { name: /Creá tu pase de elegibilidad/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Comenzar|Get started/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Paso anterior|Previous step/i })).toBeNull();
   });
 
-  it('keeps the onboarding explanation available from the profile', async () => {
+  /**
+   * Browsing is not belonging. Opening France while holding an Argentine pass
+   * must not present the reader as eligible there.
+   */
+  it('keeps country browsing separate from eligibility', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    await user.click(screen.getByRole('button', { name: 'Mi perfil' }));
-    await user.click(screen.getByRole('button', { name: /Revisar el recorrido/i }));
-    expect(
-      screen.getByRole('heading', { name: /Demostrá que podés votar|Prove you can vote/i }),
-    ).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Volver a la app|Back to the app/i })).toBeTruthy();
+
+    expect(screen.getByText(/Explorar un país no declara tu nacionalidad/i)).toBeTruthy();
+
+    // The demo issues a French pass. Argentina is browsable all the same, and
+    // browsing it must not present the reader as eligible there.
+    await user.click(screen.getByRole('tab', { name: 'Argentina' }));
+    expect(screen.getByText(/Esto no acredita elegibilidad/i)).toBeTruthy();
+    expect(screen.queryByText(/Elegibilidad lista para/i)).toBeNull();
+    expect(screen.getByRole('button', { name: /Añadir elegibilidad/i })).toBeTruthy();
+
+    await user.click(screen.getByRole('tab', { name: 'Francia' }));
+    expect(screen.getByText(/Elegibilidad lista para/i)).toBeTruthy();
   });
 
-  it('changes the synthetic demo credential country without changing product branding', async () => {
+  it('offers only the two countries with a complete pilot journey', async () => {
     render(<App />);
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
     await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
     await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
     await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
-    // The country is chosen from a flag list on the eligibility screen. It is
-    // selected once, in one control: the tinted row that used to echo the
-    // choice back is gone.
-    await user.click(screen.getByRole('radio', { name: /Brasil|Brazil/i }));
-    await user.click(
-      screen.getByRole('button', { name: /Crear mi credencial|Create my credential/i }),
-    );
-    expect(screen.getByText(/Brasil|Brazil/i)).toBeTruthy();
-    await user.click(
-      screen.getByRole('button', { name: /Ver las consultas|See the consultations/i }),
-    );
-    expect(screen.getByText('Referéndum Cívico')).toBeTruthy();
-    await user.click(screen.getByRole('tab', { name: /Countries|Países/ }));
-    expect(screen.getByText('No hay consultas disponibles en este espacio')).toBeTruthy();
-    expect(
-      screen.queryByRole('heading', { name: 'Tierras rurales y propiedad extranjera' }),
-    ).toBeNull();
+
+    expect(screen.getByRole('radio', { name: /Francia|France/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Argentina/i })).toBeTruthy();
+    // The 249-country search was a dead end: every country but one led nowhere.
+    expect(screen.queryByRole('radio', { name: /Brasil|Brazil/i })).toBeNull();
+    expect(screen.getAllByRole('radio').length).toBe(2);
+  });
+
+  it('holds one active eligibility pass in Credentials', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await completeDemoCredential(user);
+    await user.click(screen.getByRole('button', { name: 'Credenciales' }));
+
+    expect(screen.getByRole('heading', { name: /Elegibilidad, lista para usar/i })).toBeTruthy();
+    expect(screen.getByText(/No es tu pasaporte físico/i)).toBeTruthy();
+    // Exactly one active pass, named by the country it attests.
+    expect(screen.getByRole('heading', { level: 2, name: /Francia|France/i })).toBeTruthy();
+    expect(screen.getByText(/Simulado para esta demo|Simulated for this demo/i)).toBeTruthy();
+  });
+
+  it('shows the empty credential state before anything has been verified', async () => {
+    skipOnboarding();
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Credenciales' }));
+
+    expect(screen.getByText(/Todavía no tenés un pase/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Añadir elegibilidad/i })).toBeTruthy();
   });
 
   it('creates a clearly labelled simulated receipt without a wallet', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    const [voteButton] = screen.getAllByRole('button', { name: /Votá ahora/i });
+    const [voteButton] = screen.getAllByRole('button', { name: /Participar/i });
     if (!voteButton) throw new Error('Expected at least one available consultation action');
     await user.click(voteButton);
     await user.click(screen.getByRole('button', { name: /^Sí/ }));
@@ -131,47 +187,17 @@ describe('App', () => {
     expect(screen.getByText(/No representa una transacción/i)).toBeTruthy();
   });
 
-  it('propagates English through the active dashboard and document metadata', async () => {
-    render(<App />);
-    const user = userEvent.setup();
-    await user.selectOptions(screen.getByRole('combobox', { name: /Idioma|Language/ }), 'en');
-    await completeDemoCredential(user);
-    expect(screen.getByRole('heading', { name: 'Consultations for you' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'World' })).toBeTruthy();
-    expect(document.documentElement.lang).toBe('en');
-    expect(document.title).toMatch(/Civic Referendum/i);
-  });
-
-  it('consolidates the bottom navigation into three tabs and drops the separate Verify tab', async () => {
-    window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
-    render(<App />);
-    expect(await screen.findByRole('button', { name: 'Explorá' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Votá' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Mi perfil' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /^Verificá$/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Verify$/ })).toBeNull();
-  });
-
-  it('shows public results on Explore without requiring a credential or a Passport session', async () => {
-    window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
-    render(<App />);
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Explorá' }));
-    expect(
-      screen.getByRole('heading', { name: /Lo que cualquiera puede leer, sin iniciar sesión/i }),
-    ).toBeTruthy();
-    // No credential was ever prepared and no Passport session exists, yet the
-    // public results section renders unconditionally.
-    expect(screen.queryByText('Credencial lista')).toBeNull();
-  });
-
-  it('keeps one receipt per simulated vote instead of overwriting the previous one', async () => {
+  /**
+   * Receipts belong to Activity now. Reaching them from a completed vote must
+   * land there, not in the account screen.
+   */
+  it('keeps one receipt per simulated vote, in Activity', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
 
     const castVote = async (index: number, answer: RegExp) => {
-      const open = screen.getAllByRole('button', { name: /Votá ahora/i });
+      const open = screen.getAllByRole('button', { name: /Participar/i });
       const button = open[index];
       if (!button) throw new Error(`Expected an open consultation at index ${index}`);
       await user.click(button);
@@ -179,38 +205,30 @@ describe('App', () => {
       await user.click(screen.getByRole('button', { name: /Revisar mi voto/i }));
       await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
       await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
-      await user.click(screen.getByRole('button', { name: /^Votá$/ }));
+      await user.click(screen.getByRole('button', { name: 'Descubrir' }));
     };
 
     await castVote(0, /^Sí/);
     await castVote(1, /^No/);
-    await user.click(screen.getByRole('button', { name: /Mi perfil/ }));
+    await user.click(screen.getByRole('button', { name: 'Actividad' }));
 
     // Every simulated receipt used to carry the identifier
     // 'demo-tx-cico-2026-0001'. Receipts are de-duplicated by id, so the
-    // second vote silently deleted the first one from the profile and from
-    // the verifier's reach.
-    // The receipt vault is IndexedDB-backed and survives beforeEach, so the
-    // assertion is about distinctness rather than an exact count: what the
-    // fixed identifier destroyed was uniqueness, not volume.
-    const identifiers = [...document.querySelectorAll('.profile__receipts .profile__code')].map(
+    // second vote silently deleted the first one. The vault is IndexedDB-backed
+    // and survives beforeEach, so the assertion is about distinctness rather
+    // than an exact count.
+    const identifiers = [...document.querySelectorAll('.activity-card code')].map(
       (node) => node.textContent ?? '',
     );
     expect(identifiers.length).toBeGreaterThanOrEqual(2);
     expect(new Set(identifiers).size).toBe(identifiers.length);
-    expect(screen.getAllByText(/Jubilaciones y sostenibilidad previsional/).length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.getAllByText(/Energía, tarifas y transición renovable/).length).toBeGreaterThan(
-      0,
-    );
   });
 
-  it('folds Verify into Mi perfil with an on-device privacy note and a working receipt lookup', async () => {
+  it('verifies a receipt from Activity without leaving the device', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    const [voteButton] = screen.getAllByRole('button', { name: /Votá ahora/i });
+    const [voteButton] = screen.getAllByRole('button', { name: /Participar/i });
     if (!voteButton) throw new Error('Expected at least one available consultation action');
     await user.click(voteButton);
     await user.click(screen.getByRole('button', { name: /^Sí/ }));
@@ -218,15 +236,10 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
     await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
 
-    // Landed on Mi perfil; the former Verify tab no longer exists.
-    expect(screen.queryByRole('button', { name: /^Verificá$/ })).toBeNull();
-    expect(
-      screen.getByText(/cifrados solo en este dispositivo; la red nunca puede vincularlos/i),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Comprobantes de participación/i })).toBeTruthy();
 
-    // Simulated receipts are per-vote now, so the lookup reads the identifier
-    // the flow actually produced rather than a constant. A fixed id meant a
-    // second vote silently replaced the first receipt.
+    // Simulated receipts are per-vote, so the lookup reads the identifier the
+    // flow actually produced rather than a constant.
     const [receiptCode] = screen.getAllByText(/^demo-/);
     const receiptId = receiptCode?.textContent ?? '';
     expect(receiptId).toMatch(/^demo-[a-z0-9:-]+-[a-z0-9]+$/i);
@@ -234,5 +247,59 @@ describe('App', () => {
     await user.type(input, receiptId);
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
     expect(screen.getByText('Comprobante simulado')).toBeTruthy();
+  });
+
+  /**
+   * The account screen is where Midnight is named as the account layer, and
+   * where locking a session is kept distinct from destroying local data.
+   */
+  it('presents Passport as the account, with lock and delete kept apart', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await completeDemoCredential(user);
+    await user.click(screen.getByRole('button', { name: /^Passport$/ }));
+
+    expect(screen.getByText(/Midnight Passport conectado/i)).toBeTruthy();
+    expect(screen.getByText(/Dirección Preview/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Bloquear y conservar datos/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Eliminar datos locales/i })).toBeTruthy();
+  });
+
+  it('keeps the onboarding explanation available from the account screen', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await completeDemoCredential(user);
+    await user.click(screen.getByRole('button', { name: /^Passport$/ }));
+    await user.click(screen.getByRole('button', { name: /Revisar cómo funciona/i }));
+    expect(
+      screen.getByRole('heading', { name: /Demostrá que podés votar|Prove you can vote/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Volver a la app|Back to the app/i })).toBeTruthy();
+  });
+
+  it('propagates English through the shell and the document metadata', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await completeDemoCredential(user);
+    // The language control lives in the account screen now, not the header.
+    await user.click(screen.getByRole('button', { name: /^Passport$/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /Idioma|Language/ }), 'en');
+
+    expect(screen.getByRole('button', { name: 'Discover' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Credentials' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Activity' })).toBeTruthy();
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toMatch(/Civic Referendum/i);
+  });
+
+  it('reads public results without a credential or a Passport session', async () => {
+    skipOnboarding();
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: /Decisiones que podés explorar/i }),
+    ).toBeTruthy();
+    // Nothing was verified and no session exists, yet consultations render.
+    expect(screen.queryByText(/Elegibilidad lista para/i)).toBeNull();
+    expect(screen.getAllByRole('tab', { name: /Global|Francia|Argentina/ }).length).toBe(3);
   });
 });

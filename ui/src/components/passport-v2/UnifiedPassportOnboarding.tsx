@@ -25,6 +25,12 @@ interface UnifiedPassportOnboardingProps {
   dismissible?: boolean;
   onCredentialReady?: (credential: DemoCredentialSummary) => void;
   onPassportConnected?: (session: CivicPassportSession | null) => void;
+  /**
+   * Where the journey opens. First run starts at the welcome screen, but
+   * someone who already has a Passport session and taps Verify wants the
+   * document step -- not to be re-asked for consent they have already given.
+   */
+  initialStage?: OnboardingStage;
   initialLocale?: CicoLocale;
   onLocaleChange?: (locale: CicoLocale) => void;
 }
@@ -338,11 +344,12 @@ export function UnifiedPassportOnboarding({
   dismissible = true,
   onCredentialReady,
   onPassportConnected,
+  initialStage = 'welcome',
   initialLocale,
   onLocaleChange,
 }: UnifiedPassportOnboardingProps) {
   const [locale, setLocale] = useState<CicoLocale>(() => initialLocale ?? detectLocale());
-  const [stage, setStage] = useState<OnboardingStage>('welcome');
+  const [stage, setStage] = useState<OnboardingStage>(initialStage);
   const [session, setSession] = useState<CivicPassportSession | null>(null);
   const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -351,7 +358,9 @@ export function UnifiedPassportOnboarding({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const initialRender = useRef(false);
   const t = copy[locale];
-  const previousStage = PREVIOUS_STAGE[stage];
+  // Back never walks out of the entry point: opening at the document step
+  // must not offer a route into a consent screen this visit never showed.
+  const previousStage = stage === initialStage ? undefined : PREVIOUS_STAGE[stage];
   const selectedCountry = useMemo(() => findAssignedCountry(demoCountry), [demoCountry]);
 
   useLayoutEffect(() => {

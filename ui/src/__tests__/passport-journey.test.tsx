@@ -25,20 +25,20 @@ describe('PassportJourney', () => {
     await user.click(screen.getByRole('button', { name: /Use demo Passport/i }));
     expect(screen.getByRole('heading', { name: 'This is what Passport shared' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    expect(screen.getByRole('heading', { name: 'Vote from wherever you are' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Create my credential/i }));
+    expect(screen.getByRole('heading', { name: 'Create your eligibility pass' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Create my simulated pass/i }));
 
-    expect(screen.getByRole('heading', { name: 'Your credential is ready' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your eligibility pass is ready' })).toBeTruthy();
     // The uppercase SYNTHETIC CREDENTIAL banner is now a row in the summary
     // it used to shout above: whether a credential is synthetic is a value,
     // like its country and its issuer, not a flag.
-    expect(screen.getAllByText('Synthetic credential').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Simulated pass').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/Choose your scope|Elegí un espacio/i)).toBeNull();
     expect(screen.queryByText(/Generate local proof|Generando prueba/i)).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /See the consultations/i }));
     expect(onCredentialReady).toHaveBeenCalledWith(
-      expect.objectContaining({ country: 'AR', ageClass: '18+' }),
+      expect.objectContaining({ country: 'FR', ageClass: '18+' }),
     );
     expect(onClose).toHaveBeenCalledOnce();
   });

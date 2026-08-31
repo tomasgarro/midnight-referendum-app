@@ -77,7 +77,7 @@ const EN_POLL_COPY: Record<string, Partial<Poll>> = {
     question:
       'Should Argentina keep national limits and controls on foreign ownership and possession of rural land, with regular public review?',
     opened: 'August 8, 2026',
-    deadline: 'August 16, 2026',
+    deadline: 'October 4, 2026',
     whyNow:
       'Law 26.737 remains under debate. The consultation presents the current legal frame and the open questions without taking an institutional position.',
     legalFrame:
@@ -244,9 +244,12 @@ export const POLLS: Poll[] = [
     question:
       '¿Debería Argentina mantener un régimen nacional de límites y controles sobre la titularidad y posesión extranjera de tierras rurales, con revisión pública periódica?',
     opened: '8 de agosto de 2026',
-    deadline: '16 de agosto de 2026',
+    // Argentina is a pilot scope, so its consultation has to be open for the
+    // scope to be walkable at all. It closed on 16 August, which left the
+    // Argentina tab showing one closed card and no action.
+    deadline: '4 de octubre de 2026',
     opensAt: '2026-08-08T00:00:00-03:00',
-    closesAt: '2026-08-16T23:59:59-03:00',
+    closesAt: '2026-10-04T23:59:59-03:00',
     eligible: '143.820',
     participation: '8.914 participaciones de demo',
     whyNow:

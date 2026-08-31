@@ -10,6 +10,7 @@ import { PassportJourney } from '@/components/passport-v2/PassportJourney';
 import type { PreviewPassportJourneyPorts } from '@/components/passport-v2/PreviewPassportJourney';
 import { useWallet } from '@/hooks/use-wallet';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import type { OnboardingStage } from '@/integration/civic-state';
 import { ASSIGNED_COUNTRIES } from '@/integration/country-catalog';
 import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
 import { PassportIdentityBridge } from '@/integration/passport';
@@ -88,6 +89,12 @@ function CivicApp() {
   const [tab, setTab] = useState<Tab>('discover');
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
+  /**
+   * Verify is an action, so it opens the document step for someone who already
+   * has a Passport session. Only a first run -- or an explicit replay -- walks
+   * the whole explanation again.
+   */
+  const [journeyStage, setJourneyStage] = useState<OnboardingStage>('welcome');
   const [onboardingRequired, setOnboardingRequired] = useState(initialOnboardingRequired);
   const [policyDetailId, setPolicyDetailId] = useState<string | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
@@ -122,6 +129,13 @@ function CivicApp() {
   const replayOnboarding = () => {
     setFlowStage(null);
     setPolicyDetailId(null);
+    setJourneyStage('welcome');
+    setPassportJourneyOpen(true);
+  };
+  const openVerification = () => {
+    setFlowStage(null);
+    setPolicyDetailId(null);
+    setJourneyStage(passportSession ? 'eligibility' : 'welcome');
     setPassportJourneyOpen(true);
   };
   const { status: walletStatus, dustBalance } = useWallet();
@@ -445,7 +459,7 @@ function CivicApp() {
     tab === 'credentials' ? (
       <CredentialsView
         credentials={credential ? [credential] : []}
-        onVerify={() => setPassportJourneyOpen(true)}
+        onVerify={openVerification}
         locale={locale}
       />
     ) : tab === 'activity' ? (
@@ -469,7 +483,7 @@ function CivicApp() {
         publicContractAddress={runtimeContractAddress}
         onStartVote={startVote}
         onOpenPolicy={setPolicyDetailId}
-        onOpenPassportJourney={() => setPassportJourneyOpen(true)}
+        onOpenPassportJourney={openVerification}
         locale={locale}
       />
     );
@@ -506,6 +520,7 @@ function CivicApp() {
           dismissible={!onboardingRequired}
           onCredentialReady={(nextCredential) => setCredential(nextCredential)}
           onPassportConnected={setPassportSession}
+          initialStage={journeyStage}
           initialLocale={locale}
           onLocaleChange={changeLocale}
           passportPort={passportSessionPort}
@@ -567,11 +582,7 @@ function CivicApp() {
       {!passportJourneyOpen && !flowStage && !selectedPolicy ? (
         <BottomNav
           tab={tab}
-          onVerify={() => {
-            setFlowStage(null);
-            setPolicyDetailId(null);
-            setPassportJourneyOpen(true);
-          }}
+          onVerify={openVerification}
           onChange={(nextTab) => {
             setPassportJourneyOpen(false);
             navigate(nextTab);
