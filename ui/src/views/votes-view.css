@@ -33,6 +33,25 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
 }
+.votes__scope button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.votes__scope button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .votes__scope button.active {
   border-color: var(--accent);
   background: var(--accent);
