@@ -34,15 +34,29 @@ no-issuer variant.
   `preview`, `undeployed`: `MidnightPassportSessionAdapter.connect()` opens the
   real Passport origin (`VITE_PASSPORT_ORIGIN`, default
   `https://midnightpassport.com`) and requests `['session', 'profile']`.
-- **Dependency** Passport origin must have approved this app's origin.
-- **Status** `demo` **Working in demo** · other modes **Requires credentials**
-  (approved production origin is an open live gate).
+- **Dependency** An HTTPS origin, and a Passport account in the same browser.
+  The deployed Passport keeps no allowlist for this popup handshake: it posts
+  `ready` to `"*"`, accepts a request whose source is `window.opener` and whose
+  request/nonce pair matches, and replies to whatever origin sent it. Approval
+  is the person's, on Passport's own consent sheet, not an operator's.
+  Only the *embedded* mode -- Passport framing us in its in-app browser --
+  needs a listing, and that is a public PR to the community app registry, which
+  requires HTTPS and nothing else. A `*.hostingersite.com` origin qualifies.
+- **Status** `demo` **Working in demo** · other modes **Untested against live
+  Passport** (no credential gate; the session has simply never been run).
 - **Failure/recovery** Rejection surfaces as an `alert` on the consent screen
   with the provider's message and the connect button stays available. The
   header entry point shows a dismissible popover with a retry link.
 - **Copy honest?** Yes. The demo button reads "Usar Passport de demo".
-- **Next step** Register the production origin, then capture one real session
-  transcript.
+- **Next step** Deploy to the HTTPS origin, create a Passport account in that
+  browser, and capture one real session transcript. Expect `displayName` and
+  nothing else: the app requests only that field today.
+
+  Do not widen `profileFields` yet. The deployed Passport runs on
+  stagenet/ledger-9 while this app targets Preview/ledger-v8, so
+  `passportContract` would be rejected as `wrong_network`, and
+  `midnightAddresses` would return a stagenet address that `parseProfile` does
+  not network-check -- a silent-corruption hazard, not a visible failure.
 
 ### Passport holder binding
 

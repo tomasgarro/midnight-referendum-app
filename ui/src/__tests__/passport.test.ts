@@ -358,55 +358,24 @@ describe('PassportIdentityBridge', () => {
     await expect(pending).resolves.toMatchObject({ displayName: 'ready-first' });
   });
 
-  it('supports an explicit session-only handshake without profile fields', async () => {
-    const postMessage = vi.fn();
-    const popup = { postMessage, closed: false } as unknown as Window;
+  /**
+   * The deployed Passport drops a request carrying no fields and answers
+   * nothing, so an empty list used to burn the whole 180 s timeout and then
+   * report Passport as slow. It is rejected before the popup opens instead.
+   */
+  it('rejects a field-less handshake the deployed Passport cannot answer', async () => {
     let opened = '';
     const bridge = new PassportIdentityBridge({
       passportOrigin: ORIGIN,
       timeoutMs: 200,
       openPassport: (url) => {
         opened = url;
-        return popup;
+        return { postMessage: vi.fn(), closed: false } as unknown as Window;
       },
     });
 
-    const pending = bridge.connect([]);
-    const query = new URL(opened).searchParams;
-    const requestId = query.get('passportRequestId');
-    const nonce = query.get('passportNonce');
-    if (!requestId || !nonce) throw new Error('Passport request parameters were not created');
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: ORIGIN,
-        source: popup,
-        data: {
-          protocol: PASSPORT_PROFILE_PROTOCOL,
-          type: 'passport.profile.ready',
-          requestId,
-          nonce,
-        },
-      }),
-    );
-    const request = postMessage.mock.calls.at(-1)?.[0] as { fields: string[] } | undefined;
-    expect(request?.fields).toEqual([]);
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: ORIGIN,
-        source: popup,
-        data: {
-          protocol: PASSPORT_PROFILE_PROTOCOL,
-          type: 'passport.profile.response',
-          requestId,
-          nonce,
-          approved: true,
-          profile: {},
-        },
-      }),
-    );
-    await expect(pending).resolves.toMatchObject({ requestId, nonce });
+    await expect(bridge.connect([])).rejects.toMatchObject({ code: 'invalid_configuration' });
+    expect(opened).toBe('');
   });
 
   it('adopts the pair Passport mints when the app is embedded', async () => {
