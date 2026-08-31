@@ -188,15 +188,14 @@ test('wallet approval appears only at the live-action boundary and groups duplic
   await page.getByRole('button', { name: /Continue/i }).click();
   await page.getByRole('button', { name: /Use demo Passport/i }).click();
   await page.getByRole('button', { name: /Continue/i }).click();
-  await page.getByRole('button', { name: /Prepare credential/i }).click();
-  await page.getByRole('button', { name: /Use this country/i }).click();
-  await page.getByRole('button', { name: /Go to civic dashboard/i }).click();
+  await page.getByRole('button', { name: /Create my credential/i }).click();
+  await page.getByRole('button', { name: /See the consultations/i }).click();
   const openCard = page
-    .locator('article.dashboard-poll-card')
-    .filter({ has: page.getByRole('button', { name: 'Votá ahora' }) })
+    .locator('li', { has: page.locator('.poll') })
+    .filter({ has: page.getByRole('button', { name: /^(Vote now|Votá ahora)$/i }) })
     .first();
-  await openCard.getByRole('button', { name: /Leer propuesta/i }).click();
-  await page.getByRole('button', { name: 'Votar esta consulta' }).click();
+  await openCard.getByRole('button', { name: /Read proposal|Leer propuesta/i }).click();
+  await page.getByRole('button', { name: /^(Vote now|Votá ahora)$/i }).click();
   await page.getByRole('button', { name: /^Sí/ }).click();
   await page.getByRole('button', { name: /Revisar mi voto/i }).click();
   await expect(page.getByRole('button', { name: 'Conectar wallet Midnight' })).toBeVisible();
@@ -226,8 +225,8 @@ test('completes the deployed showcase without contacting private runtimes', asyn
   await page.evaluate(() => window.sessionStorage.clear());
   await page.reload();
   await expect(page.getByRole('button', { name: 'Wallet' })).toHaveCount(0);
-  await expect(page.getByText('LIVE PASSPORT')).toBeVisible();
-  await expect(page.getByText('PROVIDER-OWNED')).toBeVisible();
+  // Two uppercase truth chips became one environment badge in the header.
+  await expect(page.getByText('Live Passport')).toBeVisible();
   await page.getByRole('button', { name: /Get started/i }).click();
   await page.getByRole('button', { name: /Continue/i }).click();
   await expect(page.getByRole('button', { name: /Explore without connecting/i })).toHaveCount(0);
@@ -310,9 +309,7 @@ test('completes the Passport popup handshake with a real browser WindowProxy', a
   await popup.waitForLoadState('domcontentloaded');
   await expect(page.getByText('popup.passport')).toBeVisible();
   await page.getByRole('button', { name: /Continue/i }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Prepare a credential, not a vote' }),
-  ).toBeVisible();
-  await expect(page.getByRole('button', { name: /Prepare credential/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vote from wherever you are' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Create my credential/i })).toBeVisible();
   await popup.close();
 });

@@ -52,15 +52,20 @@ describe('opaque Passport enrollment state', () => {
     expect(loadPassportAttempt(new Date('2026-08-30T12:00:00.000Z').getTime())).toBeNull();
   });
 
-  it('keeps unreviewed tutorial media gated while exposing a transcript', async () => {
+  it('shows the trimmed scan walkthrough alongside the written steps', async () => {
     const user = userEvent.setup();
     const { container } = render(<CredentialJourneyTutorial />);
 
-    expect(
-      container.querySelector('[data-tutorial-media-gate="rights-review-required"]'),
-    ).toBeTruthy();
-    expect(container.querySelector('video')).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Leer transcripción/i }));
+    // The clip is three trimmed moments from the provider walkthrough, cropped
+    // to the illustration. It is silent and carries no audio track, so the
+    // written steps remain the accessible path.
+    const video = container.querySelector('video');
+    expect(video).toBeTruthy();
+    expect(video?.hasAttribute('muted') || video?.muted).toBeTruthy();
+    expect(container.querySelectorAll('video source')).toHaveLength(2);
+    // The tutorial is a disclosure now: the poster and the "media unavailable"
+    // notice advertised a video the component never had.
+    await user.click(screen.getByText(/Qué pasa en el teléfono/i));
     expect(screen.getByText(/Escaneá el QR/i)).toBeTruthy();
   });
 });

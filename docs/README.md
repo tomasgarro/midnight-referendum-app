@@ -12,6 +12,10 @@ branch or a Midnight Preview release.
 | --- | --- | --- |
 | [`../README.md`](../README.md) | Product boundary, current status, synthetic fallback, and quick start | Current |
 | [`CURRENT-RELEASE-READINESS.md`](CURRENT-RELEASE-READINESS.md) | Release boundary, pending gates, and evidence policy | Current |
+| [`USER-ACTION-MATRIX.md`](USER-ACTION-MATRIX.md) | What every CTA actually does, its dependency, and whether its copy is honest | Current |
+| [`UX-FINDINGS-20260831.md`](UX-FINDINGS-20260831.md) | Prioritized findings from the 31 August journey audit, fixed and open | Current |
+| [`PREVIEW-AND-BACKEND-READINESS.md`](PREVIEW-AND-BACKEND-READINESS.md) | What exists on Preview today, the critical path to a live transaction, and submission readiness by level | Current |
+| [`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md) | Every value and decision still missing before the VPS stack can start | Current |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Service ownership and privacy boundaries | Current |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) | Hostinger static/VPS target topology and operations | Current target |
 | [`ENVIRONMENT-ACCEPTANCE.md`](ENVIRONMENT-ACCEPTANCE.md) | Demo, local, and Preview acceptance criteria | Current target |

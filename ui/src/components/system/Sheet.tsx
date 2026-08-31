@@ -55,8 +55,12 @@ export function Sheet({
         event.preventDefault();
         return;
       }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      // `focusable.length === 0` returned above, so both are present -- but a
+      // narrowing the compiler can check beats two assertions telling it to
+      // stop checking.
+      if (!first || !last) return;
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();

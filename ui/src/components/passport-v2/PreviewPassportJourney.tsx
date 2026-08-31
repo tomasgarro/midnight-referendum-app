@@ -1,13 +1,4 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Fingerprint,
-  Info,
-  Lock,
-  QrCode,
-  ShieldCheck,
-} from '@phosphor-icons/react';
+import { ArrowRight, Check, Info, Lock, ShieldCheck } from '@phosphor-icons/react';
 import { iso31661NumericToAlpha2 } from 'iso-3166';
 import type {
   CivicActionPort,
@@ -21,6 +12,7 @@ import type {
 } from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CapybaraMascot } from '@/components/mascot';
+import { JourneyTopBar, SuccessMark } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName } from '@/integration/country-catalog';
 import { type CicoLocale, persistLocale } from '@/integration/locale';
@@ -30,6 +22,7 @@ import {
   savePassportAttempt,
 } from '@/integration/passport-enrollment-state';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
+import './journey.css';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
 import { CredentialJourneyTutorial } from './CredentialJourneyTutorial';
 import { EnrollmentHandoff } from './EnrollmentHandoff';
@@ -68,6 +61,33 @@ type ActiveEnrollment = Pick<CredentialEnrollment, 'enrollmentId' | 'expiresAt'>
   Partial<Pick<CredentialEnrollment, 'status' | 'createdAt' | 'interaction'>>;
 
 const ENROLLMENT_POLL_INTERVAL_MS = 5_000;
+const PREVIEW_SCREENS: readonly PreviewStage[] = [
+  'consent',
+  'provider',
+  'enrollment',
+  'credential',
+];
+/** Provider enum values are not citizen copy. */
+const ENROLLMENT_STATUS_LABEL = {
+  es: {
+    pending: 'esperando al proveedor',
+    issued: 'credencial emitida',
+    expired: 'el enlace venció',
+    denied: 'el proveedor rechazó la verificación',
+    failed: 'la verificación falló',
+  },
+  en: {
+    pending: 'waiting for the provider',
+    issued: 'credential issued',
+    expired: 'the link expired',
+    denied: 'the provider rejected the verification',
+    failed: 'the verification failed',
+  },
+} as const;
+const PREVIEW_STAGE_LABEL = {
+  es: { consent: 'Passport', provider: 'Sesión', enrollment: 'Evidencia', credential: 'Lista' },
+  en: { consent: 'Passport', provider: 'Session', enrollment: 'Evidence', credential: 'Ready' },
+} as const;
 
 function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary {
   const country = iso31661NumericToAlpha2[String(summary.country)] ?? String(summary.country);
@@ -101,7 +121,6 @@ export function PreviewPassportJourney({
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
-  const [pollBatch, setPollBatch] = useState(0);
   const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -140,7 +159,7 @@ export function PreviewPassportJourney({
       .getSession()
       .then((restored) => {
         if (!active) return;
-        if (!restored || restored.status !== 'connected') {
+        if (restored?.status !== 'connected') {
           clearPassportAttempt();
           return;
         }
@@ -175,6 +194,18 @@ export function PreviewPassportJourney({
         Date.parse(enrollment.expiresAt) <= now,
     ) || enrollmentStatus?.status === 'expired';
   const enrollmentId = enrollment?.enrollmentId;
+  const displayStatus = (
+    enrollmentExpired ? 'expired' : (enrollmentStatus?.status ?? enrollment?.status ?? 'pending')
+  ) as keyof (typeof ENROLLMENT_STATUS_LABEL)['es'];
+  /* An expired link, a denial, or a provider failure all need the same thing:
+     a new attempt. Checking again cannot help, so it stops being offered. */
+  const needsFreshAttempt =
+    enrollmentExpired ||
+    Boolean(
+      enrollmentStatus &&
+        enrollmentStatus.status !== 'pending' &&
+        enrollmentStatus.status !== 'issued',
+    );
 
   const run = async (operation: () => Promise<void>) => {
     setBusy(true);
@@ -227,7 +258,6 @@ export function PreviewPassportJourney({
       });
       setEnrollment(created);
       setLastCheckedAt(null);
-      setPollBatch(0);
       setEnrollmentStatus({
         enrollmentId: created.enrollmentId,
         status: created.status,
@@ -256,7 +286,6 @@ export function PreviewPassportJourney({
     pollingRef.current = true;
     setPolling(true);
     setBusy(true);
-    setPollBatch((current) => current + 1);
     if (!automatic) setError(null);
     try {
       setLastCheckedAt(new Date().toISOString());
@@ -309,9 +338,15 @@ export function PreviewPassportJourney({
       setEnrollmentStatus(null);
       setCredential(null);
       setLastCheckedAt(null);
-      setPollBatch(0);
       setStage('provider');
     });
+
+  const previousStage: Partial<Record<PreviewStage, PreviewStage>> = {
+    provider: 'consent',
+    enrollment: 'provider',
+    credential: 'enrollment',
+  };
+  const screenIndex = Math.max(PREVIEW_SCREENS.indexOf(stage), 0);
 
   const finish = () => {
     if (!credential) return;
@@ -319,92 +354,35 @@ export function PreviewPassportJourney({
     onClose();
   };
 
-  const previousStage: Partial<Record<PreviewStage, PreviewStage>> = {
-    provider: 'consent',
-    enrollment: 'provider',
-    credential: 'enrollment',
-  };
-
   return (
-    <main className="page-content passport-journey-page unified-onboarding">
-      <div className="showcase-toolbar unified-onboarding-toolbar">
-        <button className="back-button" onClick={onClose} type="button">
-          <ArrowLeft size={18} /> {en ? 'Back to app' : 'Volver a la app'}
-        </button>
-        <label>
-          <span className="sr-only">{en ? 'Language' : 'Idioma'}</span>
-          <select
-            aria-label={en ? 'Language' : 'Idioma'}
-            value={locale}
-            onChange={(event) => setLanguage(event.target.value as CicoLocale)}
-          >
-            <option value="en">English</option>
-            <option value="es">Español</option>
-          </select>
-        </label>
-        <span className="passport-demo-label">
-          {mode === 'undeployed'
-            ? 'UNDEPLOYED · PASSPORT PREVIEW'
-            : en
-              ? 'PREVIEW · CREDENTIAL'
-              : 'PREVIEW · CREDENCIAL'}
-        </span>
-      </div>
-
-      <header className="unified-onboarding-header">
-        <div>
-          <p className="eyebrow">{en ? 'Your first journey' : 'Tu primer recorrido'}</p>
-          <h1>{en ? 'Your identity is not your vote' : 'Tu identidad no es tu voto'}</h1>
-        </div>
-        <div className="unified-truth-labels">
-          <span className="live">
-            <Fingerprint size={14} /> PASSPORT EN VIVO
-            {mode === 'undeployed' ? ' · CUENTA PREVIEW' : ''}
-          </span>
-          <span>
-            {mode === 'undeployed' ? (
-              <>
-                <Info size={14} /> CADENA LOCAL · NO DESPLEGADA
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={14} /> CREDENCIAL VERIFICADA
-              </>
-            )}
-          </span>
-        </div>
-      </header>
-
-      <ol className="unified-progress" aria-label="Tu primer recorrido">
-        {(en
-          ? ['Learn', 'Passport', 'Evidence', 'Ready']
-          : ['Entender', 'Passport', 'Evidencia', 'Lista']
-        ).map((label, index) => {
-          const activeIndex = ['consent', 'provider', 'enrollment', 'credential'].indexOf(stage);
-          return (
-            <li
-              className={index < activeIndex ? 'done' : index === activeIndex ? 'current' : ''}
-              aria-current={index === activeIndex ? 'step' : undefined}
-              key={label}
-            >
-              <span aria-hidden="true">
-                {index < activeIndex ? <Check size={13} /> : index + 1}
-              </span>
-              <small>{label}</small>
-            </li>
-          );
-        })}
-      </ol>
-
-      {previousStage[stage] ? (
-        <button
-          className="showcase-step-back"
-          onClick={() => setStage(previousStage[stage] as PreviewStage)}
-          type="button"
-        >
-          <ArrowLeft size={16} /> {en ? 'Previous step' : 'Paso anterior'}
-        </button>
-      ) : null}
+    <main className="page-content passport-journey-page unified-onboarding preview-journey">
+      {/* The same two-row header the demo journey uses. What it replaces here
+          was eight stacked blocks: an exit link, a labelled language select, a
+          mode label, an eyebrow, a display-size page title, two truth chips, a
+          four-pill stepper, and a "Previous step" link -- all above a card
+          whose own eyebrow announced a *different* step number than the pills
+          did, because the pills counted screens and the eyebrows counted
+          stages. There is one count now. */}
+      <JourneyTopBar
+        locale={locale}
+        onLocaleChange={setLanguage}
+        languageLabel={en ? 'Language' : 'Idioma'}
+        onExit={onClose}
+        exitLabel={en ? 'Back to app' : 'Volver a la app'}
+        {...(previousStage[stage]
+          ? { onBack: () => setStage(previousStage[stage] as PreviewStage) }
+          : {})}
+        backLabel={en ? 'Previous step' : 'Paso anterior'}
+        badge={mode === 'undeployed' ? (en ? 'Local chain' : 'Cadena local') : 'Preview'}
+        current={screenIndex + 1}
+        total={PREVIEW_SCREENS.length}
+        stageLabel={PREVIEW_STAGE_LABEL[en ? 'en' : 'es'][stage]}
+        progressLabel={
+          en
+            ? `Step ${screenIndex + 1} of ${PREVIEW_SCREENS.length}`
+            : `Paso ${screenIndex + 1} de ${PREVIEW_SCREENS.length}`
+        }
+      />
 
       {error ? (
         <div className="passport-notice warning" role="alert">
@@ -418,10 +396,6 @@ export function PreviewPassportJourney({
           className="passport-journey-card unified-card"
           aria-labelledby="preview-consent-title"
         >
-          <div className="unified-hero-icon">
-            <Fingerprint size={38} />
-          </div>
-          <p className="eyebrow">{en ? 'Before you start' : 'Antes de empezar'}</p>
           <h2 id="preview-consent-title" ref={headingRef} tabIndex={-1}>
             {en ? 'Connect Midnight Passport' : 'Conectá Midnight Passport'}
           </h2>
@@ -430,18 +404,40 @@ export function PreviewPassportJourney({
               ? 'Passport establishes your session and profile consent. It does not share your response or replace a country credential.'
               : 'Passport establece la sesión y el consentimiento de perfil. No comparte tu respuesta ni se usa como sustituto de una credencial de país.'}
           </p>
+          {/* The boundary belongs at the moment consent is asked for, not one
+              screen later as a summary of what already happened. Two stacked
+              lock notices used to make the same promise twice here; this is
+              the same promise, itemised once. */}
+          <dl className="unified-consent-grid">
+            <div>
+              <dt>{en ? 'Requested' : 'Se solicita'}</dt>
+              <dd>
+                <Check size={16} />
+                {en ? 'Session and approved profile' : 'Sesión y perfil aprobado'}
+              </dd>
+            </div>
+            <div>
+              <dt>{en ? 'Not requested' : 'No se solicita'}</dt>
+              <dd>
+                <Lock size={16} />
+                {en
+                  ? 'Wallet, vote, witnesses, or transaction approval'
+                  : 'Wallet, voto, witnesses ni autorización de transacción'}
+              </dd>
+            </div>
+          </dl>
           {mode === 'undeployed' ? (
-            <PrivacyNotice>
-              {en
-                ? 'Your Passport account connects on Preview. This environment’s local chain is a separate surface and has no deployed contract; connecting an account does not turn it into a local account.'
-                : 'Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una cuenta local.'}
-            </PrivacyNotice>
+            <details className="journey-why">
+              <summary>
+                {en ? 'Which network am I connecting to?' : '¿A qué red me estoy conectando?'}
+              </summary>
+              <div>
+                {en
+                  ? 'Your Passport account connects on Preview. This environment’s local chain is a separate surface and has no deployed contract; connecting an account does not turn it into a local account.'
+                  : 'Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una cuenta local.'}
+              </div>
+            </details>
           ) : null}
-          <PrivacyNotice>
-            {en
-              ? 'We request only a session and visible profile. We do not request a wallet, vote, witnesses, or transaction approval.'
-              : 'Solicitamos únicamente sesión y perfil visible. No pedimos wallet, voto, witnesses ni autorización de transacción.'}
-          </PrivacyNotice>
           <JourneyButton locale={locale} busy={busy} onClick={connect}>
             {en ? 'Connect Passport' : 'Conectar Passport'} <ArrowRight size={19} />
           </JourneyButton>
@@ -456,7 +452,6 @@ export function PreviewPassportJourney({
           <div className="unified-hero-icon passport">
             <ShieldCheck size={38} />
           </div>
-          <p className="eyebrow">{en ? 'Step 1 · session' : 'Paso 1 · sesión'}</p>
           <h2 id="preview-provider-title" ref={headingRef} tabIndex={-1}>
             {en ? 'Passport session connected' : 'Sesión Passport conectada'}
           </h2>
@@ -505,25 +500,8 @@ export function PreviewPassportJourney({
               </p>
             </div>
           ) : null}
-          <dl
-            className="passport-provider-boundary"
-            aria-label={en ? 'Consent boundary' : 'Límite de consentimiento'}
-          >
-            <div>
-              <dt>{en ? 'Requested' : 'Se solicita'}</dt>
-              <dd>
-                {en ? 'Passport session and visible profile' : 'Sesión Passport y perfil visible'}
-              </dd>
-            </div>
-            <div>
-              <dt>{en ? 'Not requested' : 'No se solicita'}</dt>
-              <dd>
-                {en
-                  ? 'Wallet, vote, nationality, age, or document'
-                  : 'Wallet, voto, nacionalidad, edad o documento'}
-              </dd>
-            </div>
-          </dl>
+          {/* The boundary was agreed on the previous screen and is not
+              restated here; what belongs on this screen is what came back. */}
           {ports.credential ? (
             <>
               <PrivacyNotice>
@@ -555,10 +533,6 @@ export function PreviewPassportJourney({
           className="passport-journey-card unified-card"
           aria-labelledby="preview-evidence-title"
         >
-          <div className="unified-hero-icon evidence">
-            <QrCode size={38} />
-          </div>
-          <p className="eyebrow">{en ? 'Step 2 · NFC/QR evidence' : 'Paso 2 · evidencia NFC/QR'}</p>
           <h2 id="preview-evidence-title" ref={headingRef} tabIndex={-1}>
             {en ? 'Complete verification on your phone' : 'Completá la verificación en tu teléfono'}
           </h2>
@@ -570,19 +544,18 @@ export function PreviewPassportJourney({
           <dl className="credential-summary">
             <div>
               <dt>{en ? 'Status' : 'Estado'}</dt>
-              <dd>{enrollmentStatus?.status ?? enrollment?.status ?? 'pending'}</dd>
+              {/* Once the link's own expiry has passed, "waiting for the
+                  provider" is no longer true: the attempt cannot succeed. The
+                  clock outranks the last status the provider reported. */}
+              <dd>{ENROLLMENT_STATUS_LABEL[en ? 'en' : 'es'][displayStatus] ?? displayStatus}</dd>
             </div>
             <div>
               <dt>{en ? 'Expires' : 'Vence'}</dt>
               <dd>{enrollment ? new Date(enrollment.expiresAt).toLocaleString() : '—'}</dd>
             </div>
           </dl>
-          {lastCheckedAt ? (
-            <p className="enrollment-last-checked" role="status">
-              {en ? 'Last checked: ' : 'Última comprobación: '}
-              {new Date(lastCheckedAt).toLocaleTimeString()}
-            </p>
-          ) : null}
+          {/* "Última comprobación" used to print here AND again inside the
+              polling status a few rows down, with the same value. One clock. */}
           {enrollment?.interaction ? (
             <EnrollmentHandoff
               uri={enrollment.interaction.uri}
@@ -601,11 +574,9 @@ export function PreviewPassportJourney({
               </p>
             </div>
           ) : null}
-          <PrivacyNotice>
-            {en
-              ? 'CICO does not display or retain MRZ, date of birth, images, NFC data, or raw proof in the browser.'
-              : 'CICO no muestra ni conserva MRZ, fecha de nacimiento, imagen, NFC o prueba cruda en el navegador.'}
-          </PrivacyNotice>
+          {/* The handoff block above already itemises what is requested, what
+              is not, who is asking, and what is retained. Repeating the
+              retention line here made the same promise twice on one screen. */}
           <div className="passport-poll-status" role="status" aria-live="polite">
             <span
               className={polling ? 'passport-poll-dot active' : 'passport-poll-dot'}
@@ -627,38 +598,40 @@ export function PreviewPassportJourney({
                   : en
                     ? 'Automatic checks every few seconds'
                     : 'Comprobación automática cada pocos segundos'}
-                {pollBatch > 0 ? ` · ${en ? 'Batch' : 'Lote'} ${pollBatch}` : ''}
               </small>
             </span>
           </div>
-          <JourneyButton locale={locale} busy={busy} onClick={() => void checkEnrollment()}>
-            {error
-              ? en
-                ? 'Retry verification'
-                : 'Reintentar verificación'
-              : en
-                ? 'Check verification'
-                : 'Comprobar verificación'}{' '}
-            <ArrowRight size={19} />
-          </JourneyButton>
-          {enrollmentStatus?.status === 'pending' && !enrollmentExpired ? (
-            <JourneyButton
-              locale={locale}
-              busy={busy}
-              variant="secondary"
-              onClick={restartEnrollment}
-            >
-              {en ? 'Cancel verification' : 'Cancelar verificación'}
-            </JourneyButton>
-          ) : null}
-          {enrollmentExpired ||
-          (enrollmentStatus &&
-            enrollmentStatus.status !== 'pending' &&
-            enrollmentStatus.status !== 'issued') ? (
+          {/* One primary action, decided by the state the attempt is actually
+              in. Three filled buttons used to stack here -- "Check", "Cancel"
+              and "Start over" -- all the same weight, so the screen offered no
+              opinion about what to do next. Recovery is still one tap away; it
+              is just no longer competing with the thing that usually works. */}
+          {needsFreshAttempt ? (
             <JourneyButton locale={locale} busy={busy} onClick={restartEnrollment}>
-              {en ? 'Start over' : 'Empezar de nuevo'} <ArrowRight size={19} />
+              {en ? 'Get a new link' : 'Generar un enlace nuevo'} <ArrowRight size={19} />
             </JourneyButton>
-          ) : null}
+          ) : (
+            <>
+              <JourneyButton locale={locale} busy={busy} onClick={() => void checkEnrollment()}>
+                {error
+                  ? en
+                    ? 'Retry verification'
+                    : 'Reintentar verificación'
+                  : en
+                    ? 'Check now'
+                    : 'Comprobar ahora'}{' '}
+                <ArrowRight size={19} />
+              </JourneyButton>
+              <button
+                type="button"
+                className="passport-action-button quiet"
+                disabled={busy}
+                onClick={restartEnrollment}
+              >
+                {en ? 'Cancel and start over' : 'Cancelar y empezar de nuevo'}
+              </button>
+            </>
+          )}
         </section>
       ) : null}
 
@@ -667,13 +640,10 @@ export function PreviewPassportJourney({
           className="passport-journey-card unified-card credential-success-card"
           aria-labelledby="preview-success-title"
         >
-          <div className="credential-success-icon" aria-hidden="true">
-            <Check size={42} />
+          <div className="journey-success-hero">
+            <CapybaraMascot variant="achievement" decorative size={168} />
+            <SuccessMark label={en ? 'Credential created' : 'Credencial creada'} size="sm" />
           </div>
-          <CapybaraMascot variant="achievement" decorative size="lg" />
-          <p className="eyebrow">
-            {en ? 'Step 3 · credential created' : 'Paso 3 · credencial creada'}
-          </p>
           <h2 id="preview-success-title" ref={headingRef} tabIndex={-1}>
             {en ? 'Your credential is ready' : 'Tu credencial está lista'}
           </h2>

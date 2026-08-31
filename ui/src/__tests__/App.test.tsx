@@ -8,9 +8,14 @@ async function completeDemoCredential(user: ReturnType<typeof userEvent.setup>) 
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
   await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
-  await user.click(screen.getByRole('button', { name: /Preparar credencial|Prepare credential/i }));
-  await user.click(screen.getByRole('button', { name: /Usar este país|Use this country/i }));
-  await user.click(screen.getByRole('button', { name: /Ir al panel|Go to civic dashboard/i }));
+  // Country choice is now an input on the eligibility screen rather than a
+  // screen of its own, so the journey is one click shorter here.
+  await user.click(
+    screen.getByRole('button', { name: /Crear mi credencial|Create my credential/i }),
+  );
+  await user.click(
+    screen.getByRole('button', { name: /Ver las consultas|See the consultations/i }),
+  );
 }
 
 describe('App', () => {
@@ -37,9 +42,9 @@ describe('App', () => {
     ).toBeNull();
     await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
     expect(
-      screen.getByRole('heading', { name: /Tres cosas distintas|Three separate things/i }),
+      screen.getByRole('heading', { name: /Qué protege tu voto|What protects your vote/i }),
     ).toBeTruthy();
-    expect(screen.getByText(/Passport.*identifica|Passport.*session/i)).toBeTruthy();
+    expect(screen.getByText(/Tu ingreso seguro|Your secure sign-in/i)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Volver a la app|Back to the app/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
   });
@@ -92,15 +97,17 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
     await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
     await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
+    // The country is chosen from a flag list on the eligibility screen. It is
+    // selected once, in one control: the tinted row that used to echo the
+    // choice back is gone.
+    await user.click(screen.getByRole('radio', { name: /Brasil|Brazil/i }));
     await user.click(
-      screen.getByRole('button', { name: /Preparar credencial|Prepare credential/i }),
+      screen.getByRole('button', { name: /Crear mi credencial|Create my credential/i }),
     );
-    const country = screen.getByRole('combobox', { name: /País de prueba|Test country/i });
-    await user.clear(country);
-    await user.type(country, 'Brasil (BR)');
-    await user.click(screen.getByRole('button', { name: /Usar este país|Use this country/i }));
     expect(screen.getByText(/Brasil|Brazil/i)).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Ir al panel|Go to civic dashboard/i }));
+    await user.click(
+      screen.getByRole('button', { name: /Ver las consultas|See the consultations/i }),
+    );
     expect(screen.getByText('Referéndum Cívico')).toBeTruthy();
     await user.click(screen.getByRole('tab', { name: /Countries|Países/ }));
     expect(screen.getByText('No hay consultas disponibles en este espacio')).toBeTruthy();
@@ -158,6 +165,47 @@ describe('App', () => {
     expect(screen.queryByText('Credencial lista')).toBeNull();
   });
 
+  it('keeps one receipt per simulated vote instead of overwriting the previous one', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await completeDemoCredential(user);
+
+    const castVote = async (index: number, answer: RegExp) => {
+      const open = screen.getAllByRole('button', { name: /Votá ahora/i });
+      const button = open[index];
+      if (!button) throw new Error(`Expected an open consultation at index ${index}`);
+      await user.click(button);
+      await user.click(screen.getByRole('button', { name: answer }));
+      await user.click(screen.getByRole('button', { name: /Revisar mi voto/i }));
+      await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
+      await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
+      await user.click(screen.getByRole('button', { name: /^Votá$/ }));
+    };
+
+    await castVote(0, /^Sí/);
+    await castVote(1, /^No/);
+    await user.click(screen.getByRole('button', { name: /Mi perfil/ }));
+
+    // Every simulated receipt used to carry the identifier
+    // 'demo-tx-cico-2026-0001'. Receipts are de-duplicated by id, so the
+    // second vote silently deleted the first one from the profile and from
+    // the verifier's reach.
+    // The receipt vault is IndexedDB-backed and survives beforeEach, so the
+    // assertion is about distinctness rather than an exact count: what the
+    // fixed identifier destroyed was uniqueness, not volume.
+    const identifiers = [...document.querySelectorAll('.profile__receipts .profile__code')].map(
+      (node) => node.textContent ?? '',
+    );
+    expect(identifiers.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(identifiers).size).toBe(identifiers.length);
+    expect(screen.getAllByText(/Jubilaciones y sostenibilidad previsional/).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getAllByText(/Energía, tarifas y transición renovable/).length).toBeGreaterThan(
+      0,
+    );
+  });
+
   it('folds Verify into Mi perfil with an on-device privacy note and a working receipt lookup', async () => {
     render(<App />);
     const user = userEvent.setup();
@@ -176,8 +224,14 @@ describe('App', () => {
       screen.getByText(/cifrados solo en este dispositivo; la red nunca puede vincularlos/i),
     ).toBeTruthy();
 
+    // Simulated receipts are per-vote now, so the lookup reads the identifier
+    // the flow actually produced rather than a constant. A fixed id meant a
+    // second vote silently replaced the first receipt.
+    const [receiptCode] = screen.getAllByText(/^demo-/);
+    const receiptId = receiptCode?.textContent ?? '';
+    expect(receiptId).toMatch(/^demo-[a-z0-9:-]+-[a-z0-9]+$/i);
     const input = screen.getByLabelText('Identificador del comprobante');
-    await user.type(input, 'demo-tx-cico-2026-0001');
+    await user.type(input, receiptId);
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
     expect(screen.getByText('Comprobante simulado')).toBeTruthy();
   });

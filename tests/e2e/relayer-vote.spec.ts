@@ -47,19 +47,16 @@ test('submits a browser vote through the local sponsored relayer', async ({ page
     window.__cicoInjectFixtureSecret = true;
   });
   await page.getByRole('button', { name: /Votá ahora/i }).click();
-  await page.getByRole('heading', { name: 'Antes de votar' }).waitFor();
 
-  const validate = page.getByRole('button', { name: /Validar elegibilidad/i });
-  await expect(validate).toBeEnabled({ timeout: 60_000 });
-  await validate.click();
-  await page.getByRole('heading', { name: 'Usá el documento de demostración' }).waitFor();
-  await page.getByRole('button', { name: /Usar documento de demostración/i }).click();
-  await page.getByRole('heading', { name: 'Listo, podés votar' }).waitFor();
-  await page.getByRole('button', { name: /Continuar al voto/i }).click();
+  // "Antes de votar" and "Listo, podés votar" were the two vote-flow stages
+  // nothing could reach -- `startVote` has always gone straight to the choice
+  // screen for a credentialled voter. They are deleted, so the ballot is the
+  // first thing this journey sees.
+  await page.locator('.flow__question').waitFor();
   await page.getByRole('button', { name: /^Sí/ }).click();
   await page.getByRole('button', { name: /Revisar mi voto/i }).click();
-  await page.getByRole('heading', { name: 'Tu compromiso' }).waitFor();
-  await page.getByRole('button', { name: /Confirmar compromiso en Undeployed local/i }).click();
+  await page.getByRole('heading', { name: 'Revisá antes de confirmar' }).waitFor();
+  await page.getByRole('button', { name: /Confirmar acción real/i }).click();
   await page.getByRole('heading', { name: 'Preparando tu comprobante' }).waitFor();
   await page.getByRole('heading', { name: 'Gracias por participar' }).waitFor({ timeout: 180_000 });
   await expect(page.getByText('Comprobante Undeployed local')).toBeVisible();

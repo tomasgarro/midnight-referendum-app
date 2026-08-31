@@ -1,8 +1,16 @@
 # Current release readiness
 
 Status: working readiness snapshot for the checkout reviewed on 31 August
-2026. This is not a release approval, a hosted URL, or a Midnight Preview
-transaction record. No release SHA has been assigned.
+2026, revised the same day after a full user-action audit and a journey
+rebuild. This is not a release approval or a Midnight Preview transaction
+record. A static demo URL exists (below); no Preview release SHA is assigned.
+
+Two companion documents carry the detail this page summarises:
+
+- [`USER-ACTION-MATRIX.md`](USER-ACTION-MATRIX.md) — every CTA, what it
+  actually does, what it depends on, and whether its copy is honest.
+- [`UX-FINDINGS-20260831.md`](UX-FINDINGS-20260831.md) — the findings from
+  that audit, with what was fixed and what remains open.
 
 ## Release boundary
 
@@ -33,7 +41,7 @@ uses the older frozen-before-deploy model and is not current release evidence.
 
 | Gate | Current state | Release rule |
 | --- | --- | --- |
-| Static web artifact | A locally reviewed synthetic ZIP exists; no hosted URL is yet evidenced. | Publish only the reviewed artifact with an exact SHA, HTTPS, deep-link smoke test, and privacy/network check. |
+| Static web artifact | A reviewed synthetic bundle is deployed and verified over HTTPS at `https://lightskyblue-emu-103266.hostingersite.com/`. The bundle predates the 31 August journey rebuild and must be repackaged before it is cited as current. | Publish only the reviewed artifact with an exact SHA, HTTPS, deep-link smoke test, and privacy/network check. |
 | Host topology | Target is Hostinger static web plus isolated Hostinger VPS stateful services. | Static hosting never receives service secrets; issuer, verifier, database, and relayer remain isolated on stateful infrastructure. |
 | Synthetic fallback | Intended and required when live dependencies are absent. | Fallback is explicit and cannot emit live credential, vote, or canonical-receipt wording. |
 | Passport session | Source boundary exists; origin approval and live session are unverified. | Request only approved profile/session capabilities; reject wrong origin, network, nonce, or schema. |
@@ -41,6 +49,7 @@ uses the older frozen-before-deploy model and is not current release evidence.
 | Preview contracts | No current Preview deployment or receipt is asserted. | Require a fresh manifest/transcript for the exact release SHA and network. |
 | Stateful action relay | Source path exists; hosted operations and Preview evidence are unverified. | Require authenticated, idempotent, allowlisted actions and indexer confirmation before calling a receipt confirmed. |
 | Privacy/security review | Design constraints are documented; independent audit is pending. | Scan logs, bundle, storage, and network behavior before any invited pilot. |
+| Citizen-journey honesty | Audited 31 August 2026 against every CTA. One correctness defect (simulated receipts overwrote each other) and three misleading states were found and fixed; four gaps remain open. | No screen may report a failure for a capability the build does not use, or present fixture material as runtime material. |
 
 ## Historical evidence policy
 
@@ -69,6 +78,20 @@ reinterpret the historical artifact.
 6. Publish only the URL, exact SHA, reviewed status, and evidence links that
    were actually verified.
 
+## Known open gaps in the citizen journey
+
+These are recorded here, not only in the findings document, because each one
+would be visible to a participant in a pilot:
+
+| Gap | Effect on a participant | Reference |
+| --- | --- | --- |
+| No abort signal on `CivicActionPort` | A submission cannot be cancelled once started. The UI states this rather than offering a cancel that does nothing. | F-11 |
+| Runtime referenda render fixture dossier prose | A real Preview referendum would be presented with arguments and sources written for a fictional consultation. **Must be resolved before any real referendum is published.** | F-12 |
+| No offline state | A dropped connection surfaces as a provider error string, not as "you are offline". | F-13 |
+| No unsupported-device detection | A desktop-only or non-NFC user discovers the problem only after scanning the QR. | F-14 |
+| No duplicate-vote reminder | Nothing warns that this credential already voted on a consultation; the chain rejects it, but only after proof generation. | F-15 |
+| Physical NFC never tested | The entire NFC path is unobserved on hardware. This remains the single largest unverified claim. | Matrix §1 |
+
 ## Local release-candidate artifact
 
 The current synthetic fallback was built with `VITE_APP_MODE=demo` and packaged
@@ -77,14 +100,23 @@ with `index.html` at the ZIP root:
 - local path: `deploy/hostinger/artifacts/passport-preview-demo-20260831.zip`;
 - SHA-256: `6ab8066ef7e71e6b0609c01aa5776d78163a42f11a72ca851a7b07879d3b7677`;
 - privacy scan: `npm run verify:showcase` passed;
-- UI tests: 25 files and 169 tests passed;
+- UI tests at the time of packaging: 25 files and 169 tests passed (the
+  current tree is 26 files and 179 tests);
 - build caveats: the main JavaScript bundle remains about 5.1 MB and the
   ledger WASM about 10.1 MB; the Midnight indexer dependency also emits an
   `isomorphic-ws` browser-export warning during Vite build.
 
+This archive predates the 31 August journey rebuild. It is still the artifact
+behind the live demo URL, and it is superseded as a release candidate: repackage
+and re-scan before quoting a hash as current evidence.
+
 This hash binds the local ZIP only. It becomes public deployment evidence only
 after upload, HTTPS verification, route fallback checks, external smoke tests,
 and source-SHA recording.
+
+For the deployment gate list, see
+[`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md),
+which enumerates every missing value without recording any of them.
 
 See [`README.md`](../README.md) for the public-facing summary,
 [`DEPLOYMENT.md`](DEPLOYMENT.md) for the Hostinger topology,

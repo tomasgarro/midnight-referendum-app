@@ -9,7 +9,14 @@ import { resolveAppMode } from '@/integration/app-mode';
 import type { CicoLocale } from '@/integration/locale';
 
 export type Tab = 'explore' | 'votes' | 'profile';
-export type FlowStage = 'verify' | 'eligible' | 'choose' | 'review' | 'processing' | 'receipt';
+/**
+ * `verify` and `eligible` are gone. Nothing ever set them: `startVote` sends a
+ * credentialled user straight to `choose` and everyone else into the Passport
+ * journey, so the two screens they named were unreachable -- which is why the
+ * vote flow opened on "Paso 3 de 3", a progress counter that started at the
+ * end.
+ */
+export type FlowStage = 'choose' | 'review' | 'processing' | 'receipt';
 
 /** The active app keeps the same language across identity, jury, and receipt surfaces. */
 export const APP_COPY = {

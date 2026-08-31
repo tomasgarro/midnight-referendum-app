@@ -20,16 +20,13 @@ describe('PassportJourney', () => {
       screen.getByRole('heading', { name: 'Prove you can vote. Without proving who you are.' }),
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Get started/i }));
-    expect(
-      screen.getByRole('heading', { name: 'Three separate things, one simple experience' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'What protects your vote' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
     await user.click(screen.getByRole('button', { name: /Use demo Passport/i }));
     expect(screen.getByRole('heading', { name: 'This is what Passport shared' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    expect(screen.getByRole('heading', { name: 'Prepare a credential, not a vote' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Prepare credential/i }));
-    await user.click(screen.getByRole('button', { name: /Use this country/i }));
+    expect(screen.getByRole('heading', { name: 'Vote from wherever you are' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Create my credential/i }));
 
     expect(screen.getByRole('heading', { name: 'Your credential is ready' })).toBeTruthy();
     // The uppercase SYNTHETIC CREDENTIAL banner is now a row in the summary
@@ -39,7 +36,7 @@ describe('PassportJourney', () => {
     expect(screen.queryByText(/Choose your scope|Elegí un espacio/i)).toBeNull();
     expect(screen.queryByText(/Generate local proof|Generando prueba/i)).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /Go to civic dashboard/i }));
+    await user.click(screen.getByRole('button', { name: /See the consultations/i }));
     expect(onCredentialReady).toHaveBeenCalledWith(
       expect.objectContaining({ country: 'AR', ageClass: '18+' }),
     );
@@ -83,8 +80,12 @@ describe('PassportJourney', () => {
       />,
     );
 
-    expect(screen.getByText('UNDEPLOYED · PASSPORT PREVIEW')).toBeTruthy();
+    expect(screen.getByText('Cadena local')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Use demo Passport/i })).toBeNull();
+    // The two-networks caveat is stated before the reader connects, on the
+    // screen where they are deciding to, rather than as a notice afterwards.
+    expect(screen.getByText(/¿A qué red me estoy conectando\?/)).toBeTruthy();
+    expect(screen.getByText(/sigue sin contrato desplegado/i)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
     expect(await screen.findByRole('heading', { name: 'Sesión Passport conectada' })).toBeTruthy();
     expect(connect).toHaveBeenCalledWith(
@@ -93,6 +94,8 @@ describe('PassportJourney', () => {
         requestedCapabilities: ['session', 'profile'],
       }),
     );
-    expect(screen.getByText(/cadena local.*no desplegada/i)).toBeTruthy();
+    // The session screen reports the network Passport actually returned; it
+    // no longer repeats the caveat the consent screen already made.
+    expect(screen.getAllByText('preview').length).toBeGreaterThan(0);
   });
 });

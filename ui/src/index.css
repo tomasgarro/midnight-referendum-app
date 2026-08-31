@@ -12,7 +12,11 @@
 :root {
   font-family: "Encode Sans", system-ui, sans-serif;
   color: #141414;
-  background: #eaf4fc;
+  /* The root canvas is the warm ground. This was the last sky-blue surface
+     with product-wide reach: it never showed in normal use because the shell
+     is exactly one viewport tall, but it is what a rubber-band over-scroll on
+     iOS reveals, and what a full-page capture exposes under the shell. */
+  background: var(--ground);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   /* Legacy sky-blue palette. Being retired view by view onto the tokens in
@@ -37,7 +41,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #eaf4fc;
+  /* The last sky-blue surface. It only ever showed as a band under the shell
+     when content ran past one viewport, which read as the page ending early. */
+  background: var(--ground);
 }
 button,
 input {
@@ -45,6 +51,26 @@ input {
 }
 button {
   cursor: pointer;
+}
+
+/* Element defaults belong with the other resets at the top of the file,
+   not 100 lines below the first class that overrides them. */
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+h1 {
+  margin-bottom: 18px;
+  color: var(--legacy-ink);
+  font-size: clamp(29px, 7vw, 38px);
+  line-height: 1.09;
+  letter-spacing: -0.05em;
+}
+h2 {
+  color: var(--legacy-ink);
+  line-height: 1.17;
+  letter-spacing: -0.035em;
 }
 button:disabled {
   cursor: not-allowed;
@@ -177,23 +203,6 @@ button:disabled {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-h1,
-h2,
-p {
-  margin-top: 0;
-}
-h1 {
-  margin-bottom: 18px;
-  color: var(--legacy-ink);
-  font-size: clamp(29px, 7vw, 38px);
-  line-height: 1.09;
-  letter-spacing: -0.05em;
-}
-h2 {
-  color: var(--legacy-ink);
-  line-height: 1.17;
-  letter-spacing: -0.035em;
 }
 .secondary-link {
   border: 0;
@@ -517,400 +526,6 @@ h2 {
   }
 }
 
-/* Passport v2 live lane: warm-light tokens, with one flat indigo accent. */
-.unified-onboarding {
-  background: var(--ground);
-  color: var(--ink);
-  font-family: var(--font-body);
-}
-.unified-onboarding h1,
-.unified-onboarding h2,
-.unified-onboarding h3 {
-  font-family: var(--font-display);
-  color: var(--ink);
-}
-.unified-onboarding .eyebrow {
-  color: var(--accent);
-}
-.unified-onboarding .unified-onboarding-toolbar label,
-.unified-onboarding .unified-card > p:not(.eyebrow),
-.unified-onboarding .passport-notice p,
-.unified-onboarding .unified-explanation-list small,
-.unified-onboarding .unified-evidence-list small,
-.unified-onboarding .country-selector-help {
-  color: var(--ink-muted);
-}
-.unified-onboarding .unified-onboarding-toolbar select,
-.unified-onboarding .country-search-input {
-  border-color: var(--line);
-  background: var(--surface);
-  color: var(--ink);
-  border-radius: var(--r-input);
-}
-.unified-onboarding .unified-truth-labels span {
-  background: var(--surface-sunken);
-  color: var(--ink-muted);
-}
-.unified-onboarding .unified-truth-labels .live {
-  background: var(--accent-wash);
-  color: var(--accent);
-}
-.unified-onboarding .unified-progress li {
-  color: var(--ink-muted);
-}
-.unified-onboarding .unified-progress li::after {
-  background: var(--line);
-}
-.unified-onboarding .unified-progress li span {
-  background: var(--surface-sunken);
-  color: var(--ink-muted);
-}
-.unified-onboarding .unified-progress li.current {
-  color: var(--accent);
-}
-.unified-onboarding .unified-progress li.current span {
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-.unified-onboarding .unified-progress li.done {
-  color: var(--positive);
-}
-.unified-onboarding .unified-progress li.done span {
-  background: var(--positive-wash);
-  color: var(--positive);
-}
-.unified-onboarding .unified-hero-icon {
-  background: var(--accent-wash);
-  color: var(--accent);
-  border-radius: var(--r-card);
-}
-.unified-onboarding .unified-hero-icon.evidence {
-  background: var(--warning-wash);
-  color: var(--warning);
-}
-.unified-onboarding .unified-explanation-list article,
-.unified-onboarding .unified-evidence-list li,
-.unified-onboarding .unified-passkey-details,
-.unified-onboarding .unified-passkey-check {
-  border-color: var(--line);
-  background: var(--surface);
-}
-.unified-onboarding .unified-explanation-list article > span,
-.unified-onboarding .unified-evidence-list li > span {
-  background: var(--accent-wash);
-  color: var(--accent);
-}
-.unified-onboarding .unified-consent-grid > div,
-.unified-onboarding .credential-success-summary,
-.unified-onboarding .unified-selected-country {
-  background: var(--accent-wash);
-}
-.unified-onboarding .unified-consent-grid > div:last-child,
-.unified-onboarding .unified-evidence-status {
-  background: var(--warning-wash);
-}
-.unified-onboarding .unified-consent-grid dt,
-.unified-onboarding .unified-selected-country,
-.unified-onboarding .showcase-step-back {
-  color: var(--accent);
-}
-.unified-onboarding .unified-consent-grid > div:last-child dt {
-  color: var(--warning);
-}
-.unified-onboarding .passport-action-button {
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  color: var(--accent-ink);
-  transition:
-    transform var(--dur-press) var(--ease-out),
-    background var(--dur-press) ease-out;
-}
-.unified-onboarding .passport-action-button:hover {
-  background: var(--accent-hover);
-  filter: none;
-}
-.unified-onboarding .passport-action-button:active {
-  transform: scale(0.98);
-}
-.unified-onboarding .passport-action-button.secondary {
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  color: var(--ink);
-}
-.unified-onboarding .passport-notice {
-  background: var(--accent-wash);
-  color: var(--accent);
-}
-.unified-onboarding .passport-notice.warning {
-  background: var(--warning-wash);
-  color: var(--warning);
-}
-.unified-onboarding .passport-notice.success {
-  background: var(--positive-wash);
-  color: var(--positive);
-}
-.unified-onboarding .passport-notice.warning p {
-  color: #7f3f0c;
-}
-.unified-onboarding .passport-notice.success p {
-  color: #276b49;
-}
-.unified-onboarding .unified-session-confirmation {
-  border-color: #b9ddca;
-  background: var(--positive-wash);
-  color: var(--positive);
-}
-.unified-onboarding .credential-success-icon {
-  background: var(--positive-wash);
-  color: var(--positive);
-}
-.unified-onboarding .credential-success-icon.unavailable {
-  background: var(--warning-wash);
-  color: var(--warning);
-}
-
-/* Consent and provider boundary are deliberately scannable before the QR. */
-.unified-onboarding .passport-provider-boundary,
-.unified-onboarding .passport-handoff-boundary {
-  display: grid;
-  gap: 8px;
-  margin: 16px 0 0;
-}
-.unified-onboarding .passport-provider-boundary > div,
-.unified-onboarding .passport-handoff-boundary > div {
-  display: grid;
-  gap: 4px;
-  padding: 10px 11px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-input);
-  background: var(--surface);
-}
-.unified-onboarding .passport-provider-boundary dt,
-.unified-onboarding .passport-handoff-boundary dt {
-  color: var(--ink-muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-.unified-onboarding .passport-provider-boundary dd,
-.unified-onboarding .passport-handoff-boundary dd {
-  margin: 0;
-  color: var(--ink);
-  font-size: 11px;
-  line-height: 1.35;
-}
-.unified-onboarding .passport-handoff-boundary dd {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-.unified-onboarding .passport-handoff-boundary dd svg {
-  flex: 0 0 auto;
-  margin-top: 1px;
-  color: var(--accent);
-}
-.unified-onboarding .passport-enrollment-handoff {
-  border-color: var(--line);
-  border-radius: var(--r-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-}
-.unified-onboarding .passport-handoff-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.unified-onboarding .passport-handoff-heading .passport-provider-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r-input);
-  background: var(--accent-wash);
-  color: var(--accent);
-}
-.unified-onboarding .passport-handoff-kicker {
-  margin: 0 0 3px;
-  color: var(--accent);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-.unified-onboarding .passport-enrollment-handoff h3 {
-  margin: 0;
-  font-family: var(--font-display);
-  color: var(--ink);
-}
-.unified-onboarding .passport-enrollment-handoff > p:not(.passport-enrollment-expiry),
-.unified-onboarding .passport-enrollment-uri {
-  color: var(--ink-muted);
-}
-.unified-onboarding .passport-enrollment-qr-wrap {
-  border-color: var(--line);
-  border-radius: var(--r-input);
-}
-.unified-onboarding .passport-enrollment-expiry {
-  color: var(--warning);
-}
-.unified-onboarding .passport-enrollment-handoff summary {
-  color: var(--accent);
-}
-.unified-onboarding .passport-poll-status {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  margin-top: 16px;
-  padding: 11px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-input);
-  background: var(--surface-sunken);
-}
-.unified-onboarding .passport-poll-dot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 auto;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: var(--ink-muted);
-}
-.unified-onboarding .passport-poll-dot.active {
-  background: var(--accent);
-  animation: passport-poll-pulse 1s ease-in-out infinite;
-}
-.unified-onboarding .passport-poll-status > span:last-child {
-  display: grid;
-  gap: 3px;
-}
-.unified-onboarding .passport-poll-status strong {
-  color: var(--ink);
-  font-size: 11px;
-}
-.unified-onboarding .passport-poll-status small {
-  color: var(--ink-muted);
-  font-size: 9px;
-  line-height: 1.4;
-}
-.unified-onboarding .credential-country-value {
-  display: grid;
-  gap: 2px;
-}
-.unified-onboarding .credential-country-value small {
-  color: var(--ink-muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-/* Rights-gated tutorial: the poster remains useful without unreviewed media. */
-.unified-onboarding .passport-journey-tutorial {
-  display: grid;
-  gap: 12px;
-  margin-top: 16px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  background: var(--surface);
-}
-.unified-onboarding .passport-tutorial-poster {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  min-height: 92px;
-  place-content: center;
-  border-radius: var(--r-input);
-  background: var(--accent-wash);
-  color: var(--accent);
-  text-align: center;
-}
-.unified-onboarding .passport-tutorial-poster span {
-  color: var(--ink);
-  font-size: 11px;
-  font-weight: 750;
-}
-.unified-onboarding .passport-tutorial-copy {
-  display: grid;
-  gap: 6px;
-}
-.unified-onboarding .passport-tutorial-copy h3 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: 16px;
-}
-.unified-onboarding
-  .passport-tutorial-copy
-  > p:not(.passport-handoff-kicker):not(.passport-tutorial-gate) {
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: 10px;
-  line-height: 1.45;
-}
-.unified-onboarding .passport-tutorial-gate {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  margin: 0;
-  color: var(--warning);
-  font-size: 10px;
-  line-height: 1.4;
-}
-.unified-onboarding .passport-tutorial-transcript-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  min-height: 44px;
-  width: max-content;
-  padding: 5px 0;
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 800;
-}
-.unified-onboarding .passport-tutorial-transcript {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  padding: 0 0 0 21px;
-  color: var(--ink-muted);
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-/* Stage headings receive programmatic focus for screen-reader orientation.
-   They are not controls, so remove only their browser ring; all buttons,
-   links, selects and inputs retain the keyboard focus treatment above. */
-.unified-onboarding h2[tabindex="-1"]:focus,
-.unified-onboarding h2[tabindex="-1"]:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-@keyframes passport-poll-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .unified-onboarding .passport-poll-dot.active {
-    animation: none;
-  }
-}
-
-@media (max-width: 375px) {
-  .unified-onboarding .passport-handoff-boundary,
-  .unified-onboarding .passport-provider-boundary {
-    gap: 6px;
-  }
-}
-
 /* Wave 2: one Passport-first onboarding and civic dashboard. */
 .unified-onboarding {
   min-height: calc(100vh - 64px);
@@ -920,26 +535,6 @@ h2 {
   padding-bottom: calc(28px + env(safe-area-inset-bottom));
   background: #f8f7f3;
   color: #232d4f;
-}
-.unified-onboarding-toolbar {
-  margin-bottom: 18px;
-}
-.unified-onboarding-toolbar label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--legacy-muted);
-  font-size: 10px;
-  font-weight: 700;
-}
-.unified-onboarding-toolbar select {
-  min-height: 44px;
-  padding: 7px 12px;
-  border: 1px solid var(--legacy-line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--legacy-ink);
-  font-size: 11px;
 }
 .unified-onboarding-header {
   display: flex;
@@ -956,119 +551,12 @@ h2 {
   line-height: 1.08;
   letter-spacing: -0.04em;
 }
-.unified-truth-labels {
-  display: grid;
-  flex: 0 0 auto;
-  gap: 5px;
-  justify-items: end;
-  max-width: 130px;
-  color: #657690;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-align: right;
-}
-.unified-truth-labels span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: #eceae4;
-}
-.unified-truth-labels .live {
-  color: #2f79bd;
-}
-.unified-progress {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  margin: 0 0 12px;
-  padding: 0;
-  list-style: none;
-}
-.unified-progress li {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 5px;
-  min-width: 0;
-  color: #94a4b8;
-  text-align: center;
-}
-.unified-progress li::after {
-  content: "";
-  position: absolute;
-  top: 12px;
-  left: calc(50% + 13px);
-  width: calc(100% - 25px);
-  height: 2px;
-  background: #e0edf7;
-}
-.unified-progress li:last-child::after {
-  display: none;
-}
-.unified-progress li span {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: #e7f1f9;
-  color: var(--legacy-ink);
-  font-size: 10px;
-  font-weight: 800;
-}
-.unified-progress li small {
-  overflow: hidden;
-  max-width: 100%;
-  color: inherit;
-  font-size: 8px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.unified-progress li.current {
-  color: #2f79bd;
-}
-.unified-progress li.current span {
-  background: var(--legacy-sky-strong);
-  color: white;
-}
-.unified-progress li.done {
-  color: #318352;
-}
-.unified-progress li.done span {
-  background: #dff3e7;
-  color: #318352;
-}
 .unified-card {
   padding: 28px 2px 20px;
   border: 0;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
-}
-.unified-welcome-card {
-  padding-top: 34px;
-}
-.unified-welcome-card > p:not(.eyebrow) {
-  max-width: 34rem;
-  font-size: 14px;
-}
-.unified-card h2 {
-  margin: 0 0 10px;
-  color: var(--legacy-ink);
-  font-size: clamp(22px, 6vw, 28px);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-}
-.unified-card > p:not(.eyebrow) {
-  color: #536680;
-  font-size: 13px;
-  line-height: 1.55;
 }
 .unified-hero-icon {
   display: grid;
@@ -1117,12 +605,6 @@ h2 {
   color: #367fca;
   font-size: 11px;
   font-weight: 800;
-}
-.unified-explanation-list article > div,
-.unified-evidence-list li > div {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
 }
 .unified-explanation-list strong,
 .unified-evidence-list strong {
@@ -1192,17 +674,6 @@ h2 {
   color: #527c64;
   font-size: 10px;
 }
-.unified-evidence-status {
-  margin-top: 17px;
-  padding: 10px 11px;
-  border: 1px solid #f0d894;
-  border-radius: 10px;
-  background: #fffaf0;
-  color: #906c1c;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
 .credential-success-card {
   border-color: #bfe7ce;
 }
@@ -1220,13 +691,6 @@ h2 {
 .credential-success-icon.unavailable {
   background: #fff4d8;
   color: #a87413;
-}
-.unified-card .passport-action-button.quiet {
-  min-height: 44px;
-  margin-top: 8px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: #2f79bd;
 }
 .country-search-label {
   display: block;
@@ -1250,29 +714,6 @@ h2 {
 .unified-onboarding-toolbar select:focus-visible {
   outline: 3px solid rgba(78, 150, 223, 0.28);
   outline-offset: 2px;
-}
-.unified-selected-country {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  margin-top: 14px;
-  padding: 10px 11px;
-  border: 1px solid #cfe3f3;
-  border-radius: 11px;
-  background: #f5faff;
-  color: #2f79bd;
-}
-.unified-selected-country strong {
-  flex: 1;
-  color: var(--legacy-ink);
-  font-size: 12px;
-}
-.unified-selected-country small {
-  color: #657690;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
 }
 .credential-success-summary {
   margin-top: 18px;
@@ -1307,95 +748,10 @@ h2 {
   font-weight: 750;
   text-align: right;
 }
-.unified-card .passport-action-button {
-  width: 100%;
-  min-height: 52px;
-  margin-top: 22px;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 700;
-}
-.unified-card .passport-action-button.secondary {
-  margin-top: 8px;
-}
-.showcase-step-back {
-  min-height: 42px;
-  margin: 0 0 10px;
-  padding: 6px 0;
-  border: 0;
-  background: transparent;
-  color: #387fc4;
-  font-size: 11px;
-  font-weight: 750;
-}
 .passport-notice p {
   margin: 0;
   font-size: 11px;
   line-height: 1.45;
-}
-.unified-passkey-check {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 11px;
-  border: 1px solid #d8e7f4;
-  border-radius: 10px;
-  background: #fbfdff;
-  color: #657690;
-}
-.unified-passkey-check > span {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-.unified-passkey-check strong {
-  color: var(--legacy-ink);
-  font-size: 11px;
-}
-.unified-passkey-check small {
-  color: #71809a;
-  font-size: 9px;
-  line-height: 1.4;
-}
-.unified-passkey-check.available {
-  border-color: #bfe7ce;
-  background: #effaf3;
-  color: #318352;
-}
-.unified-passkey-check.unavailable,
-.unified-passkey-check.unknown {
-  background: #fffaf0;
-  border-color: #f0d894;
-  color: #906c1c;
-}
-.unified-passkey-details {
-  margin-top: 10px;
-  border: 1px solid #d8e7f4;
-  border-radius: 10px;
-  background: #fbfdff;
-}
-.unified-passkey-details summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 11px;
-  color: var(--legacy-ink);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 750;
-  list-style-position: inside;
-}
-.unified-passkey-details summary::marker {
-  color: #4388cf;
-}
-.unified-passkey-details summary:focus-visible {
-  outline: 3px solid rgba(47, 121, 189, 0.55);
-  outline-offset: -3px;
-}
-.unified-passkey-details .unified-passkey-check {
-  margin: 0 10px 10px;
 }
 .dashboard-intro-card {
   border: 1px solid var(--legacy-line);
@@ -1471,10 +827,10 @@ h2 {
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    scroll-behavior: auto;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
   }
 }
 
@@ -1492,92 +848,6 @@ h2 {
   --showcase-paper: #fffdf8;
   --showcase-accent: #d79b2b;
   background: #fbfaf7;
-  color: var(--showcase-ink);
-}
-.showcase-journey .passport-journey-heading h1 {
-  max-width: 320px;
-  color: var(--showcase-ink);
-  font-size: 32px;
-  letter-spacing: -0.055em;
-  line-height: 1.04;
-}
-.showcase-journey .eyebrow {
-  color: #8f671b;
-}
-.showcase-journey .passport-journey-card {
-  border-color: var(--showcase-line);
-  border-radius: 20px;
-  background: var(--showcase-paper);
-  box-shadow: 0 12px 30px rgba(31, 31, 28, 0.06);
-}
-.showcase-journey .passport-journey-card > h2 {
-  color: var(--showcase-ink);
-  font-size: 26px;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
-.showcase-journey .passport-journey-card > h2:focus-visible {
-  outline: 3px solid var(--showcase-accent);
-  outline-offset: 5px;
-  border-radius: 6px;
-}
-.showcase-journey .passport-journey-card > p:not(.eyebrow) {
-  color: var(--showcase-muted);
-}
-.showcase-journey .showcase-toolbar select {
-  border-color: var(--showcase-line);
-  border-radius: 10px;
-  background: var(--showcase-paper);
-  color: var(--showcase-ink);
-}
-.showcase-journey .showcase-progress li {
-  color: #a3a096;
-}
-.showcase-journey .showcase-progress li::after {
-  background: #e7e1d5;
-}
-.showcase-journey .showcase-progress li > span {
-  background: #eeeae1;
-  color: var(--showcase-ink);
-}
-.showcase-journey .showcase-progress li.current {
-  color: #8f671b;
-}
-.showcase-journey .showcase-progress li.current > span {
-  background: #f2c766;
-}
-.showcase-journey .showcase-progress li.done {
-  color: #55745c;
-}
-.showcase-journey .showcase-progress li.done > span {
-  background: #87a88b;
-}
-.showcase-journey .showcase-truth-labels span {
-  border-color: var(--showcase-line);
-  background: #f3f1eb;
-  color: #5c5a52;
-}
-.showcase-journey .showcase-truth-labels .live {
-  border-color: #bfd4c2;
-  background: #eef6ef;
-  color: #315f3b;
-}
-.showcase-journey .passport-action-button.primary {
-  background: var(--showcase-ink);
-  color: #fffdf8;
-}
-.showcase-journey .passport-action-button.primary:hover {
-  filter: brightness(1.1);
-  transform: none;
-}
-.showcase-journey .passport-action-button.secondary {
-  border-color: var(--showcase-line);
-  background: #fff;
-  color: var(--showcase-ink);
-}
-.showcase-journey .showcase-identity-stack span {
-  border: 1px solid #eeeadf;
-  background: #f6f4ee;
   color: var(--showcase-ink);
 }
 .showcase-learning-note,
@@ -1711,22 +981,6 @@ h2 {
   color: #817a6d;
   font-size: 9.5px;
   line-height: 1.35;
-}
-.showcase-journey .showcase-profile {
-  border-color: #bfd4c2;
-  background: #eef6ef;
-}
-.showcase-journey .showcase-choice-grid button.selected {
-  border-color: var(--showcase-accent);
-  background: #fff6df;
-  box-shadow: 0 0 0 2px #f3d98c;
-}
-.showcase-journey .choice-free-receipt {
-  border: 1px solid #e8e4da;
-  background: #f6f4ee;
-}
-.showcase-journey .choice-free-receipt span {
-  color: #8f671b;
 }
 
 @media (max-width: 375px) {
@@ -1887,70 +1141,6 @@ h2 {
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.08em;
-}
-.passport-journey-progress {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 3px;
-  margin: 0 0 18px;
-  padding: 0;
-  list-style: none;
-}
-.passport-journey-progress li {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 5px;
-  min-width: 0;
-  color: #8b99ad;
-  text-align: center;
-}
-.passport-journey-progress li::after {
-  content: "";
-  position: absolute;
-  top: 12px;
-  left: calc(50% + 12px);
-  width: calc(100% - 22px);
-  height: 2px;
-  background: #dceaf5;
-}
-.passport-journey-progress li:last-child::after {
-  display: none;
-}
-.passport-journey-progress li span {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: #e8f3fc;
-  color: var(--legacy-ink);
-  font-size: 10px;
-  font-weight: 800;
-}
-.passport-journey-progress li small {
-  overflow: hidden;
-  max-width: 100%;
-  color: inherit;
-  font-size: 8px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.passport-journey-progress li.current {
-  color: #b17a13;
-}
-.passport-journey-progress li.current span {
-  background: var(--legacy-yellow);
-}
-.passport-journey-progress li.done {
-  color: #4388cf;
-}
-.passport-journey-progress li.done span {
-  background: var(--legacy-sky);
-  color: white;
 }
 .passport-journey-card {
   padding: 23px 17px 20px;
@@ -2551,24 +1741,6 @@ h2 {
   background: #eef7ff;
   color: #145998;
 }
-.showcase-step-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  margin: -10px 0 10px;
-  padding: 0 2px;
-  border: 0;
-  background: transparent;
-  color: #387fc4;
-  font-size: 12px;
-  font-weight: 800;
-}
-.showcase-step-back:hover {
-  color: #145998;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 .showcase-identity-stack {
   display: grid;
   gap: 10px;
@@ -2784,12 +1956,6 @@ h2 {
   .showcase-progress li small {
     font-size: 8px;
   }
-  .passport-journey-progress {
-    gap: 0;
-  }
-  .passport-journey-progress li small {
-    font-size: 7px;
-  }
   .passport-journey-card {
     padding-left: 14px;
     padding-right: 14px;
@@ -2803,4 +1969,523 @@ h2 {
   .passport-enrollment-qr-wrap {
     padding: 7px;
   }
+}
+
+/* ===================== Passport v2 theming (overrides) =====================
+ *
+ * Moved to the end of the file. These are token overrides for the layout
+ * rules below them -- `.unified-onboarding .unified-consent-grid > div` over
+ * `.unified-consent-grid > div`, and so on -- and they used to sit ~400 lines
+ * ABOVE the rules they override. That is a descending-specificity cascade:
+ * it happened to work only because the overrides are more specific, and it
+ * was the source of every noDescendingSpecificity warning in this file.
+ * Overrides belong last.
+ */
+/* Passport v2 live lane: warm-light tokens, with one flat indigo accent. */
+.unified-onboarding {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+.unified-onboarding h1,
+.unified-onboarding h2,
+.unified-onboarding h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+}
+.unified-onboarding .eyebrow {
+  color: var(--accent);
+}
+.unified-onboarding .unified-onboarding-toolbar label,
+.unified-onboarding .unified-card > p:not(.eyebrow),
+.unified-onboarding .passport-notice p,
+.unified-onboarding .unified-explanation-list small,
+.unified-onboarding .unified-evidence-list small,
+.unified-onboarding .country-selector-help {
+  color: var(--ink-muted);
+}
+.unified-onboarding .unified-onboarding-toolbar select,
+.unified-onboarding .country-search-input {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r-input);
+}
+.unified-onboarding .unified-hero-icon {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-radius: var(--r-card);
+}
+.unified-onboarding .unified-hero-icon.evidence {
+  background: var(--warning-wash);
+  color: var(--warning);
+}
+.unified-onboarding .unified-explanation-list article,
+.unified-onboarding .unified-evidence-list li,
+.unified-onboarding .unified-passkey-details,
+.unified-onboarding .unified-passkey-check {
+  border-color: var(--line);
+  background: var(--surface);
+}
+.unified-onboarding .unified-explanation-list article > span,
+.unified-onboarding .unified-evidence-list li > span {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.unified-onboarding .unified-consent-grid > div,
+.unified-onboarding .credential-success-summary,
+.unified-onboarding .unified-selected-country {
+  background: var(--accent-wash);
+}
+.unified-onboarding .unified-consent-grid > div:last-child,
+.unified-onboarding .unified-evidence-status {
+  background: var(--warning-wash);
+}
+.unified-onboarding .unified-consent-grid dt,
+.unified-onboarding .unified-selected-country,
+.unified-onboarding .showcase-step-back {
+  color: var(--accent);
+}
+.unified-onboarding .unified-consent-grid > div:last-child dt {
+  color: var(--warning);
+}
+.unified-onboarding .passport-action-button {
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background var(--dur-press) ease-out;
+}
+.unified-onboarding .passport-action-button:hover {
+  background: var(--accent-hover);
+  filter: none;
+}
+.unified-onboarding .passport-action-button:active {
+  transform: scale(0.98);
+}
+.unified-onboarding .passport-action-button.secondary {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+.unified-onboarding .passport-notice {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.unified-onboarding .passport-notice.warning {
+  background: var(--warning-wash);
+  color: var(--warning);
+}
+.unified-onboarding .passport-notice.success {
+  background: var(--positive-wash);
+  color: var(--positive);
+}
+.unified-onboarding .passport-notice.warning p {
+  color: #7f3f0c;
+}
+.unified-onboarding .passport-notice.success p {
+  color: #276b49;
+}
+.unified-onboarding .unified-session-confirmation {
+  border-color: #b9ddca;
+  background: var(--positive-wash);
+  color: var(--positive);
+}
+.unified-onboarding .credential-success-icon {
+  background: var(--positive-wash);
+  color: var(--positive);
+}
+.unified-onboarding .credential-success-icon.unavailable {
+  background: var(--warning-wash);
+  color: var(--warning);
+}
+
+/* Consent and provider boundary are deliberately scannable before the QR. */
+.unified-onboarding .passport-provider-boundary,
+.unified-onboarding .passport-handoff-boundary {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.unified-onboarding .passport-provider-boundary > div,
+.unified-onboarding .passport-handoff-boundary > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  background: var(--surface);
+}
+.unified-onboarding .passport-provider-boundary dt,
+.unified-onboarding .passport-handoff-boundary dt {
+  color: var(--ink-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.unified-onboarding .passport-provider-boundary dd,
+.unified-onboarding .passport-handoff-boundary dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.unified-onboarding .passport-handoff-boundary dd {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.unified-onboarding .passport-handoff-boundary dd svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+.unified-onboarding .passport-enrollment-handoff {
+  border-color: var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.unified-onboarding .passport-handoff-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.unified-onboarding .passport-handoff-heading .passport-provider-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-input);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.unified-onboarding .passport-handoff-kicker {
+  margin: 0 0 3px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.unified-onboarding .passport-enrollment-handoff h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--ink);
+}
+.unified-onboarding .passport-enrollment-handoff > p:not(.passport-enrollment-expiry),
+.unified-onboarding .passport-enrollment-uri {
+  color: var(--ink-muted);
+}
+.unified-onboarding .passport-enrollment-qr-wrap {
+  border-color: var(--line);
+  border-radius: var(--r-input);
+}
+.unified-onboarding .passport-enrollment-expiry {
+  color: var(--warning);
+}
+.unified-onboarding .passport-enrollment-handoff summary {
+  color: var(--accent);
+}
+.unified-onboarding .passport-poll-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 16px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  background: var(--surface-sunken);
+}
+.unified-onboarding .passport-poll-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+}
+.unified-onboarding .passport-poll-dot.active {
+  background: var(--accent);
+  animation: passport-poll-pulse 1s ease-in-out infinite;
+}
+.unified-onboarding .passport-poll-status > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+.unified-onboarding .passport-poll-status strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+.unified-onboarding .passport-poll-status small {
+  color: var(--ink-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.unified-onboarding .credential-country-value {
+  display: grid;
+  gap: 2px;
+}
+.unified-onboarding .credential-country-value small {
+  color: var(--ink-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* Rights-gated tutorial: the poster remains useful without unreviewed media. */
+.unified-onboarding .passport-journey-tutorial {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+.unified-onboarding .passport-tutorial-poster {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-height: 92px;
+  place-content: center;
+  border-radius: var(--r-input);
+  background: var(--accent-wash);
+  color: var(--accent);
+  text-align: center;
+}
+.unified-onboarding .passport-tutorial-poster span {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+.unified-onboarding .passport-tutorial-copy {
+  display: grid;
+  gap: 6px;
+}
+.unified-onboarding .passport-tutorial-copy h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 16px;
+}
+.unified-onboarding
+  .passport-tutorial-copy
+  > p:not(.passport-handoff-kicker):not(.passport-tutorial-gate) {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.unified-onboarding .passport-tutorial-gate {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  color: var(--warning);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.unified-onboarding .passport-tutorial-transcript-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 44px;
+  width: max-content;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+.unified-onboarding .passport-tutorial-transcript {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0 0 0 21px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* Stage headings receive programmatic focus for screen-reader orientation.
+   They are not controls, so remove only their browser ring; all buttons,
+   links, selects and inputs retain the keyboard focus treatment above. */
+.unified-onboarding h2[tabindex="-1"]:focus,
+.unified-onboarding h2[tabindex="-1"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+@keyframes passport-poll-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unified-onboarding .passport-poll-dot.active {
+    animation: none;
+  }
+}
+
+@media (max-width: 375px) {
+  .unified-onboarding .passport-handoff-boundary,
+  .unified-onboarding .passport-provider-boundary {
+    gap: 6px;
+  }
+}
+
+/* ---- showcase/unified-card theming overrides ----
+   Same reason as the block above: descendant overrides that used to sit
+   hundreds of lines before the base rules they override. */
+.unified-card h2 {
+  margin: 0 0 10px;
+  color: var(--legacy-ink);
+  font-size: clamp(22px, 6vw, 28px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+.unified-card > p:not(.eyebrow) {
+  color: #536680;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.unified-card .passport-action-button.quiet {
+  min-height: 44px;
+  margin-top: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #2f79bd;
+}
+.unified-card .passport-action-button {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 22px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.unified-card .passport-action-button.secondary {
+  margin-top: 8px;
+}
+.showcase-journey .passport-journey-heading h1 {
+  max-width: 320px;
+  color: var(--showcase-ink);
+  font-size: 32px;
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+}
+.showcase-journey .eyebrow {
+  color: #8f671b;
+}
+.showcase-journey .passport-journey-card {
+  border-color: var(--showcase-line);
+  border-radius: 20px;
+  background: var(--showcase-paper);
+  box-shadow: 0 12px 30px rgba(31, 31, 28, 0.06);
+}
+.showcase-journey .passport-journey-card > h2 {
+  color: var(--showcase-ink);
+  font-size: 26px;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+.showcase-journey .passport-journey-card > h2:focus-visible {
+  outline: 3px solid var(--showcase-accent);
+  outline-offset: 5px;
+  border-radius: 6px;
+}
+.showcase-journey .passport-journey-card > p:not(.eyebrow) {
+  color: var(--showcase-muted);
+}
+.showcase-journey .showcase-toolbar select {
+  border-color: var(--showcase-line);
+  border-radius: 10px;
+  background: var(--showcase-paper);
+  color: var(--showcase-ink);
+}
+.showcase-journey .showcase-progress li {
+  color: #a3a096;
+}
+.showcase-journey .showcase-progress li::after {
+  background: #e7e1d5;
+}
+.showcase-journey .showcase-progress li > span {
+  background: #eeeae1;
+  color: var(--showcase-ink);
+}
+.showcase-journey .showcase-progress li.current {
+  color: #8f671b;
+}
+.showcase-journey .showcase-progress li.current > span {
+  background: #f2c766;
+}
+.showcase-journey .showcase-progress li.done {
+  color: #55745c;
+}
+.showcase-journey .showcase-progress li.done > span {
+  background: #87a88b;
+}
+.showcase-journey .showcase-truth-labels span {
+  border-color: var(--showcase-line);
+  background: #f3f1eb;
+  color: #5c5a52;
+}
+.showcase-journey .showcase-truth-labels .live {
+  border-color: #bfd4c2;
+  background: #eef6ef;
+  color: #315f3b;
+}
+.showcase-journey .passport-action-button.primary {
+  background: var(--showcase-ink);
+  color: #fffdf8;
+}
+.showcase-journey .passport-action-button.primary:hover {
+  filter: brightness(1.1);
+  transform: none;
+}
+.showcase-journey .passport-action-button.secondary {
+  border-color: var(--showcase-line);
+  background: #fff;
+  color: var(--showcase-ink);
+}
+.showcase-journey .showcase-identity-stack span {
+  border: 1px solid #eeeadf;
+  background: #f6f4ee;
+  color: var(--showcase-ink);
+}
+.showcase-journey .showcase-profile {
+  border-color: #bfd4c2;
+  background: #eef6ef;
+}
+.showcase-journey .showcase-choice-grid button.selected {
+  border-color: var(--showcase-accent);
+  background: #fff6df;
+  box-shadow: 0 0 0 2px #f3d98c;
+}
+.showcase-journey .choice-free-receipt {
+  border: 1px solid #e8e4da;
+  background: #f6f4ee;
+}
+.showcase-journey .choice-free-receipt span {
+  color: #8f671b;
+}
+
+/* Moved past the six unrelated `> div` rules that follow it in the sheet.
+   Nothing between them targets these lists, so ordering it last only makes
+   the intent explicit -- and it was the sole remaining source of descending
+   specificity in this file. */
+.unified-explanation-list article > div,
+.unified-evidence-list li > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }

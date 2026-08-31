@@ -7,6 +7,10 @@ proof services, two separate PostgreSQL stores, and the Rarimo verifier/gateway.
 Only the outer Caddy `edge-proxy` binds host ports 80 and 443. No Hostinger API
 call is required by this runbook.
 
+Before working through this runbook, check
+[`VPS-READINESS-CHECKLIST.md`](VPS-READINESS-CHECKLIST.md): it lists every value
+and decision this procedure assumes you already have, with nothing filled in.
+
 Use three DNS names, all pointed at the VPS, and one exact frontend origin:
 
 - `CICO_DOMAIN` — CICO `/v1/*` API.

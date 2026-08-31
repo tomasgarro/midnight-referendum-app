@@ -120,12 +120,14 @@ describe('Preview Passport journey', () => {
         enrollmentId: 'pending-enrollment',
         status: 'pending',
         holderBinding: new Uint8Array(32).fill(1),
-        createdAt: '2026-08-24T12:00:00.000Z',
-        expiresAt: '2026-08-24T12:10:00.000Z',
+        createdAt: new Date().toISOString(),
+        // A live link: the clock alone must not report it as expired, or the
+        // pending state under test is never reachable.
+        expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
         interaction: {
           kind: 'cross-device-qr',
           uri: 'https://app.rarime.com/external?id=pending-enrollment',
-          expiresAt: '2026-08-24T12:10:00.000Z',
+          expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
         },
       }),
       getEnrollmentStatus: vi.fn().mockResolvedValue({
@@ -146,11 +148,12 @@ describe('Preview Passport journey', () => {
 
     await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
     await user.click(screen.getByRole('button', { name: /Iniciar verificación documental/i }));
-    expect(await screen.findByText('pending')).toBeTruthy();
+    // Provider enum values are translated before a citizen sees them.
+    expect(await screen.findByText('esperando al proveedor')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Código QR de verificación' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Comprobar verificación/i }));
-    expect(await screen.findByText('expired')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Empezar de nuevo/i }));
+    await user.click(screen.getByRole('button', { name: /Comprobar ahora/i }));
+    expect(await screen.findByText('el enlace venció')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Generar un enlace nuevo/i }));
     expect(await screen.findByRole('heading', { name: 'Sesión Passport conectada' })).toBeTruthy();
     expect(clearCredential).toHaveBeenCalledOnce();
   });
