@@ -1,0 +1,75 @@
+# Copy to Caddyfile. Caddy's {$...} values are supplied by .env.public.local.
+# This is the only service that binds public host ports.
+
+{
+	# Do not emit request logs by default: request IDs and opaque verifier IDs
+	# are operationally sensitive. Enable a redacted sink only after review.
+	auto_https prefer_wildcard
+}
+
+{$CICO_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+	}
+	request_body {
+		max_size 64KB
+	}
+	@cico path /v1/*
+	handle @cico {
+		reverse_proxy cico:8791
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}
+
+{$RELAY_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+	}
+	request_body {
+		max_size 2MB
+	}
+	@relay path /v2/*
+	handle @relay {
+		reverse_proxy relayer:8790
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}
+
+{$RARIMO_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+	}
+	@proof_params {
+		method GET
+		path /integrations/verificator-svc/public/proof-params/*
+	}
+	handle @proof_params {
+		reverse_proxy rarimo-gateway:8080
+	}
+	@callback {
+		method POST
+		path /integrations/verificator-svc/public/callback/*
+	}
+	handle @callback {
+		reverse_proxy rarimo-gateway:8080
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}

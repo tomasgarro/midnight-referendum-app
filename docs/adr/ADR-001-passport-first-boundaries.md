@@ -5,7 +5,11 @@
 
 ## Context
 
-CICO must make Midnight Passport the durable user-facing identity and authorization layer while the required passport-credential and Compact-execution capabilities are still emerging. Rarimo can provide temporary passport evidence, but must not become a permanent domain dependency.
+CICO must make Midnight Passport the durable user-facing identity, consent, and
+session surface while the required credential and Compact-execution
+capabilities are still emerging. Passport profile/session data is not civic
+eligibility or action authority. Rarimo can provide temporary NFC evidence, but
+must not become a permanent domain dependency.
 
 The current Passport profile bridge supports session/profile consent. It is not an authority for nationality, age, private voting witnesses, or arbitrary Compact execution. As of 24 August 2026, the official `midnight-passport-sdk` repository describes the SDK as planning/spec work with a reduced beta defined; its planned packages include a thin DApp connector, but it is not yet a production passport-evidence API that CICO can integrate for nationality or age.
 
@@ -19,7 +23,13 @@ The application depends on three provider-neutral ports:
 - `CivicCredentialPort` for passport-backed credential enrollment and local summaries; and
 - `CivicActionPort` for voting, cohort actions, and canonical receipts.
 
-Current adapters are the Passport profile bridge, Rarimo plus the CICO issuer, the encrypted browser vault, wallet-derived Midnight providers, and a browser-owned civic action adapter. The sponsored Passport-v2 relay remains a separate pending workstream. Official Passport-native adapters may replace components independently as capabilities ship.
+Current adapters are the Passport profile bridge, Rarimo plus the CICO issuer,
+the encrypted browser vault, wallet-derived Midnight providers, and a
+browser-owned civic action adapter. A stateful sponsored relay remains a
+separate pending workstream. Official Passport-native evidence or action
+adapters may replace components independently as capabilities ship; connecting
+Passport alone never implies wallet, recovery, biometric, ETH, or arbitrary
+Compact execution capability.
 
 Passport account, alias, address, and session identifiers are display/session data only. They never enter a credential commitment, Merkle membership leaf, voter secret, ballot commitment, or nullifier derivation.
 
@@ -32,6 +42,8 @@ The UI and use-case layer may not import Rarimo payloads, issuer transport types
 - Passport remains visible and central to onboarding while ballot identity stays cryptographically separate.
 - Capability-gated adapters and conformance tests are required.
 - Product copy must distinguish Passport session consent from passport verification and vote authorization.
+- Wallet, recovery, biometric, and ETH behavior belongs to optional post-Preview
+  Profile/Vault decisions, not the current Passport profile/session boundary.
 
 ## Passport capability migration
 

@@ -1,20 +1,20 @@
 # Deployment topology
 
-Status: target topology for the local Undeployed v2 slice and a later hosted
-Passport Preview pilot. The checkout contains source paths for the CICO
-evidence/issuer process and capability-gated v2 relay, and the current local
-Undeployed lifecycle has been operator-verified. Its sanitized
-manifest/transcript are committed at
+Status: target topology for the synthetic release and a later hosted Passport
+Preview pilot. The checkout contains source paths for the CICO evidence/issuer
+process and capability-gated v2 relay. A prior local Undeployed lifecycle is
+preserved as historical evidence at
 [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/)
 (manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
-No Preview deployment, Passport origin approval, physical NFC evidence, hosted
-URL, CI result, or release identity is asserted. A pinned/running self-hosted verificator, funded
-issuer wallet, deployed open registry, and physical NFC transcript remain
-external deployment dependencies. The legacy `/balance` and `/submit` routes
-remain compatibility-only and **must not be published as the citizen action
-API**.
+That record is SHA-specific and uses the older frozen-enrollment model; it is
+not evidence for the current branch. No Preview deployment, Passport origin
+approval, physical NFC evidence, hosted URL, CI result, or release identity is
+asserted. A pinned/running self-hosted verificator, funded issuer wallet,
+deployed open registry, and physical NFC transcript remain external deployment
+dependencies. The legacy `/balance` and `/submit` routes remain
+compatibility-only and **must not be published as the citizen action API**.
 
-This plan implements ADR-001 through ADR-006:
+This plan implements ADR-001 through ADR-007:
 
 - Midnight Passport remains the durable consent/session surface; Rarimo is a
   replaceable evidence adapter.
@@ -28,12 +28,16 @@ This plan implements ADR-001 through ADR-006:
 - Raw Rarimo proof data terminates at the restricted backend verifier. The
   browser accepts only request-bound minimal evidence and canonical issuance
   data. Holder/voter material and ballot choice remain browser-owned.
+- Open enrollment is the current model; a referendum records its initial root
+  and admits later roots only through separately attested root publication.
+- Profile/Vault wallet, recovery, biometric, and ETH capabilities are optional
+  post-Preview work, not prerequisites for the voting-first release.
 
 ## Service boundaries
 
 ```mermaid
 flowchart LR
-  U[Citizen browser] -->|HTTPS static UI| V[Vercel: Vite application]
+  U[Citizen browser] -->|HTTPS static UI| V[Hostinger static web]
   U -->|HTTPS / WSS read-only| I[Midnight Preview indexer]
   U -->|loopback witness only| P[Citizen-local proof server]
   U -->|HTTPS citizen action job| R[Hostinger VPS: relayer]
@@ -46,8 +50,11 @@ flowchart LR
 `api/` is a browser/client TypeScript SDK, not a server to deploy. `cico-service/`
 is the separate Node HTTP façade and Preview issuer process. It deliberately
 exposes no vote endpoint. The
-Vite UI is static output. The browser connects directly to the canonical Preview indexer;
-neither Vercel nor the relayer proxies its GraphQL or WebSocket connection.
+Vite UI is static output. The browser connects directly to the canonical
+Preview indexer; neither Hostinger static web nor the relayer proxies its
+GraphQL or WebSocket connection. If the issuer, Rarimo verifier, relay, or
+Preview endpoints are unavailable, the UI stays in its labelled synthetic
+fallback.
 
 The UI can publish generated ZK assets, a contract address and public endpoint
 configuration. It must never publish a voter secret, witness, issuer or
@@ -57,9 +64,10 @@ organizer key, relayer seed, or raw provider result.
 
 ### Development and verification: one WSL workstation
 
-Use this topology to reproduce and inspect the verified local Undeployed v2
-run. The physical passport flow, real provider-backed credential, and Preview
-deployment remain separate gates; a local run is not hosted release evidence.
+Use this topology for local development and for inspecting the preserved
+historical Undeployed v2 run. The physical passport flow, real provider-backed
+credential, and Preview deployment remain separate gates; a local run is not
+hosted release evidence.
 
 | Component | Location | Exposure |
 | --- | --- | --- |
@@ -92,14 +100,14 @@ The proof server must remain compatible with the pinned `ledger-v8@8.1.0`/V2
 proof format. A browser E2E test must prove that the intended browser origin
 can use loopback proving before this becomes a pilot prerequisite.
 
-### Invited Preview pilot: static UI plus stateful relay
+### Invited Preview pilot: Hostinger static web plus stateful VPS services
 
 This is the first hosted topology, only after the ADR-003 relayer job has been
 implemented and reviewed.
 
 | Component | Proposed host | Required configuration |
 | --- | --- | --- |
-| Citizen UI and public generated assets | Vercel | Vite project; `npm run build`; output `ui/dist`; SPA rewrite to `index.html`; custom HTTPS pilot domain. |
+| Citizen UI and public generated assets | Hostinger static web | Vite project; `npm run build`; publish `ui/dist`; SPA rewrite to `index.html`; custom HTTPS pilot domain. |
 | Citizen proving | Participant device | Loopback proof server, or an explicitly approved Passport provider only. A hosted default proof endpoint is prohibited. |
 | Sponsored relayer | Dedicated Hostinger VPS, not shared hosting | Non-root Node 22 service behind Nginx TLS; only citizen-job endpoint publicly proxied. |
 | Relayer proof service | Same VPS, separate Docker container | Bound to `127.0.0.1:6300`; never reverse proxied. |
@@ -114,7 +122,7 @@ SSH by key and operator IP/VPN where possible.
 
 #### Pilot transaction flow
 
-1. The citizen loads `<PILOT_UI_ORIGIN>` from Vercel.
+1. The citizen loads `<PILOT_UI_ORIGIN>` from Hostinger static web.
 2. The browser proves locally, or tells the person exactly which approved
    Passport provider can receive the witness.
 3. The browser sends one authenticated and idempotent citizen-action request
@@ -155,24 +163,25 @@ is enabled.
 ## Environment and secret classification
 
 All `VITE_*` values are compiled into the browser bundle. They are public,
-including when Vercel stores them as environment values.
+including when Hostinger's build environment stores them as environment values.
 
 | Classification | Values | Storage and handling |
 | --- | --- | --- |
-| Public browser config | `VITE_APP_MODE`, network, contract addresses/roots/role public keys, referendum catalog, relay URL, indexer HTTP/WSS URLs, Passport origin, `VITE_PASSPORT_V2_API_URL`, explorer URL | Vercel Preview values or committed templates; review each change as public. No issuer/organizer secret may use a `VITE_*` name. The Passport v2 API URL must use HTTPS outside localhost. |
+| Public browser config | `VITE_APP_MODE`, network, contract addresses/roots/role public keys, referendum catalog, relay URL, indexer HTTP/WSS URLs, Passport origin, `VITE_PASSPORT_V2_API_URL`, explorer URL | Hostinger build values or committed templates; review each change as public. No issuer/organizer secret may use a `VITE_*` name. The Passport v2 API URL must use HTTPS outside localhost. |
 | Privacy-sensitive but not secret | `VITE_MIDNIGHT_PROOF_SERVER_URL` | Loopback in development. An HTTPS provider only after written trust approval and UI disclosure. Never make a Hostinger proof server the implicit citizen default. |
-| Relayer secret | `RELAYER_SEED` and future action-auth material | `0600` environment file owned by non-root service account, or a suitable secrets manager. Never Vercel, client bundle, CI output, or support ticket. |
+| Relayer secret | `RELAYER_SEED` and future action-auth material | `0600` environment file owned by non-root service account, or a suitable secrets manager. Never static hosting, client bundle, CI output, or support ticket. |
 | Relayer config | network/RPC/indexer URLs, loopback proof URL, exact origins, allowlisted contracts/circuits, rate limits | Root-owned deployment configuration; not secret but change-controlled. |
 | Issuer/organizer secrets | callback verifier, issuer key, organizer key | Separate secret stores and operators from the relayer. Current same-seed derivation is incompatible with ADR-003 pilot target. |
-| CI secrets | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, VPS deployment SSH key | CI secret store only; scope Vercel token to team/project. |
+| Deployment secrets | Hostinger deployment credential and VPS deployment SSH key | Secret store only; never a browser build value or repository file. |
 
-Use separate Vercel Development, Preview and Production environments. An
-invited pilot may use a Vercel Production domain while still targeting Midnight
-Preview; hosting terminology never changes the network or product claim.
+Keep static-site publishing credentials separate from VPS service credentials.
+An invited pilot may use a Hostinger custom domain while still targeting
+Midnight Preview; hosting terminology never changes the network or product
+claim.
 
 ## TLS, CORS and WebSocket controls
 
-### Vercel UI
+### Hostinger static web
 
 - Serve the custom pilot domain over HTTPS and redirect HTTP to HTTPS.
   Passport/session callbacks must use the exact approved origin.
@@ -180,7 +189,7 @@ Preview; hosting terminology never changes the network or product claim.
 - Restrict `connect-src` to the relay HTTPS origin, Passport origin, Preview
   indexer HTTPS/WSS endpoints, and an explicitly approved proof provider.
   Keep third-party telemetry off until privacy review.
-- The indexer WebSocket is an outbound browser connection. Vercel must not be
+- The indexer WebSocket is an outbound browser connection. Hostinger static web must not be
   used as an indexer or relayer WebSocket server.
 
 ### Hostinger VPS and relay domain
@@ -189,7 +198,7 @@ Preview; hosting terminology never changes the network or product claim.
   origin; proxy only to `127.0.0.1:8790`.
 - Firewall Node and proof-server ports from the Internet. Nginx is the only
   public process; the relay needs no inbound WebSocket endpoint.
-- Set `RELAYER_ALLOWED_ORIGINS` to exact Vercel pilot domains. Never use `*`,
+- Set `RELAYER_ALLOWED_ORIGINS` to exact Hostinger pilot domains. Never use `*`,
   substring matching, or an unbounded staging set.
 - CORS is not authentication. Before Internet exposure implement short-lived,
   origin-bound action authorization; IP/nullifier rate limits; body limits;
@@ -226,7 +235,7 @@ a substitute for persisted job status or DUST lifecycle reconciliation.
 
 | Check | Owner | Ready condition |
 | --- | --- | --- |
-| UI deployment | Vercel / synthetic browser test | HTTPS home and deep-linked route load the intended commit. |
+| UI deployment | Hostinger static web / synthetic browser test | HTTPS home and deep-linked route load the intended commit. |
 | Citizen proof server | Participant browser / local script | Expected version and `V2`; no public listener. |
 | Relayer liveness | Monitor | HTTPS response without balances, keys or transaction bodies. |
 | Relayer readiness | Authenticated operator monitor | Fully synced; expected network; indexer HTTP/WSS, node and proof-server healthy; DUST reserve; queue not stuck. |
@@ -243,31 +252,28 @@ serialized transaction bodies.
 These are target procedures only. Do not run them until domains, hosting,
 secrets, contract address and the ADR-003 relay implementation are approved.
 
-### Static UI to Vercel
+### Static UI to Hostinger
 
-After adding Vercel project settings for `npm run build`, `ui/dist` and SPA
-routing, run from the canonical WSL checkout:
+After configuring the Hostinger static site for `ui/dist` and SPA routing, run
+from the reviewed checkout:
 
 ```bash
 nvm use
 npm ci
 bash scripts/verify-linux.sh demo
 npm run build
-npx vercel@<approved-version> link --yes --scope <team>
-npx vercel@<approved-version> pull --yes --environment=preview
-npx vercel@<approved-version> build
-npx vercel@<approved-version> deploy --prebuilt
+npm run verify:showcase
+# Upload the reviewed ui/dist artifact through the approved Hostinger channel.
+# Configure HTTPS, the SPA fallback, and the exact public origin in Hostinger.
 ```
 
-Promote the exact tested artifact only after browser E2E, privacy scan and
-relayer readiness checks pass:
+Publish the exact tested artifact only after browser E2E, privacy scan and
+relayer readiness checks pass. The static host must receive public build
+configuration only; never upload issuer, verifier, relayer, wallet, or database
+secrets.
 
-```bash
-npx vercel@<approved-version> promote <tested-preview-deployment-url>
-```
-
-For CI, pin the Vercel CLI and use `vercel pull`, `vercel build`, and
-`vercel deploy --prebuilt`; store Vercel credentials only in CI secrets.
+The retained [`VERCEL-SETUP.md`](VERCEL-SETUP.md) describes an older/alternative
+static-host procedure. It is not the current deployment target.
 
 ### Hostinger VPS CICO issuer
 

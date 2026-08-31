@@ -1,10 +1,16 @@
 # Overnight architecture handoff (historical context)
 
 This note records an earlier implementation handoff. It is retained for
-architecture context, not as current runtime evidence. The review checkout has
-not verified an Undeployed v2 run; use the [root README](../README.md),
+architecture context, not as current runtime evidence. The preserved
+Undeployed v2 record at `evidence/undeployed-v2/abdd0a2/` belongs to a different
+source SHA and the older frozen-enrollment model; it is not evidence for the
+current branch. Use the [root README](../README.md),
 [environment acceptance matrix](ENVIRONMENT-ACCEPTANCE.md), and
 [Wave 1 checklist](WAVE-1-SUBMISSION-CHECKLIST.md) for current status.
+
+The current product uses open enrollment during the published window. Passport
+profile/session consent remains separate from eligibility, and Rarimo remains a
+temporary NFC evidence adapter behind the issuer boundary.
 
 ## Outcome
 
@@ -74,9 +80,9 @@ idempotent receipt. Persist request ids and terminal states so retries cannot
 double-submit. Until this exists, the legacy relayer must not be exposed as a v2
 or production voting path.
 
-Once this service has an end-to-end deployment transcript, remove the remaining
-“no v2 configuration means legacy Preview” compatibility branch so every
-Preview build fails closed unless its intended action lane is explicit.
+This was a historical recommendation. The current release policy is already
+fail-closed: missing live configuration selects the labelled synthetic or
+unavailable state and never silently uses a legacy Preview lane.
 
 ### 2. Canonical receipt resolution
 
@@ -101,9 +107,9 @@ retention, and recovery before enabling public enrollment.
 
 ### 5. Organizer lifecycle and operations
 
-Add v2 organizer flows for proposal creation, freeze/open/close transitions,
-reveal/counting where applicable, and operational recovery. Every transition
-needs authorization, idempotency, and indexer-observed state tests.
+Add v2 organizer flows for proposal creation, open/close enrollment and voting
+transitions, reveal/counting where applicable, and operational recovery. Every
+transition needs authorization, idempotency, and indexer-observed state tests.
 
 ## Verification record
 

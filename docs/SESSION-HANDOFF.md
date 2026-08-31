@@ -5,6 +5,16 @@ records what landed, what was actually verified versus merely reported, what is
 still open, and the working rules that keep the next session from re-deriving
 them.
 
+> Historical session notes. The branch table and verification totals below
+> describe the 30 August session, not the current release status. For current
+> product boundaries, use [`README.md`](../README.md) and
+> [`CURRENT-RELEASE-READINESS.md`](CURRENT-RELEASE-READINESS.md). The preserved
+> `abdd0a2` Undeployed record is historical evidence for its exact SHA and the
+> older frozen-enrollment model.
+
+The current review checkout is `feat/passport-preview-night` at
+`ab21a0bdd933995c8aedc9a27ba30e510c2d8d07`; no release SHA has been assigned.
+
 ---
 
 ## 1. Where the branches are

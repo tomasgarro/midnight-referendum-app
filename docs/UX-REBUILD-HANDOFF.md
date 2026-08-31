@@ -1,5 +1,13 @@
 # UX rebuild — handoff
 
+> Historical UX work log. It records an earlier branch and review session; it
+> is not a current release status or deployment/evidence record. Use the
+> [documentation index](README.md) and [current readiness snapshot](CURRENT-RELEASE-READINESS.md)
+> for current decisions.
+
+The current review checkout is `feat/passport-preview-night`; the branch name
+below is retained only to identify the historical UX work log.
+
 Written 2026-08-30. Updated 2026-08-30 when Step 4 landed.
 
 **Step 4 is done.** What follows is the record of it plus what is left in

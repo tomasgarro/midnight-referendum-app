@@ -4,6 +4,11 @@
 - Date: 2026-08-24
 - Owners: CICO platform team
 
+> Rarimo is a temporary NFC eligibility-evidence adapter, not Passport
+> identity, wallet, recovery, biometric, ETH, or voting authority. Passport
+> remains the profile/session boundary. Open enrollment and the current release
+> fallback are defined in [ADR-007](ADR-007-open-enrollment-and-evidence-roles.md).
+
 ## Context
 
 CICO needs a Preview-only bridge from a passport NFC proof to its existing

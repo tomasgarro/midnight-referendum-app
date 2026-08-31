@@ -1,0 +1,26 @@
+# The deployment Dockerfiles use the repository as their build context. Keep
+# operator material and local state out of every image layer, including layers
+# produced before a later COPY can hide a file.
+.git
+.git/**
+.claude
+.agents
+.codex
+node_modules
+**/node_modules
+**/.env
+**/.env.*
+**/*.local
+**/.state
+**/.cico-state
+**/postgres-data
+playwright-report
+test-results
+coverage
+*.log
+deploy/hostinger/artifacts
+
+# Source maps are useful only during local review and can disclose source paths
+# in a public runtime image. The UI archive is checked separately by the static
+# packager.
+ui/dist

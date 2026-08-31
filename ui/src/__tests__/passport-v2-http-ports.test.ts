@@ -199,7 +199,7 @@ describe('HttpEnrollmentStatusPort', () => {
   };
 
   it('reads the pending batch and the deadline it is bounded by', async () => {
-    const fetcher = vi.fn(async () => json(wire));
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => json(wire));
     const port = new HttpEnrollmentStatusPort({ baseUrl: 'https://cico.test', fetcher });
 
     await expect(port.getStatus()).resolves.toEqual(wire);

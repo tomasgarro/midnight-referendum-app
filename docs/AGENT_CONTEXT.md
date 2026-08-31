@@ -1,5 +1,9 @@
 # CICO Passport v2 agent context
 
+> Working context for the current checkout. This is not a release record. The
+> committed Undeployed v2 transcript under `evidence/undeployed-v2/abdd0a2/` is
+> historical and SHA-specific; do not use it as evidence for the current branch.
+
 ## Objective
 
 Build a Midnight Passport-first, passport-backed, non-binding civic consultation on Midnight Preview. Rarimo is a temporary evidence adapter. Do not claim mainnet, official-election, human-uniqueness, biometric-holder, or anti-coercion guarantees.
@@ -7,7 +11,7 @@ Build a Midnight Passport-first, passport-backed, non-binding civic consultation
 ## Source of truth
 
 - Repository: the reviewed checkout containing this document
-- Implementation branch: `feat/undeployed-v2-evidence-release`
+- Implementation branch: `feat/passport-preview-night`
 - Baseline: no release SHA is assigned; inspect the current worktree before
   making evidence claims
 - Runtime: Linux/WSL, Node `22.22.0` from `.nvmrc`
@@ -19,13 +23,14 @@ Never edit the historical Windows project copy. Generated Compact assets are syn
 ## Current implementation status (review checkout)
 
 The checkout contains v2 contract, provider, issuer, browser, relayer, and
-operator-runner code. The current Undeployed v2 lifecycle and relay run have
-been verified locally by an operator, and the sanitized manifest/transcript are
-committed at
+operator-runner code. A prior Undeployed v2 lifecycle and relay run was
+verified locally by an operator, and its historical sanitized
+manifest/transcript are committed at
 `docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` and
 `docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json`
 (manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
-Do not turn that local result into a Preview transaction, Passport approval,
+That record uses the older frozen-enrollment model and is not a current-branch
+run. Do not turn it into a Preview transaction, Passport approval,
 physical NFC/provider approval, CI result, test total, hosted URL, or video
 claim; those remain separate release gates.
 
@@ -65,7 +70,9 @@ Passport profile fields are display/session data only. They never enter credenti
 - Use domain-separated hashes and commitments with shared TS/Compact golden vectors.
 - The issuer receives a blinded holder binding, never the voter secret or holder blind.
 - The credential leaf binds issuer, country, age class, assurance, epoch, and validity.
-- Every referendum pins an exact frozen credential root.
+- The current open-enrollment referendum pins an initial credential root and
+  accepts later roots only through an independently attested root-publisher
+  path. The older frozen-root model is historical; see ADR-007.
 - Vote and cohort nullifiers use separate domains and include a random referendum ID.
 - Ballot commitments include the referendum ID and fresh 32-byte randomness.
 - Failed policy proofs use a generic public error.

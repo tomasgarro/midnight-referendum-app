@@ -1,5 +1,12 @@
 # Sponsored relayer
 
+> **Legacy compatibility surface.** This document explains the original
+> `/balance` and `/submit` adapter. The current hosted release path is the
+> capability-gated, idempotent v2 action/job API described in
+> [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) and
+> [`../deploy/hostinger/RUNBOOK.md`](../deploy/hostinger/RUNBOOK.md). Do not
+> expose the compatibility routes publicly.
+
 Pays the network fee for referendum votes so a citizen needs no wallet, no
 browser extension, and no DUST.
 

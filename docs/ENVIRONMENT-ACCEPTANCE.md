@@ -1,87 +1,96 @@
 # Environment acceptance matrix
 
-This is the target acceptance matrix, not the runtime transcript. The current
-Undeployed v2 lifecycle has an operator-verified local run, and its sanitized
-manifest/transcript are committed at
-[docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json](evidence/undeployed-v2/abdd0a2/undeployed.manifest.json)
-and
-[docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json](evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json)
-(manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`).
-Every user-visible claim must match the selected environment: local Undeployed
-evidence does not upgrade the synthetic demo, and neither satisfies a Preview,
-Passport, or physical NFC release gate.
+This is the target acceptance matrix, not a runtime transcript. The current
+product is voting-first and uses an explicit synthetic fallback when live
+dependencies are absent. Open enrollment is the current v2 model. The only
+committed Undeployed v2 transcript is the historical, SHA-specific
+frozen-enrollment record under
+[`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/).
+
+Every user-visible claim must match the selected environment. Local evidence
+does not become Preview evidence, and a synthetic state never becomes a real
+credential, vote, or canonical receipt through copy alone.
 
 | Capability | `demo` | `undeployed` | `preview` |
 | --- | --- | --- | --- |
-| Passport session | Deterministic fixture, labelled simulated | Real official Passport passkey/profile session when the origin is accepted; otherwise unavailable, not faked | Real official Passport passkey/profile session on the approved HTTPS origin |
-| Passport account/ACC | Synthetic display fixture | Official returned account may be displayed, but is **not** claimed deployed on local devnet unless the protocol proves that network | Returned account must identify the Preview network and pass schema/origin/nonce validation |
-| Passport recovery | No real recovery claim | Passport-owned encrypted backup only | Passport-owned encrypted backup only |
-| Holder binding | `unsupported` or synthetic fixture, labelled | Verified Passport grant/signature when available; otherwise `unsupported` | Verified Passport grant/signature when available; otherwise `unsupported` |
-| Civic credential | Synthetic adapter and fixture | Real local Registry V1 issuance from fixture evidence; fixture source remains disclosed | Real configured issuer and evidence adapter; synthetic fixtures cannot pass |
-| Referendum contract | Simulated | Real local Referendum V2 deployed against the frozen local registry root | Real Preview Referendum V2 from the signed manifest |
-| Proving | Simulated | Local proof server at `http://localhost:6300` | Local proving preferred; any remote/TEE provider is explicitly disclosed |
-| Action funding/submission | Simulated | Durable atomic v2 relay, local node `ws://localhost:9944`; Lace is diagnostic fallback | Durable atomic v2 relay on configured Preview endpoints; Lace separately verified |
-| Public reads | Fixture catalog/state | Real local indexer `http://localhost:8088/api/v4/graphql` | Real configured Preview indexer |
-| Receipt | Synthetic and labelled | Canonical only after local indexer observation | Canonical only after independent Preview indexer observation |
-| NFC/passport evidence | Not available or synthetic | Fixture evidence only until physical companion transcript exists | Rarimo/native companion only after physical-device gate; raw document data never enters this web app |
+| Passport session | Deterministic fixture, labelled simulated | Official Passport profile/session only when an approved origin and live session are configured; otherwise unavailable | Official Passport profile/session on the approved HTTPS origin |
+| Passport profile | Synthetic display fixture | Consented display fields only; never eligibility or vote authority | Consented display fields only; never eligibility or vote authority |
+| Civic credential | Synthetic adapter and fixture, visibly labelled | Configured local issuer and provider path; fixtures remain disclosed | Real configured issuer and verified evidence; synthetic fixtures cannot pass |
+| Enrollment | Simulated | Open while the published enrollment window is active; later roots require attestation | Open while the published enrollment window is active; later roots require attestation |
+| Referendum | Simulated | Referendum V2 with an initial root plus admitted, attested roots | Referendum V2 from a signed release manifest |
+| Rarimo/NFC evidence | Unavailable or synthetic | Temporary Rarimo adapter only; no physical-device claim without a transcript | Rarimo/native adapter only after the physical and verifier gates |
+| Proving | Simulated | Local loopback proof server when configured | Local proving preferred; any approved remote provider is disclosed |
+| Action funding/submission | Simulated | Stateful v2 relay when configured; incomplete configuration blocks live action | Stateful v2 relay on approved Preview endpoints |
+| Public reads | Fixture catalog/state | Configured local indexer | Configured Preview indexer |
+| Receipt | Synthetic and labelled | Canonical only after indexer observation | Canonical only after independent Preview indexer observation |
+| Wallet/recovery/biometric/ETH | Not offered | Not a current release requirement | Optional post-Preview Profile/Vault work, not implied by Passport consent |
 
-## Evidence state and remaining gates
-
-The current local run is verified for the bounded Undeployed v2 lifecycle, and
-its sanitized manifest/transcript are committed as the release evidence for
-that lifecycle; the final Preview release record is still pending. The
-following evidence is required before the corresponding environment may be
-described as live or released.
+## Acceptance gates
 
 ### Demo
 
-- A visible simulation disclosure before eligibility or action.
-- No live, verified, deployed, or canonical wording for fixture results.
-- No production acceptance test consumes demo fixtures.
+- Show a simulation disclosure before eligibility or action.
+- Keep `Synthetic credential`, `Simulated vote`, and simulated receipt wording
+  visible at the relevant stages.
+- Never contact CICO, Rarimo, a relay, a proof server, or a real contract from
+  the synthetic path.
+- Do not use demo fixtures as production acceptance evidence.
 
-### Undeployed v2 — operator-verified locally; evidence committed
+### Current source and local Undeployed target
 
-- Verified locally: network ID `undeployed`, node/indexer/proof/PostgreSQL
-  services, registry issue/freeze, referendum deploy/cast/replay rejection/
-  close/reveal/finalize, canonical indexer confirmation, and the capability-
-  gated relay's DUST, concurrency, and restart checks.
-- Committed for the release record: the sanitized manifest and transcript at
-  `docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` and
-  `docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json`
-  (human-readable form at `undeployed-v2.transcript.md`), containing only
-  reviewed public addresses, identifiers, digests, the frozen root, indexer
-  observations, and DUST accounting. Manifest digest
-  `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`.
-- Known limitation of the committed evidence: the three `registry.*` indexer
-  observations (deploy, issue, freeze) were all captured at approximately
-  2026-08-29T14:35:50Z, after the freeze had already completed. Each therefore
-  records the terminal registry state (`frozen: true`, `credentialCount: 1`)
-  rather than the state as of that individual stage. Each observation carries
-  its own `observedAt` timestamp, so this is transparent in the artifact. The
-  referendum observations progress correctly across stages (COMMIT ->
-  REVEAL -> FINALIZED, issuedVotes 0 -> 1, tally 0 -> YES 1).
-- DUST accounting uses a fixed-time valuation model: because DUST accrues over
-  wall-clock time, the before/after balances in the evidence are both
-  valuated at a single bounded reference instant (`valuationAt`); raw later
-  balances can otherwise exceed earlier ones even after DUST was spent.
-- The local result remains separate from Passport approval, a real provider
-  credential, a hosted deployment, and Midnight Preview evidence.
+- Use the current open-enrollment source and record the exact source SHA for any
+  new local run.
+- Require network, node, indexer, proof-server, contract, and relay settings to
+  be explicit; missing or partial settings select synthetic/unavailable state,
+  not a fabricated live result.
+- Ensure later roots are paired with separate registry attestations and that
+  the accepted-root list is auditable.
+- Keep Passport profile/session values separate from credential leaves,
+  voter secrets, ballot commitments, and nullifiers.
+- Keep raw MRZ/NFC/document/face/provider-proof data behind the restricted
+  verifier and issuer; do not log or persist it in the browser or relay.
+- Call a receipt confirmed only after the canonical indexer observes the
+  transaction.
 
-### Preview
+### Historical Undeployed v2 evidence
 
-- The same artifact versions and operator command produce a signed Preview
-  manifest.
-- Passport/user, issuer, organizer, and relay identities are independent.
-- Passport response network/account fields resolve to Preview.
-- The transcript includes public addresses/hashes and DUST before/after, and a
-  clean machine can resolve the final receipt through the Preview indexer.
+The preserved record at
+[`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/) is complete
+evidence for its own local run only. It is bound to:
+
+- source commit `abdd0a2203fbef909f70f6ddc06681ac1327f457`;
+- source tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`;
+- manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`;
+- the older frozen registry lifecycle, including `registry.freeze`.
+
+The registry observations and DUST accounting remain useful audit details, but
+they do not prove current-source behavior, Passport approval, physical NFC, a
+hosted service, or Midnight Preview. Preserve the JSON and Markdown files
+unchanged; a new run gets a new evidence directory and manifest.
+
+### Preview release
+
+Before calling the Preview environment live or released, attach a new record
+for the exact release SHA containing:
+
+- approved Passport origin/session evidence, with independent user, issuer,
+  organizer, and relay identities;
+- pinned verifier/issuer configuration, physical NFC transcript, minimum-claim
+  issuance, deletion, and replay/idempotency checks;
+- open-enrollment schedule, accepted roots, separate registry attestations, and
+  canonical indexer observations;
+- cast, close, reveal, and finalize transaction records plus DUST, restart, and
+  indexer-lag reconciliation;
+- static-host HTTPS/deep-link smoke tests, privacy/log/storage scans, and the
+  published synthetic fallback behavior.
 
 ## Fail-closed rules
 
-- Missing or partial v2 configuration disables the real action; it never falls
-  back to the v1 reader or simulated success.
-- Wrong Passport origin, nonce, request ID, schema, network, or account contract
-  is rejected.
-- Submission without indexer confirmation remains pending.
-- Unknown environment/provider capability is reported as unavailable, not
-  inferred or fabricated.
+- Missing or partial live configuration disables the live action and selects the
+  labelled synthetic/unavailable state; it never falls back to v1 routes.
+- Wrong Passport origin, nonce, request ID, schema, network, or account
+  contract is rejected.
+- Unknown environment/provider capability is unavailable, not inferred.
+- A relay acknowledgement is pending until indexer confirmation.
+- Fixtures, source adapters, and historical transcripts are never described as
+  genuine Passport credentials or physical NFC evidence.

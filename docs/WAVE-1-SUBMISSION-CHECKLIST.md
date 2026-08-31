@@ -1,9 +1,10 @@
 # Wave 1 evidence checklist
 
-This checklist is a release worksheet. The current Undeployed v2 lifecycle has
+This checklist is a release worksheet. A historical Undeployed v2 lifecycle has
 an operator-verified local run, and its sanitized manifest/transcript are
-committed at [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/);
-this checklist must not be read as a committed final Preview release record.
+preserved at [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/).
+That SHA-specific record uses the older frozen-enrollment model; this checklist
+must not be read as a current-branch or final Preview release record.
 The active status summary is the four-row table in the [root
 README](../README.md). Historical v1 Preview values are preserved separately in
 [LEGACY-V1-PREVIEW-EVIDENCE.md](LEGACY-V1-PREVIEW-EVIDENCE.md).
@@ -16,13 +17,13 @@ material, raw provider data, document images, or ballot choices.
 
 | Field | Value |
 | --- | --- |
-| Review checkout / branch | `feat/undeployed-v2-evidence-release` |
+| Review checkout / branch | `feat/passport-preview-night` |
 | Release SHA | not assigned |
 | Evidence source SHA | `abdd0a2203fbef909f70f6ddc06681ac1327f457` (tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`) |
 | Manifest digest | `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d` |
 | Sanitized manifest path | `docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json` |
 | Sanitized transcript path | `docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json` (human-readable form at `undeployed-v2.transcript.md`) |
-| Runtime environment | Undeployed v2 operator run verified locally |
+| Runtime environment | Current source target; historical Undeployed v2 run preserved separately |
 | Reviewer | |
 | Review date | |
 
@@ -31,7 +32,8 @@ material, raw provider data, document images, or ballot choices.
 ### Source and privacy boundaries
 
 - [ ] README and this checklist distinguish historical v1, synthetic demo,
-      current Undeployed v2, and Passport/Preview/NFC gates.
+      current open-enrollment source, historical Undeployed v2 evidence, and
+      Passport/Preview/NFC gates.
 - [ ] No current document claims a Preview transaction, deployed address,
       release SHA, CI status, test total, hosted URL, video, Passport origin
       approval, Preview deployment, or physical NFC evidence without a
@@ -51,12 +53,13 @@ material, raw provider data, document images, or ballot choices.
 - [ ] Confirm no demo state is described as a real credential, Passport
       approval, NFC verification, deployed contract, or canonical receipt.
 
-### Undeployed v2 runtime evidence
+### Historical Undeployed v2 runtime evidence
 
-- Verified locally by the operator: the pinned services and the registry
-  deploy/issue/freeze, referendum deploy/cast/replay rejection/close/reveal/
-  finalize lifecycle completed; the local indexer confirmed the action; and the
-  capability-gated relay passed DUST, concurrency, and restart checks.
+- The preserved SHA-specific record reports that the pinned services and the
+  registry deploy/issue/freeze, referendum deploy/cast/replay rejection/close/
+  reveal/finalize lifecycle completed; the local indexer confirmed the action;
+  and the capability-gated relay passed DUST, concurrency, and restart checks.
+  This is historical frozen-model evidence, not a current-branch run.
 - [ ] Confirm the runner fails closed when local genesis funding is absent.
 - [x] Sanitize and review the generated manifest/transcript; the reviewed
       evidence is committed at `docs/evidence/undeployed-v2/abdd0a2/`.

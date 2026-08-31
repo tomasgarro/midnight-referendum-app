@@ -1,0 +1,43 @@
+# Build both Node services only from a sanitized checkout. The repository
+# .dockerignore excludes operator env files and runtime state from the context.
+
+ARG NODE_IMAGE
+FROM ${NODE_IMAGE} AS build
+
+WORKDIR /src
+COPY package.json package-lock.json ./
+COPY api/package.json api/package.json
+COPY cico-service/package.json cico-service/package.json
+COPY relayer/package.json relayer/package.json
+COPY ui/package.json ui/package.json
+RUN npm ci --ignore-scripts
+
+COPY . .
+ARG SERVICE_WORKSPACE
+RUN npm run build --workspace midnight-referendum-api \
+ && npm run build --workspace ${SERVICE_WORKSPACE}
+
+FROM ${NODE_IMAGE} AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Reinstall production dependencies in the runtime layer so no build tools or
+# source tree are copied into the service image. All workspace package manifests
+# are required for npm's lockfile validation.
+COPY package.json package-lock.json ./
+COPY api/package.json api/package.json
+COPY cico-service/package.json cico-service/package.json
+COPY relayer/package.json relayer/package.json
+COPY ui/package.json ui/package.json
+RUN npm ci --omit=dev --ignore-scripts \
+ && rm -rf ui
+
+ARG SERVICE_DIR
+COPY --from=build /src/api/dist api/dist
+COPY --from=build /src/${SERVICE_DIR}/dist ${SERVICE_DIR}/dist
+COPY --from=build /src/contracts/credential-registry-v1/managed contracts/credential-registry-v1/managed
+COPY --from=build /src/contracts/referendum-v2/managed contracts/referendum-v2/managed
+
+RUN mkdir -p /var/lib/cico-passport /var/lib/relayer/state \
+ && chown -R node:node /var/lib/cico-passport /var/lib/relayer
+USER node

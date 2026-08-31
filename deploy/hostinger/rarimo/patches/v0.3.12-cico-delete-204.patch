@@ -1,0 +1,167 @@
+diff --git a/Dockerfile b/Dockerfile
+index bd1fc2d..225cea3 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -1,4 +1,8 @@
+-FROM golang:1.23.0-alpine as buildbase
++ARG GO_IMAGE=golang:1.23.0-alpine
++ARG RUNTIME_IMAGE=alpine:3.20
++ARG DERIVATIVE_VERSION=v0.3.12-cico-delete-204
++
++FROM ${GO_IMAGE} AS buildbase
+ 
+ RUN apk add git build-base ca-certificates
+ 
+@@ -12,10 +16,19 @@ COPY . .
+ RUN go mod tidy && go mod vendor
+ RUN CGO_ENABLED=1 GO111MODULE=on GOOS=linux GOOS=linux go build -o /usr/local/bin/verificator-svc /go/src/github.com/rarimo/verificator-svc
+ 
++FROM buildbase AS test
++RUN go test ./internal/service/handlers
++
++FROM ${RUNTIME_IMAGE} AS runtimebase
++
+ FROM scratch
+-COPY --from=alpine:3.9 /bin/sh /bin/sh
+-COPY --from=alpine:3.9 /usr /usr
+-COPY --from=alpine:3.9 /lib /lib
++ARG DERIVATIVE_VERSION
++LABEL org.opencontainers.image.source="https://github.com/rarimo/verificator-svc" \
++      org.opencontainers.image.revision="f7ebbdf4d692326dd50d2c49976dd31042b2c29a" \
++      org.opencontainers.image.version="${DERIVATIVE_VERSION}"
++COPY --from=runtimebase /bin/sh /bin/sh
++COPY --from=runtimebase /usr /usr
++COPY --from=runtimebase /lib /lib
+ 
+ COPY --from=buildbase /usr/local/bin/verificator-svc /usr/local/bin/verificator-svc
+ COPY --from=buildbase /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+diff --git a/internal/service/handlers/delete_user.go b/internal/service/handlers/delete_user.go
+index 908155d..996bf09 100644
+--- a/internal/service/handlers/delete_user.go
++++ b/internal/service/handlers/delete_user.go
+@@ -12,7 +12,13 @@ import (
+ )
+ 
+ func DeleteUser(w http.ResponseWriter, r *http.Request) {
+-	if !auth.Authenticates(ctx.UserClaims(r), auth.AdminGrant) {
++	// The upstream handler checked AdminGrant unconditionally, even though the
++	// auth middleware deliberately supplies no claims when auth is disabled.
++	// CICO uses this endpoint only on the private Docker network, so the
++	// redundant check made cleanup return 401 in the supported disabled-auth
++	// deployment. Keep the admin gate whenever auth is enabled; the user grant
++	// check below still runs in both modes.
++	if ctx.AuthClient(r).Enabled && !auth.Authenticates(ctx.UserClaims(r), auth.AdminGrant) {
+ 		ape.RenderErr(w, problems.Unauthorized())
+ 		return
+ 	}
+diff --git a/internal/service/handlers/delete_user_test.go b/internal/service/handlers/delete_user_test.go
+new file mode 100644
+index 0000000..64bb84e
+--- /dev/null
++++ b/internal/service/handlers/delete_user_test.go
+@@ -0,0 +1,105 @@
++package handlers
++
++import (
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/go-chi/chi"
++	"github.com/rarimo/verificator-svc/internal/config"
++	"github.com/rarimo/verificator-svc/internal/data"
++	"github.com/rarimo/verificator-svc/internal/service/ctx"
++	"github.com/rarimo/web3-auth-svc/pkg/auth"
++)
++
++func TestDeleteUserReturns204WhenAuthDisabled(t *testing.T) {
++	t.Parallel()
++
++	query := &deleteUserQuery{user: &data.VerifyUsers{UserID: "cleanup-id"}}
++	request := httptest.NewRequest(http.MethodDelete, "/integrations/verificator-svc/private/user/cleanup-id", nil)
++	route := chi.NewRouteContext()
++	route.URLParams.Add("user_id", "cleanup-id")
++	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, route))
++	request = request.WithContext(ctx.CtxVerifiers(config.Verifiers{PreserveUserIDCase: true})(request.Context()))
++	request = request.WithContext(ctx.CtxAuthClient(&auth.Client{Enabled: false})(request.Context()))
++	request = request.WithContext(ctx.CtxUserClaims(nil)(request.Context()))
++	request = request.WithContext(ctx.CtxVerifyUsersQ(query)(request.Context()))
++
++	response := httptest.NewRecorder()
++	DeleteUser(response, request)
++
++	if response.Code != http.StatusNoContent {
++		t.Fatalf("expected disabled-auth cleanup to return 204, got %d: %s", response.Code, response.Body.String())
++	}
++	if !query.deleted {
++		t.Fatal("expected the matching user to be deleted")
++	}
++}
++
++func TestDeleteUserStillRequiresAdminWhenAuthEnabled(t *testing.T) {
++	t.Parallel()
++
++	query := &deleteUserQuery{user: &data.VerifyUsers{UserID: "cleanup-id"}}
++	request := httptest.NewRequest(http.MethodDelete, "/integrations/verificator-svc/private/user/cleanup-id", nil)
++	route := chi.NewRouteContext()
++	route.URLParams.Add("user_id", "cleanup-id")
++	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, route))
++	request = request.WithContext(ctx.CtxVerifiers(config.Verifiers{PreserveUserIDCase: true})(request.Context()))
++	request = request.WithContext(ctx.CtxAuthClient(&auth.Client{Enabled: true})(request.Context()))
++	request = request.WithContext(ctx.CtxUserClaims(nil)(request.Context()))
++	request = request.WithContext(ctx.CtxVerifyUsersQ(query)(request.Context()))
++
++	response := httptest.NewRecorder()
++	DeleteUser(response, request)
++
++	if response.Code != http.StatusUnauthorized {
++		t.Fatalf("expected enabled-auth cleanup without admin claim to return 401, got %d", response.Code)
++	}
++	if query.deleted {
++		t.Fatal("did not expect an unauthorized cleanup to delete a user")
++	}
++}
++
++// deleteUserQuery is deliberately tiny: the handler only needs New, WhereID,
++// Get and DeleteByID. The remaining interface methods make accidental future
++// handler expansion fail loudly at compile time instead of hiding a fake call.
++type deleteUserQuery struct {
++	user    *data.VerifyUsers
++	deleted bool
++}
++
++func (q *deleteUserQuery) New() data.VerifyUsersQ { return q }
++
++func (q *deleteUserQuery) Get() (*data.VerifyUsers, error) { return q.user, nil }
++
++func (q *deleteUserQuery) Select() ([]data.VerifyUsers, error) { return nil, nil }
++
++func (q *deleteUserQuery) Update(*data.VerifyUsers) error { return nil }
++
++func (q *deleteUserQuery) Upsert(user *data.VerifyUsers) (data.VerifyUsers, error) {
++	return *user, nil
++}
++
++func (q *deleteUserQuery) Delete() error { return nil }
++
++func (q *deleteUserQuery) DeleteByID(user *data.VerifyUsers) error {
++	if q.user == nil || user == nil || q.user.UserID != user.UserID {
++		return nil
++	}
++	q.deleted = true
++	return nil
++}
++
++func (q *deleteUserQuery) WhereID(string) data.VerifyUsersQ { return q }
++
++func (q *deleteUserQuery) WhereHashID(string) data.VerifyUsersQ { return q }
++
++func (q *deleteUserQuery) WhereCreatedAtLt(time.Time) data.VerifyUsersQ { return q }
++
++func (q *deleteUserQuery) FilterByInternalAID(string) data.VerifyUsersQ { return q }
++
++func (q *deleteUserQuery) FilterByNullifier(string) data.VerifyUsersQ { return q }
++
++func (q *deleteUserQuery) FilterByEventData(string) data.VerifyUsersQ { return q }

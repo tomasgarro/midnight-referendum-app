@@ -1,0 +1,22 @@
+# Internal only. The outer Caddyfile is the sole public listener and repeats
+# this allow-list at the hostname boundary.
+
+:8080 {
+	@proof_params {
+		method GET
+		path /integrations/verificator-svc/public/proof-params/*
+	}
+	handle @proof_params {
+		reverse_proxy rarimo-verificator:8000
+	}
+	@callback {
+		method POST
+		path /integrations/verificator-svc/public/callback/*
+	}
+	handle @callback {
+		reverse_proxy rarimo-verificator:8000
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}

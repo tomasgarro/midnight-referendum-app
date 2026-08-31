@@ -1,0 +1,262 @@
+# Production-shaped Hostinger VPS topology.
+#
+# Only edge-proxy publishes host ports 80/443. Every application, verifier,
+# database, and proof service is reachable only over its dedicated Docker
+# network. Supply interpolation values with .env.public.local and service
+# credentials with the four service-specific *.local files.
+name: midnight-civic-vps
+
+services:
+  edge-proxy:
+    image: ${CADDY_IMAGE:?set CADDY_IMAGE to an immutable Caddy image}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CICO_DOMAIN: ${CICO_DOMAIN:?set CICO_DOMAIN}
+      RELAY_DOMAIN: ${RELAY_DOMAIN:?set RELAY_DOMAIN}
+      RARIMO_DOMAIN: ${RARIMO_DOMAIN:?set RARIMO_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      cico:
+        condition: service_healthy
+      relayer:
+        condition: service_started
+      rarimo-gateway:
+        condition: service_started
+    networks:
+      - cico-edge
+      - relay-edge
+      - rarimo-edge
+
+  cico:
+    image: ${CICO_IMAGE:?set CICO_IMAGE to an immutable release image}
+    command: ["node", "cico-service/dist/server.js"]
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ./.env.cico.local
+    expose:
+      - "8791"
+    volumes:
+      - cico-state:/var/lib/cico-passport
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8791/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - cico-edge
+      - cico-internal
+      - rarimo-cico
+    depends_on:
+      cico-proof:
+        condition: service_started
+
+  cico-proof:
+    image: ${MIDNIGHT_PROOF_IMAGE:?set MIDNIGHT_PROOF_IMAGE to an immutable image}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    command: ["midnight-proof-server", "-v"]
+    expose:
+      - "6300"
+    environment:
+      RUST_BACKTRACE: "full"
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - cico-internal
+
+  relayer:
+    image: ${RELAYER_IMAGE:?set RELAYER_IMAGE to an immutable release image}
+    command: ["node", "relayer/dist/server.js"]
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ./.env.relayer.local
+    expose:
+      - "8790"
+    volumes:
+      - relayer-state:/var/lib/relayer/state
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      relayer-postgres:
+        condition: service_healthy
+      relayer-proof:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8790/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 5m
+    networks:
+      - relay-edge
+      - relay-internal
+
+  relayer-proof:
+    image: ${MIDNIGHT_PROOF_IMAGE:?set MIDNIGHT_PROOF_IMAGE to an immutable image}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    command: ["midnight-proof-server", "-v"]
+    expose:
+      - "6300"
+    environment:
+      RUST_BACKTRACE: "full"
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - relay-internal
+
+  relayer-postgres:
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to an immutable Postgres image}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ./.env.relayer-db.local
+    expose:
+      - "5432"
+    volumes:
+      - relayer-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - relay-internal
+
+  rarimo-postgres:
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to an immutable Postgres image}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ./.env.rarimo.local
+    expose:
+      - "5432"
+    volumes:
+      - rarimo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - rarimo-internal
+
+  rarimo-migrate:
+    image: ${RARIMO_IMAGE:?set RARIMO_IMAGE to the reviewed v0.3.12 derivative}
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KV_VIPER_FILE: /config.yaml
+    command: ["migrate", "up"]
+    depends_on:
+      rarimo-postgres:
+        condition: service_healthy
+    volumes:
+      - ./rarimo/config.yaml:/config.yaml:ro
+    networks:
+      - rarimo-internal
+
+  rarimo-verificator:
+    image: ${RARIMO_IMAGE:?set RARIMO_IMAGE to the reviewed v0.3.12 derivative}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KV_VIPER_FILE: /config.yaml
+    command: ["run", "service"]
+    depends_on:
+      rarimo-migrate:
+        condition: service_completed_successfully
+    expose:
+      - "8000"
+    volumes:
+      - ./rarimo/config.yaml:/config.yaml:ro
+    networks:
+      - rarimo-internal
+      - rarimo-cico
+      - rarimo-egress
+
+  # This is an internal allow-list gateway. The public edge proxy can reach
+  # only this service, and this gateway can reach only the verifier.
+  rarimo-gateway:
+    image: ${CADDY_IMAGE:?set CADDY_IMAGE to an immutable Caddy image}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "8080"
+    volumes:
+      - ./rarimo/Caddyfile:/etc/caddy/Caddyfile:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      rarimo-verificator:
+        condition: service_started
+    networks:
+      - rarimo-edge
+      - rarimo-internal
+
+networks:
+  cico-edge:
+  cico-internal:
+    internal: true
+  relay-edge:
+  relay-internal:
+    internal: true
+  rarimo-edge:
+  rarimo-internal:
+    internal: true
+  rarimo-cico:
+    internal: true
+  rarimo-egress:
+
+volumes:
+  caddy-data:
+    name: midnight-civic-caddy-data
+  caddy-config:
+    name: midnight-civic-caddy-config
+  cico-state:
+    name: midnight-civic-cico-state
+  relayer-state:
+    name: midnight-civic-relayer-state
+  relayer-postgres-data:
+    name: midnight-civic-relayer-postgres-data
+  rarimo-postgres-data:
+    name: midnight-civic-rarimo-postgres-data

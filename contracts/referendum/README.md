@@ -1,5 +1,10 @@
 # Referendum contract — first slice
 
+> **Legacy v1 contract.** The current Passport/open-enrollment release path is
+> implemented by `contracts/credential-registry-v1/` and
+> `contracts/referendum-v2/`. Keep this document for the original v1
+> commit/reveal slice; do not use it as the current deployment model.
+
 This directory contains the first Compact contract slice for the Buenos Aires
 hackathon referendum.
 

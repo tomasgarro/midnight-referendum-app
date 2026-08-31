@@ -2,10 +2,12 @@
 
 Status: working roadmap for a non-binding civic-consultation product targeting
 Midnight Preview. This is an outcome-driven plan, not a promise of dates or a
-claim that the product is suitable for governmental elections. The current
+claim that the product is suitable for governmental elections. A historical
 Undeployed v2 lifecycle has an operator-verified local run, and its sanitized
-manifest/transcript are committed at
+manifest/transcript are preserved at
 [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/).
+That record is tied to one source SHA and the older frozen-enrollment model; it
+is not evidence for the current branch.
 This document does not assert a Preview deployment, Passport approval, NFC
 session, release identity, CI result, test total, URL, or video.
 
@@ -17,15 +19,16 @@ the source of truth for cryptographic release gates.
 
 CICO should let a person use one passport-backed civic credential across
 global and country-restricted consultations without attaching their identity,
-nationality, or Passport profile to a ballot. Midnight Passport is the durable
-consent and capability surface. Rarimo is a replaceable evidence adapter until
-a Passport-native credential capability is available.
+nationality, or Passport profile to a ballot. Midnight Passport is the
+consent/session and display-profile surface. Rarimo is a temporary, replaceable
+NFC evidence adapter until a Passport-native credential capability is available.
 
 Primary outcomes:
 
 1. A person can understand, enroll, and participate without owning a wallet.
-2. A referendum can enforce a frozen passport-backed policy without learning
-   who voted or how a country-eligible person voted.
+2. A referendum can enforce an issuer-bound passport-backed policy during an
+   open enrollment window without learning who voted or how a country-eligible
+   person voted.
 3. A confirmed receipt is independently resolvable through the Midnight
    indexer and reveals no ballot choice or Passport identifier.
 4. Replacing Rarimo with a Passport-native provider changes an adapter, not the
@@ -33,9 +36,12 @@ Primary outcomes:
 5. Preview evidence—not interface copy—determines readiness for an invited
    pilot.
 
-Non-goals for the Preview MVP: mainnet, binding elections, biometric holder
-proof, human uniqueness, anti-coercion, individual credential revocation, and
-private geography percentages.
+The current enrollment model is open during a published window; later roots
+require separate registry attestation. Non-goals for the Preview MVP: mainnet,
+binding elections, biometric holder proof, human uniqueness, anti-coercion,
+individual credential revocation, private geography percentages, and real
+wallet/recovery/ETH features. Those Profile/Vault capabilities are optional
+post-Preview work.
 
 ## Now / next / later
 
@@ -43,13 +49,13 @@ private geography percentages.
 | --- | --- | --- | --- | --- |
 | Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Synthetic journey path present; live Passport evidence pending |
 | Now | Provider-neutral domain ports | Rarimo and future Passport-native providers remain replaceable | Session, credential, and action conformance checks; no provider transports in use cases | Source path present; verification pending |
-| Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Vercel package, Hostinger separation plan | Configuration present; release checks pending |
-| Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while every referendum pins an exact frozen root | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Exercised by the operator-verified local Undeployed run; manifest/transcript committed at `docs/evidence/undeployed-v2/abdd0a2/` |
+| Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Hostinger static artifact, isolated VPS plan | Configuration present; release checks pending |
+| Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while each referendum pins an initial root and accepts only attested later roots | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Source path present; the preserved `abdd0a2` run is historical frozen-model evidence |
 | Next | Rarimo evidence adapter + issuer | A physical passport verification can authorize a provider-neutral credential for an open enrollment epoch | Server-verified callback, claim-bound authorization, replay/idempotency checks, raw-data deletion check, synthetic and Rarimo conformance parity | In progress; source boundary exists, but trusted verificator, callback approval, funded issuer, physical NFC transcript, and runtime evidence remain gates |
-| Now | Credential epoch coordinator | A bounded cohort enrolls, the canonical root freezes, and only then do matching consultations open | Indexer-reconciled enrollment close/freeze transcript; UI states for enrollment, freeze, eligible epoch, and next epoch | Exercised by the operator-verified local Undeployed run; manifest/transcript committed at `docs/evidence/undeployed-v2/abdd0a2/` |
-| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Undeployed v2 run verified locally; Preview evidence and committed local transcript pending |
-| Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag checks | Local capability, DUST, concurrency, and restart checks verified; hosted/Preview evidence pending |
-| Next | Encrypted private state and receipts | Refresh/restart recovery does not require cleartext browser persistence | Threat model, encrypted IndexedDB checks, export/recovery UX, no sensitive storage/log matches | In progress; runtime recovery and durable receipt evidence pending |
+| Now | Open-enrollment coordinator | Participants enroll during the published window; later roots are attested and accepted before the deadline | Indexer-reconciled enrollment close/accepted-root transcript; UI states for open, closed, eligible, and next consultation | Source path present; current runtime evidence pending |
+| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Preview evidence pending; historical local transcript is not current evidence |
+| Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag checks | Source path present; hosted/Preview evidence pending |
+| Next | Encrypted private state and receipts | Voting state and receipts remain privacy-preserving across refresh/restart | Threat model, encrypted IndexedDB checks, choice-free receipt UX, no sensitive storage/log matches | In progress; live recovery evidence pending |
 | Later | Invited Preview pilot | A small cohort completes real passport-backed consultations reliably | Acceptance funnel, support runbook, incident exercise, privacy review, uptime/error data | Gated |
 | Later | Geography decision | Country participation reporting has an honest privacy and trust model | Explicit approval of public opt-in or delayed ZK aggregation; dedicated audit | Human decision gate |
 | Later | Passport-native credential adapter | Passport becomes the credential provider when its supported capabilities permit it | Adapter conformance parity and migration rehearsal; no Compact/use-case rewrite | Capability-gated |
@@ -72,24 +78,23 @@ Gate requirements (not a current claim of a complete release record):
 
 ### R1 — cryptographic vertical slice
 
-Scope: `CredentialRegistryV1`, referendum v2, claim-bound leaf, frozen-root
-policy, country/adult/assurance predicates, vote nullifier, and referendum-bound
-ballot commitment.
+Scope: `CredentialRegistryV1`, referendum v2, claim-bound leaf, open-enrollment
+root policy, country/adult/assurance predicates, vote nullifier, and
+referendum-bound ballot commitment.
 
 Gate:
 
 - Compact compiles with the repository-pinned compiler;
 - TypeScript and Compact golden vectors match;
 - every claim, secret, blind, domain, and referendum ID sensitivity case passes;
-- issuance after freeze and membership against another root fail;
+- claim-modified issuance and membership against an unaccepted root fail;
 - public transcript and ZKIR review find no country, age, holder binding,
   credential opening, choice, or salt disclosure in `castVote`.
 
-Source status: the contract and policy boundaries are in the checkout, and the
-current local Undeployed run exercises their deployed lifecycle. The sanitized
-manifest/transcript are committed at
-`docs/evidence/undeployed-v2/abdd0a2/`; independent cryptographic/ZKIR review
-and Preview evidence remain separate gates.
+Source status: the contract and policy boundaries are in the checkout. The
+preserved `abdd0a2` manifest/transcript exercises the older frozen lifecycle
+only; it is historical evidence tied to that SHA. Independent
+cryptographic/ZKIR review and Preview evidence remain separate gates.
 
 ### R2 — real passport enrollment
 
@@ -117,15 +122,16 @@ post-confirmation/pre-journal crash window remain required evidence gates.
 
 ### R3 — real Preview consultation
 
-Scope: enrollment close and registry freeze, browser private-state integration,
-local/approved proving disclosure, v2 contract deployment, sponsored action,
-indexer receipt, organizer close/reveal/finalize, and result view.
+Scope: open-enrollment close and accepted-root reconciliation, browser
+private-state integration, local/approved proving disclosure, v2 contract
+deployment, sponsored action, indexer receipt, organizer close/reveal/finalize,
+and result view.
 
 Gate:
 
 - one fresh end-to-end Preview transcript is independently reproducible;
-- every selectable referendum uses the frozen root and epoch containing the
-  browser-held credential; late enrollees are routed to the next epoch;
+- every selectable referendum uses its initial or separately attested accepted
+  root and matching epoch; late enrollees are routed to the next consultation;
 - failed/unconfirmed actions stay pending and never create confirmed receipts;
 - voter, issuer, organizer, and relayer keys are independent;
 - contract/circuit/network allowlists reject all other relay work;
@@ -135,18 +141,15 @@ Source status: registry/referendum assets, typed witnesses, address-scoped
 private state, contract-specific providers, canonical root/path binding,
 browser-owned choice/witness preparation, choice-free receipts, pending
 confirmation recovery, and environment-driven composition exist in the
-checkout. The issuer/coordinator and catalog fail-closed boundaries are part
-of the source design. The current operator-verified Undeployed run covers the
-local v2 operator command, one-time capability issuer, durable relay, restart
-path, and indexer-only receipt lookup; its sanitized manifest/transcript are
-committed at `docs/evidence/undeployed-v2/abdd0a2/`. Preview evidence and
-independent review remain required. ADR-006
-deliberately rejects an immediate passport scan against an already-frozen live
-referendum.
+  checkout. The issuer/coordinator and catalog fail-closed boundaries are part
+  of the source design. The preserved local transcript covers an older
+  frozen-model run only; it must not be counted as current or Preview evidence.
+  Preview evidence and independent review remain required. ADR-007 defines the
+  current open-enrollment behavior.
 
 ### R4 — invited pilot
 
-Scope: HTTPS pilot domain, Vercel static UI, hardened Hostinger VPS relay,
+Scope: HTTPS pilot domain, Hostinger static UI, hardened Hostinger VPS relay,
 operator monitoring, support/recovery, accessibility, and an approved
 geography decision.
 
@@ -164,7 +167,7 @@ Gate:
 ```text
 Credential schema + golden vectors
         |
-        +--> CredentialRegistryV1 --> frozen root
+        +--> CredentialRegistryV1 --> initial/attested roots
         |                              |
 Rarimo callback --> issuer/vault ------+--> referendum v2 --> Preview action
                                                                |
@@ -185,7 +188,7 @@ parallel only when their file ownership does not overlap.
 | --- | --- | --- | --- |
 | Root integrator / security reviewer | GPT-5.6 Sol, xhigh | Architecture, shared interfaces, manifests, generated assets, integration, final gates | A second root/integrator |
 | Compact contract worker | GPT-5.6 Sol, xhigh | Compact source, simulator tests, golden vectors, disclosure review | Manifests, generated assets, UI |
-| Credential/provider worker | GPT-5.6 Terra, high or xhigh | Rarimo adapter, issuer callback, vault, provider conformance | Compact schema after freeze, relayer wallet |
+| Credential/provider worker | GPT-5.6 Terra, high or xhigh | Rarimo adapter, issuer callback, vault, provider conformance | Compact schema or root policy decisions, relayer wallet |
 | Product/UX worker | GPT-5.6 Terra, high | Journey, accessibility, organizer UI, Playwright specifications | Provider verification or cryptographic claims |
 | Quality/operations worker | GPT-5.6 Luna, xhigh for bounded checks; Terra high for deployment code | CI, test matrices, deploy scripts, monitoring, runbooks | Product/crypto decisions |
 

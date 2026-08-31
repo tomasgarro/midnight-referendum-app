@@ -1,6 +1,11 @@
 # ADR-006: Credential epoch and referendum lifecycle
 
-Status: accepted for the Preview MVP
+Status: Historical/superseded by [ADR-007](ADR-007-open-enrollment-and-evidence-roles.md)
+
+> This record preserves the earlier frozen-before-deploy model. It remains
+> useful for interpreting the SHA-specific Undeployed evidence at
+> `docs/evidence/undeployed-v2/abdd0a2/`, but it is not the current enrollment
+> policy. Open enrollment is current; see ADR-007.
 
 ## Context
 

@@ -1,162 +1,142 @@
-# First public deployment: Passport-first Midnight Preview MVP
+# First public deployment: voting-first synthetic showcase
 
-Status: target release runbook. The first public artifact is intended to be a
-Passport-first showcase: profile consent may be enabled only after the release
-owner verifies the approved origin; credential issuance and voting remain
-synthetic. No public deployment is asserted by this runbook.
+Status: target release runbook. No public deployment is asserted by this
+document or the current checkout. The target is a Hostinger static web surface
+for the browser and isolated Hostinger VPS services for any later stateful
+issuer, verifier, database, and relayer.
 
 ## Release boundary
 
-The first release exposes only the static Vite UI on Vercel:
+The first release is a static, voting-first consultation showcase:
 
-- live Midnight Passport profile consent requesting `displayName` only;
-- synthetic civic credential and choice-free receipt, visibly labelled as simulated data;
-- browser camera access remains disabled; the public path uses only the synthetic document fixture;
-- no real credential, contract action, or chain-confirmed receipt;
-- no browser request to Rarimo, a verificator, CICO, a relayer, a database, or a raw proof route;
-- no issuer, organizer, relayer, verifier, wallet, holder, witness, or ballot secret in Vercel,
-  GitHub Actions, `VITE_*`, the bundle, or logs;
-- showcase mode hard-disables wallet, indexer, relayer, proof-server, and CICO runtime initialization,
-  even if stale deployment variables are present.
+- Passport may provide approved session/consent and display-profile data only;
+- eligibility, voting, and receipts remain synthetic unless their separate live
+  gates are explicitly enabled and evidenced;
+- browser camera access and direct Rarimo/verificator calls remain disabled in
+  the synthetic path;
+- no issuer, organizer, relayer, verifier, wallet, holder, witness, or ballot
+  secret is placed in static-host configuration, `VITE_*`, the bundle, or logs;
+- missing Passport, Rarimo, issuer, relay, or Preview configuration selects an
+  explicit synthetic/unavailable state rather than fabricating success.
 
-The current legacy relayer (`/balance`, `/submit`, `/keys`, and detailed health data) is not a
-public API. Do not publish it through Nginx, Vercel rewrites, wildcard DNS, or permissive CORS.
-Do not publish raw Rarimo/verificator proof or callback routes.
+The current legacy relayer (`/balance`, `/submit`, `/keys`, and detailed health
+data) is not a public API. Do not publish it through Nginx, static-host
+rewrites, wildcard DNS, or permissive CORS. Do not publish raw
+Rarimo/verificator proof or callback routes.
 
 ## Staged topology
 
-| Surface | First public preview | Later private/invited stage |
+| Surface | First public showcase | Later private/invited stage |
 | --- | --- | --- |
-| UI | Vercel static deployment at `<PREVIEW_UI_ORIGIN>` | Same UI may enable approved Preview ports. |
-| Passport | Live profile/consent bridge at the pinned Passport origin | Future Passport-native credential capability. |
-| CICO/Rarimo | Not configured | Private CICO facade and verificator on dedicated infrastructure. |
-| Citizen proving | Not required | Participant-local loopback proof server only. |
-| Relayer | Not configured | Future authenticated, atomic citizen-action relay only. |
-| Hostinger | Optional static redirect/marketing shell | VPS for isolated private services; never shared hosting. |
+| UI | Hostinger static web at `<SHOWCASE_UI_ORIGIN>` | Same static surface may enable approved Preview ports. |
+| Passport | Profile/session consent only, after origin approval | Future Passport-native evidence capability, if separately approved. |
+| CICO/Rarimo | Synthetic/unavailable | Private CICO façade and pinned verifier on isolated VPS infrastructure. |
+| Citizen proving | Not required for synthetic flow | Participant-local loopback proof server or explicitly approved provider. |
+| Voting | Simulated and labelled | Stateful, authenticated v2 action relay only after Preview evidence. |
+| Hostinger VPS | Not required by the static showcase | Issuer, verifier/database, and relay as separate stateful services. |
 | Midnight | No transaction | Fresh Preview registry, referendum, funded roles, and transcript. |
 
-Recommended later host split:
-
-- `pilot.<domain>`: Vercel UI;
-- `passport-preview.<domain>`: narrow CICO issuance facade;
-- `relay-preview.<domain>`: only after the atomic relay exists.
-
-Issuer and relay must not share a process, OS account, wallet seed, role secret, database, or logs.
+Issuer and relay must not share a process, OS account, wallet seed, role secret,
+database, or logs. Static hosting receives public configuration only.
 
 ## Inputs required from the release owner
 
 Before deployment, record:
 
-1. Vercel team/project access and deployment owner.
-2. `<PREVIEW_UI_ORIGIN>`, DNS provider/owner, and TLS owner.
-3. Whether Hostinger is only a static redirect or a later VPS service host.
-4. Exact release commit SHA and GitHub `main` protection/merge owner.
-5. Synthetic fixture policy, disclaimer copy, incident contact, and rollback owner.
-6. The exact origins required by the selected UI capabilities so CSP can be frozen.
+1. Hostinger static-site and VPS owners, access scope, and rollback owner.
+2. `<SHOWCASE_UI_ORIGIN>`, DNS provider/owner, and TLS owner.
+3. Exact release commit SHA and the artifact digest produced from it.
+4. Synthetic fixture policy, disclaimer copy, incident contact, and support path.
+5. Exact origins required by the selected Passport/session capabilities so CSP
+   can be frozen.
 
-Later Passport and voting stages additionally require the pinned Rarimo/verificator version,
-private CICO origin, callback authentication, issuer/registry/epoch details, approved Midnight
-Preview endpoints, funded independent role wallets, and an issue/vote/close/reveal/finalize
-transcript.
+Later Passport, enrollment, and voting stages additionally require a
+pinned Rarimo/verificator version, private CICO origin, callback authentication,
+issuer/registry details, approved Midnight Preview endpoints, independent role
+wallets, and an issue/vote/close/reveal/finalize transcript.
 
 ## Environment ownership
 
-Every `VITE_*` value is public build output. For the public showcase:
+Every `VITE_*` value is public build output. For the public synthetic showcase:
 
-- set `VITE_APP_MODE=showcase` and set `VITE_PASSPORT_ORIGIN` only to the exact
-  Passport origin approved for this release;
-- leave contract address, CICO URL, relayer URL, and remote proof-server URL empty;
-- never place a secret, seed, private callback header, service-role key, or database credential in
-  a `VITE_*` variable;
-- keep CICO and relayer environment files only in their future private operator secret stores.
+- set the explicit showcase mode and only the exact approved Passport origin;
+- leave contract, CICO, relayer, and remote proof-server URLs empty;
+- never place a secret, seed, private callback header, service-role key, or
+  database credential in a `VITE_*` variable;
+- keep CICO and relayer environment files only in their future private VPS
+  secret stores.
 
-The manual GitHub workflow uses the protected `public-preview` environment and needs scoped
-`VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets. It checks out reviewed `main`
-only, pins Compact 0.31.1 and Vercel CLI 59.5.0, builds one Preview artifact, deploys that exact
-prebuilt output, and runs Playwright against the deployed URL.
+The static host must install development dependencies needed to build the
+artifact, but it must not receive service secrets. Build from the reviewed SHA,
+run the repository's quality and showcase checks, and upload only the resulting
+`ui/dist` files through the approved Hostinger channel. Automatic deployment
+from arbitrary branches is not a release process.
 
-Do not enable automatic Git-connected Vercel builds yet. Generated Compact assets are deliberately
-not tracked, and an ordinary Vercel builder does not install the pinned Compact toolchain. The
-manual workflow reproduces the clean GitHub runner setup before `vercel build`.
-`vercel.json` enforces this with `git.deploymentEnabled: false`.
+## CSP and browser smoke gate
 
-Vercel must install development dependencies because Vite, TypeScript, Husky, and the Midnight
-build tooling are declared there. The checked-in install contract is
-`HUSKY=0 npm ci --include=dev`: `--include=dev` overrides a project-level production omit, while
-`HUSKY=0` intentionally skips Git-hook installation in the immutable deployment checkout. Do not
-replace this with `--ignore-scripts`, because dependency lifecycle scripts may be required.
+The static response must enforce the reviewed allowlist: scripts, styles,
+fonts, images, and connections are limited to approved origins; Passport is
+allowed only as the exact configured origin; objects and unexpected third-party
+origins are disabled.
 
-## CSP gate
+Run Chromium with CSP enforcement and fail the release if the browser reaches
+CICO, a verifier, a legacy relay, a raw proof route, a non-loopback proof host,
+or a real contract while the showcase is synthetic.
 
-`vercel.json` enforces a reviewed allowlist: scripts, styles, fonts, images and connections are
-self-only; Passport is allowed only as the exact frame/ancestor origin; objects are disabled; and
-base, form, worker and manifest behavior are constrained. Encode Sans is self-hosted, and the UI
-has no inline React styles, so `unsafe-inline` is not required.
-
-Chromium must run with CSP enforcement during the deployed smoke test. Fail release if the browser
-reports a CSP violation or reaches CICO, verificator, legacy relay, raw proof routes, a non-loopback
-proof host, a real contract, or an unexpected third-party origin.
-
-## Release gates
-
-Run at the exact release SHA from WSL:
-
-```bash
-nvm use
-npm ci
-npm run quality
-npm run verify:linux -- demo
-npm run build
-CI=true npm run test:e2e
-npm audit --omit=dev
-git diff --check
-test -s ui/dist/index.html
-npm run verify:showcase
-node -e "JSON.parse(require('fs').readFileSync('vercel.json', 'utf8'))"
-```
-
-Required browser smoke:
+Required smoke checks:
 
 - HTTPS home and a deep-linked SPA route load;
-- the synthetic disclosure is visible before credential or vote interaction;
+- the synthetic disclosure is visible before eligibility or vote interaction;
 - no private-service, relay, proof, or real-contract request appears;
-- the response includes the reviewed CSP and existing security headers;
-- keyboard navigation and 320px, 390px, tablet, and desktop widths have no critical regression.
+- security headers and the reviewed CSP are present;
+- keyboard navigation and 320px, 390px, tablet, and desktop widths have no
+  critical regression.
 
-## Vercel execution
+## Live-enablement gates
 
-1. Merge the reviewed PR to protected `main`; do not deploy an arbitrary ref with Vercel secrets.
-2. Link/create the Vercel project with repository root `/`, Node 22, the checked-in install command
-   `HUSKY=0 npm ci --include=dev`, `npm run build`, and output `ui/dist`, but leave automatic Git
-   builds disabled.
-3. Create the protected GitHub environment `public-preview`; add the three scoped Vercel secrets
-   and an approval owner. Configure only the approved public Passport origin.
-4. Review the checked-in origin allowlist. The workflow refuses to deploy while `vercel.json`
-   lacks `Content-Security-Policy`.
-5. Manually dispatch `.github/workflows/deploy-vercel-preview.yml`. It installs Compact, verifies
-   the source, runs `vercel build`, deploys with `--prebuilt`, checks a deep route and headers, and
-   runs the Passport journeys against the resulting URL.
-6. Review the workflow summary and browser/network evidence before assigning a custom domain.
-7. Add the custom domain using only the DNS record Vercel provides; verify HTTPS and redirect.
-8. Publish the URL with the SHA, test evidence, incident contact, and an explicit “no real vote”
-   statement. Do not run referendum deploy, relayer, or CICO commands for this release.
+Do not enable live Passport evidence, Rarimo enrollment, or Preview voting from
+this static release until the matching evidence exists:
 
-## Hostinger execution for a later private enrollment stage
+1. Passport origin/session approval and network/nonce validation.
+2. Pinned self-hosted Rarimo verifier, authenticated callback, physical NFC
+   transcript, minimal-claim issuance, deletion, and replay/idempotency tests.
+3. Open-enrollment registry/referendum manifest with separately attested roots.
+4. Stateful VPS relay with authorization, allowlists, idempotency, DUST,
+   restart, and canonical-indexer reconciliation.
+5. Independent privacy, storage, log, accessibility, and deployed-browser
+   review tied to the exact release SHA.
 
-Use a VPS, not shared hosting. Place CICO behind Nginx/systemd using the checked-in examples.
-Keep the verificator and database private, use exact Origin/CORS and callback authentication,
-restrict filesystem permissions, and isolate issuer material from any relay. Complete physical
-NFC enrollment and restart/reconciliation testing before inviting users.
+Profile/Vault wallet, recovery, biometric, and ETH capabilities are optional
+post-Preview work. They are not implied by Passport consent and are not
+prerequisites for this voting-first release.
+
+## Hostinger execution
+
+### Static web
+
+Build the reviewed SHA in a clean environment, run the smoke checks above, and
+publish `ui/dist` to the Hostinger static site. Configure HTTPS, the SPA
+fallback, the exact public origin, and the approved CSP/security headers. Keep
+all stateful service endpoints absent from the synthetic build.
+
+### Stateful VPS services
+
+Use a dedicated, non-root service account and separate systemd/container
+boundaries for CICO, the Rarimo verifier/database, and the relay. Terminate TLS
+at Nginx, expose only the narrow approved façade, bind proof services to
+loopback/private networks, and keep state and secrets outside the static site.
+Use the reviewed examples under `deploy/hostinger/` as starting templates;
+they do not by themselves deploy or fund any service.
 
 ## Rollback and incident stop
 
-- Vercel: promote the last known-good static deployment or detach the custom domain.
-- DNS: restore the prior provider record from the change record.
-- Hostinger static shell: restore the previous static bundle/snapshot; never point it temporarily
-  at a private service.
-- Exposure: remove public access, revoke/rotate exposed material, preserve logs, and notify the
-  issuer/relay owners.
+- Static web: restore the previous immutable artifact or detach the custom
+  domain from the change record.
+- VPS: stop public proxying, preserve the incident record, rotate exposed
+  material, and reconcile service state before restart.
+- Exposure: remove access if the browser reaches a private host, a
+  non-loopback proof endpoint, a raw proof/verificator route, a legacy relay
+  route, a real contract, or an unreviewed origin.
 
-Rollback is mandatory if the browser reaches a private host, non-loopback proof endpoint, raw
-proof/verificator route, legacy relayer route, real contract, or unreviewed origin, or if showcase copy
-could be mistaken for a confirmed credential or vote.
+Rollback is also mandatory if showcase copy could be mistaken for a confirmed
+credential, physical NFC verification, or real vote.
