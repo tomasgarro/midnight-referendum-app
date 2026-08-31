@@ -8,11 +8,13 @@ import { App } from '../App';
  * Passport, what Passport shared, the simulated pass, done. The country is
  * chosen on the eligibility screen rather than on a screen of its own.
  */
-async function completeDemoCredential(user: ReturnType<typeof userEvent.setup>) {
+async function completeDemoCredential(user: ReturnType<typeof userEvent.setup>, country?: RegExp) {
   await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
   await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
+  // France is the default; the pilot's other country is one click away.
+  if (country) await user.click(screen.getByRole('radio', { name: country }));
   await user.click(
     screen.getByRole('button', { name: /Crear mi pase simulado|Create my simulated pass/i }),
   );
@@ -128,7 +130,11 @@ describe('App', () => {
     await user.click(screen.getByRole('tab', { name: 'Argentina' }));
     expect(screen.getByText(/Esto no acredita elegibilidad/i)).toBeTruthy();
     expect(screen.queryByText(/Elegibilidad lista para/i)).toBeNull();
-    expect(screen.getByRole('button', { name: /Añadir elegibilidad/i })).toBeTruthy();
+    // Every open Argentine consultation offers the way in, and none offers a vote.
+    expect(screen.getAllByRole('button', { name: /Añadir elegibilidad/i }).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByRole('button', { name: /^Participar/i })).toBeNull();
 
     await user.click(screen.getByRole('tab', { name: 'Francia' }));
     expect(screen.getByText(/Elegibilidad lista para/i)).toBeTruthy();
@@ -194,7 +200,10 @@ describe('App', () => {
   it('keeps one receipt per simulated vote, in Activity', async () => {
     render(<App />);
     const user = userEvent.setup();
-    await completeDemoCredential(user);
+    // Argentina is the scope with several open consultations, so it is where
+    // two distinct receipts can be produced.
+    await completeDemoCredential(user, /Argentina/i);
+    await user.click(screen.getByRole('tab', { name: 'Argentina' }));
 
     const castVote = async (index: number, answer: RegExp) => {
       const open = screen.getAllByRole('button', { name: /Participar/i });
@@ -206,6 +215,7 @@ describe('App', () => {
       await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
       await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
       await user.click(screen.getByRole('button', { name: 'Descubrir' }));
+      await user.click(screen.getByRole('tab', { name: 'Argentina' }));
     };
 
     await castVote(0, /^Sí/);
