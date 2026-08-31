@@ -1,139 +1,153 @@
 # Referéndum Cívico
 
-**A passport-first, wallet-less civic consultation prototype for Midnight.**
+**A Passport-first civic consultation prototype for Midnight.**
 
-The citizen can understand the privacy model, present eligibility evidence,
-commit a ballot, and receive a receipt without publishing identity or choice.
-This is a non-binding prototype for research and demonstration; it is not an
-official election, a production service, or a claim of human uniqueness.
+Referéndum Cívico makes the privacy boundary understandable: a person can
+explore a consultation, present eligibility evidence, cast a ballot, and
+receive a receipt without publishing their profile or ballot choice. It is a
+non-binding prototype for research and demonstration. It is not an official
+election, a production service, or a claim of human uniqueness.
 
-## Current evidence status
+## Current status
 
-This branch contains a current operator-verified Undeployed v2 run. Its
-sanitized manifest and transcript are committed at
-[docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json](docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json)
-and [docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json](docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json)
-(human-readable form at [undeployed-v2.transcript.md](docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.md)),
-manifest digest `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`.
-The local run is evidence for the bounded Undeployed lifecycle only; it is not
-Passport approval, Midnight Preview evidence, or physical NFC evidence.
+The table below describes this checkout as of 31 August 2026. It is a source
+and product status summary, not a release approval or a Preview deployment
+attestation.
 
-The manifest attests source commit `abdd0a2203fbef909f70f6ddc06681ac1327f457`
-(tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`), which is the runtime,
-contract, relay, and operator code as it was executed. Later commits on this
-branch change only documentation and the verification harness, never that
-runtime, contract, relay, or operator code, so the attested SHA is
-deliberately the run's SHA rather than the branch head.
+| Surface | Status | Honest interpretation |
+| --- | --- | --- |
+| Synthetic demo | **Runnable** | The complete journey is simulated and must remain labelled as simulated. |
+| Enrollment model | **Open in the current source** | A registry can admit credentials while a consultation is in its enrollment window; the referendum can accept separately attested later roots. |
+| Passport | **Profile/session boundary only** | Passport consent and display fields are separate from eligibility and voting authority. No Passport credential, wallet, recovery, or origin approval is claimed here. |
+| Rarimo | **Temporary evidence adapter** | Rarimo is intended to provide temporary NFC-based eligibility evidence behind the CICO issuer boundary. Physical-device verification and a hosted verifier are not evidenced here. |
+| Voting | **Primary product action** | The product prioritizes understanding and participating in a consultation; wallet, recovery, biometric, and ETH features are optional post-Preview Profile/Vault work. |
+| Historical Undeployed v2 run | **Preserved, historical** | The committed artifact at [`docs/evidence/undeployed-v2/abdd0a2/`](docs/evidence/undeployed-v2/abdd0a2/) is a SHA-specific local run of the older frozen-enrollment model. It is not evidence for this branch head or a Preview deployment. |
+| Preview / public release | **Not released** | No hosted URL, Preview transaction, Passport approval, physical NFC transcript, or release SHA is asserted. |
 
-| Scope | Status in this checkout | What it proves | What it does not prove |
-| --- | --- | --- | --- |
-| Historical v1 Midnight Preview | **Historical only** — see [legacy v1 evidence](docs/LEGACY-V1-PREVIEW-EVIDENCE.md) | The old DNI/contract experiment and its recorded Preview transcript | Passport-v2, `CredentialRegistryV1`, `ReferendumV2`, or this branch |
-| Synthetic demo | **Runnable, synthetic** | Product flow, privacy explanations, and explicit simulated states | A real credential, Passport approval, NFC evidence, relay, or chain receipt |
-| Current Undeployed v2 | **Operator-verified locally; evidence committed** | Real local v2 run against real midnight-node/indexer/proof-server containers and a real PostgreSQL relay store: deploy, issue/freeze, cast/replay rejection, close/reveal/finalize, canonical indexer receipt, and relay DUST/concurrency/restart checks | A real provider credential, Passport approval, Preview deployment/receipt, physical NFC, release identity, CI result, or hosted release |
-| Passport / Preview / physical NFC gates | **Not verified** | — | Passport origin approval, Preview deployment, provider verification, genuine document/NFC evidence, hosted URL, or walkthrough video |
+The deployment target is a Hostinger static web surface plus isolated,
+stateful Hostinger VPS services for any future issuer and relayer. When those
+services or credentials are unavailable, the product falls back to an honest
+synthetic journey; it must not silently turn fixtures into live evidence.
 
-## How it works
+## What the product means by Passport and Rarimo
 
-1. Midnight Passport is a consent/session and optional display-profile surface;
-   profile fields are never cryptographic voting authority.
-2. A provider-neutral credential adapter is intended to derive minimal,
-   issuer-bound eligibility claims. Rarimo is a replaceable evidence adapter,
-   not a claim that physical NFC verification is available here.
-3. `CredentialRegistryV1` issues credentials into an open epoch. An operator
-   freezes the canonical root; each `ReferendumV2` binds to that exact root and
-   its policy.
-4. The browser owns the voter secret, credential opening, ballot choice, and
-   proving witness. The ballot is a referendum-bound commitment and the vote
-   nullifier prevents a second vote without identifying the voter.
-5. A capability-gated relayer may submit an already-proved action. A relay
-   response is only pending; the Midnight indexer is the source of truth for a
-   confirmed receipt.
+Midnight Passport is the consent, session, and optional display-profile
+surface. A name, account, alias, address, or session identifier is never a
+credential leaf, voter secret, ballot commitment, or nullifier. The Profile
+and Vault concepts may later add real wallet, recovery, biometric, or ETH
+capabilities, but those are optional post-Preview features and are not part of
+the current release claim.
+
+Rarimo is a replaceable evidence adapter, not the product identity layer. A
+temporary Rarimo NFC verification can produce minimal issuer-bound eligibility
+claims (for example, country, adult class, and document-NFC assurance) through
+the restricted CICO service. Raw document, MRZ, NFC, face, and provider-proof
+material must not reach the browser, public assets, or ballot path. A Rarimo
+fixture or source adapter is not physical NFC evidence.
+
+The current enrollment model is intentionally open. The registry remains
+append-only while enrollment is open; a referendum records its initial root
+and can accept later roots only through the narrow root-publisher path and a
+separate registry attestation. Enrollment closes on its own published deadline.
+The older frozen-before-deploy model is retained only in historical ADR and
+evidence records.
+
+Voting remains the primary action. The browser owns the voter secret, private
+credential opening, ballot choice, and proving witness. The relay, when a
+stateful service is eventually enabled, accepts only an already-authorized
+action. A relay acknowledgement is pending until the Midnight indexer
+confirms the transaction.
 
 ```text
 Passport consent/profile ──┐
-                            ├─> browser-owned witness ─> v2 relayer ─> indexer receipt
-Evidence adapter ─> issuer ─┘       (choice stays private)
+                            ├─> browser-private eligibility + ballot
+Temporary Rarimo evidence ─> issuer ─> open enrollment ─> vote ─> indexer receipt
 ```
 
-The trust boundaries are documented in [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-and the decisions in [docs/adr](docs/adr/ADR-001-passport-first-boundaries.md).
+See [the architecture map](docs/ARCHITECTURE.md), [current release
+readiness](docs/CURRENT-RELEASE-READINESS.md), and [the documentation
+index](docs/README.md) for the detailed boundaries and gates.
 
-## Reproduce the synthetic demo
+## Historical evidence (preserved)
 
-Use Node 22 and npm 10. The demo does not need a wallet, funds, Passport
-credentials, or a network:
+The local Undeployed v2 transcript was generated from source commit
+`abdd0a2203fbef909f70f6ddc06681ac1327f457` (tree
+`9d1319aa3540a0943f760631ec3ac9c9e5b40b36`) and has manifest digest
+`d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d`.
+It records a complete local node/indexer/proof-server/relay lifecycle, but it
+is historical evidence for that exact SHA and the old frozen registry run.
+Later source changed the default to open enrollment, so this artifact must not
+be described as a run of the current branch.
+
+Read the [historical transcript](docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.md),
+[machine-readable transcript](docs/evidence/undeployed-v2/abdd0a2/undeployed-v2.transcript.json),
+and [manifest](docs/evidence/undeployed-v2/abdd0a2/undeployed.manifest.json) for
+the complete preserved record. The artifact contains public addresses,
+transaction identifiers, state, and digests; it does not establish Passport
+approval, physical NFC, a hosted service, or Midnight Preview evidence.
+
+To reproduce the historical record, use the recorded source commit in an
+isolated checkout and follow its transcript. Running the current checkout's
+local runner can produce a new local result, but it cannot change or upgrade
+the historical artifact above.
+
+## Run the synthetic demo
+
+Use Node 22 and npm 10. The demo needs no wallet, funds, Passport credential,
+Rarimo device, or network. Force demo mode so a developer's local
+`ui/.env` cannot silently select Undeployed or Preview:
 
 ```bash
 npm ci
+# macOS / Linux
+VITE_APP_MODE=demo npm run dev -- --host localhost --port 4173 --strictPort
+```
+
+```powershell
+# Windows PowerShell
+$env:VITE_APP_MODE='demo'
 npm run dev -- --host localhost --port 4173 --strictPort
 ```
 
-Open `http://localhost:4173`. Every simulated credential and vote must remain
-labelled in the UI. A simulated receipt is not a canonical chain receipt.
+Open `http://localhost:4173`. Simulated eligibility, votes, and receipts must
+remain visibly labelled. A simulated receipt is not a canonical chain receipt.
 
-## Reproduce the Undeployed v2 run
+## Privacy and limitations
 
-On Linux or WSL2 with Docker and the pinned toolchain, the bounded runner creates
-fresh local-only secrets in ignored files, starts the pinned local services, and
-stops on missing genesis funding or any failed lifecycle step:
+The design aims to keep Passport profile data, document data, MRZ/NFC payload,
+face image, voter secret, credential opening, witness, vote salt, and ballot
+choice out of public records and service logs. This is a design objective and
+source boundary, not an independent security audit.
 
-```bash
-npm ci
-npm run evidence:undeployed:v2
-```
+In particular:
 
-The command reproduces the local run behind the committed evidence at
-[docs/evidence/undeployed-v2/abdd0a2/](docs/evidence/undeployed-v2/abdd0a2/);
-it is not a substitute for a Preview release record. Never commit generated env
-files, private keys, voter secrets, witnesses, ballot choices, raw provider
-evidence, or local database state. See
-[ENVIRONMENT-ACCEPTANCE.md](docs/ENVIRONMENT-ACCEPTANCE.md) and
+- a fixture, barcode, or synthetic state is not proof that a document is genuine;
+- Passport profile/session consent does not authorize eligibility or arbitrary
+  Compact actions;
+- Rarimo evidence remains temporary and provider-bound until a reviewed
+  Passport-native capability exists;
+- public geography is a separate privacy decision; see
+  [ADR-004](docs/adr/ADR-004-geography-privacy-fork.md);
+- no mainnet, legal-election, anti-coercion, biometric-holder, human-uniqueness,
+  recovery, wallet, or ETH claim is made by this prototype.
+
+For release gates and the synthetic fallback policy, read
+[CURRENT-RELEASE-READINESS.md](docs/CURRENT-RELEASE-READINESS.md),
+[ENVIRONMENT-ACCEPTANCE.md](docs/ENVIRONMENT-ACCEPTANCE.md), and
 [DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
-## Privacy model and limitations
-
-Public chain data is limited to protocol facts such as a valid action,
-nullifier, and post-close aggregate. The design aims to keep Passport profile,
-document data, MRZ/NFC payload, face image, voter secret, credential opening,
-witness, salt, and ballot choice out of public records and service logs.
-
-That design does not make a local Undeployed run a live Preview service or make
-the prototype suitable for a pilot. In particular:
-
-- A barcode or fixture is not proof that a document is genuine. Physical NFC,
-  provider verification, retention/deletion review, and any Passport-native
-  holder capability remain gates.
-- No Passport origin, account/network response, or app-directory approval is
-  approved by this README.
-- No v2 Preview deployment, transaction, indexer receipt, hosted URL, release
-  SHA, CI status, test total, or video is asserted here. The committed evidence
-  covers only the local Undeployed run described above.
-- The three `registry.*` indexer observations in the committed evidence
-  (deploy, issue, freeze) were all captured after the freeze had completed, so
-  each records the terminal registry state rather than the state as of that
-  individual stage; each observation carries its own timestamp so this is
-  transparent in the artifact. The referendum observations progress correctly
-  across stages.
-- The contract, relayer, provider boundary, browser private-state design, and
-  operational recovery still require independent review before any pilot.
-- Geography is a separate privacy decision. A public country counter is not a
-  private ballot attribute; see [ADR-004](docs/adr/ADR-004-geography-privacy-fork.md).
-
-For the full acceptance gates, read
-[ENVIRONMENT-ACCEPTANCE.md](docs/ENVIRONMENT-ACCEPTANCE.md),
-[ROADMAP.md](docs/ROADMAP.md), and the [deployment plan](docs/DEPLOYMENT.md).
 
 ## Repository map
 
 | Area | Role |
 | --- | --- |
-| `contracts/` | Compact registry and referendum policy |
+| `contracts/` | Compact credential registry and referendum policy |
 | `api/` | Provider-neutral ports, witnesses, manifests, and canonical reads |
 | `cico-service/` | Evidence gateway and issuer boundary |
 | `relayer/` | Capability-gated, idempotent action submission |
-| `ui/` | Passport consent, eligibility, voting, and receipt journeys |
-| `scripts/evidence-undeployed-v2.mjs` | Local-only evidence procedure |
-| `docs/` | Architecture, acceptance gates, release evidence, and legacy history |
+| `ui/` | Passport consent, browser-encrypted credential state, voting, Profile, and receipt journeys |
+| `scripts/` | Local verification, deployment, and evidence procedures |
+| `docs/` | Active architecture/release docs and clearly labelled historical records |
+| `artifacts/overnight-ui/` | Archived overnight screenshots; not current release evidence |
 
 ## License
 

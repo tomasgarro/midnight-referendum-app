@@ -22,9 +22,16 @@ import type {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CapybaraMascot } from '@/components/mascot';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import { countryName } from '@/integration/country-catalog';
 import { type CicoLocale, persistLocale } from '@/integration/locale';
+import {
+  clearPassportAttempt,
+  loadPassportAttempt,
+  savePassportAttempt,
+} from '@/integration/passport-enrollment-state';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
+import { CredentialJourneyTutorial } from './CredentialJourneyTutorial';
 import { EnrollmentHandoff } from './EnrollmentHandoff';
 
 export interface PreviewPassportJourneyPorts {
@@ -52,6 +59,16 @@ interface PreviewPassportJourneyProps {
 
 type PreviewStage = 'consent' | 'provider' | 'enrollment' | 'credential';
 
+/**
+ * A resumed attempt intentionally contains no provider response or holder
+ * material. It is enough to ask the adapter for a status and render the
+ * waiting state; the QR is shown only during the original provider handoff.
+ */
+type ActiveEnrollment = Pick<CredentialEnrollment, 'enrollmentId' | 'expiresAt'> &
+  Partial<Pick<CredentialEnrollment, 'status' | 'createdAt' | 'interaction'>>;
+
+const ENROLLMENT_POLL_INTERVAL_MS = 5_000;
+
 function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary {
   const country = iso31661NumericToAlpha2[String(summary.country)] ?? String(summary.country);
   return {
@@ -77,15 +94,19 @@ export function PreviewPassportJourney({
   const [locale, setLocale] = useState<CicoLocale>(initialLocale ?? 'es');
   const [stage, setStage] = useState<PreviewStage>('consent');
   const [session, setSession] = useState<CivicPassportSession | null>(null);
-  const [enrollment, setEnrollment] = useState<CredentialEnrollment | null>(null);
+  const [enrollment, setEnrollment] = useState<ActiveEnrollment | null>(null);
   const [enrollmentStatus, setEnrollmentStatus] = useState<EnrollmentStatusSnapshot | null>(null);
   const [credential, setCredential] = useState<CredentialSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [pollBatch, setPollBatch] = useState(0);
   const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const pollingRef = useRef(false);
+  const checkEnrollmentRef = useRef<(automatic?: boolean) => Promise<void>>(async () => {});
   const en = locale === 'en';
   const setLanguage = (next: CicoLocale) => {
     setLocale(next);
@@ -104,12 +125,56 @@ export function PreviewPassportJourney({
     return () => window.clearInterval(timer);
   }, [enrollment, stage]);
 
+  // A refresh can safely resume the opaque provider attempt. The adapter owns
+  // the actual holder binding and provider state; the UI restores only the
+  // enrollment handle and expiry from sessionStorage.
+  useEffect(() => {
+    let active = true;
+    const attempt = loadPassportAttempt();
+    if (!attempt)
+      return () => {
+        active = false;
+      };
+
+    void ports.passport
+      .getSession()
+      .then((restored) => {
+        if (!active) return;
+        if (!restored || restored.status !== 'connected') {
+          clearPassportAttempt();
+          return;
+        }
+        setSession(restored);
+        onPassportConnected?.(restored);
+        setEnrollment({
+          enrollmentId: attempt.enrollmentId,
+          expiresAt: attempt.expiresAt,
+          status: 'pending',
+        });
+        setEnrollmentStatus({
+          enrollmentId: attempt.enrollmentId,
+          status: 'pending',
+          updatedAt: new Date().toISOString(),
+        });
+        setStage('enrollment');
+      })
+      .catch(() => {
+        // A stale opaque handle is not evidence of a credential. Drop it and
+        // require a fresh Passport consent + provider handoff.
+        if (active) clearPassportAttempt();
+      });
+    return () => {
+      active = false;
+    };
+  }, [onPassportConnected, ports.passport]);
+
   const enrollmentExpired =
     Boolean(
       enrollment &&
         Number.isFinite(Date.parse(enrollment.expiresAt)) &&
         Date.parse(enrollment.expiresAt) <= now,
     ) || enrollmentStatus?.status === 'expired';
+  const enrollmentId = enrollment?.enrollmentId;
 
   const run = async (operation: () => Promise<void>) => {
     setBusy(true);
@@ -162,39 +227,89 @@ export function PreviewPassportJourney({
       });
       setEnrollment(created);
       setLastCheckedAt(null);
+      setPollBatch(0);
       setEnrollmentStatus({
         enrollmentId: created.enrollmentId,
         status: created.status,
         updatedAt: created.createdAt,
       });
       if (created.status === 'issued') {
+        clearPassportAttempt();
         await loadCredential();
       } else {
+        savePassportAttempt({
+          enrollmentId: created.enrollmentId,
+          expiresAt: created.expiresAt,
+        });
         setStage('enrollment');
       }
     });
 
-  const checkEnrollment = () =>
-    run(async () => {
-      if (!enrollment || !ports.credential) throw new Error('No hay enrolamiento activo.');
+  const checkEnrollment = async (automatic = false) => {
+    if (pollingRef.current) return;
+    if (!enrollment || !ports.credential) {
+      if (!automatic) setError('No hay enrolamiento activo.');
+      return;
+    }
+    if (enrollmentExpired && automatic) return;
+
+    pollingRef.current = true;
+    setPolling(true);
+    setBusy(true);
+    setPollBatch((current) => current + 1);
+    if (!automatic) setError(null);
+    try {
+      setLastCheckedAt(new Date().toISOString());
       const status = await ports.credential.getEnrollmentStatus(enrollment.enrollmentId);
       setEnrollmentStatus(status);
-      setLastCheckedAt(new Date().toISOString());
       if (status.status === 'pending') return;
       if (status.status !== 'issued') {
         setError(`La verificación terminó con estado ${status.status}.`);
         return;
       }
+      clearPassportAttempt();
       await loadCredential();
-    });
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : automatic
+            ? 'No pudimos consultar el estado. Reintentaremos automáticamente.'
+            : 'No pudimos consultar el estado.',
+      );
+    } finally {
+      pollingRef.current = false;
+      setPolling(false);
+      setBusy(false);
+    }
+  };
+
+  checkEnrollmentRef.current = checkEnrollment;
+
+  useEffect(() => {
+    if (
+      stage !== 'enrollment' ||
+      !enrollmentId ||
+      enrollmentExpired ||
+      enrollmentStatus?.status !== 'pending'
+    ) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void checkEnrollmentRef.current(true);
+    }, ENROLLMENT_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [enrollmentId, enrollmentExpired, enrollmentStatus?.status, stage]);
 
   const restartEnrollment = () =>
     run(async () => {
       await ports.credential?.clearCredential();
+      clearPassportAttempt();
       setEnrollment(null);
       setEnrollmentStatus(null);
       setCredential(null);
       setLastCheckedAt(null);
+      setPollBatch(0);
       setStage('provider');
     });
 
@@ -390,6 +505,25 @@ export function PreviewPassportJourney({
               </p>
             </div>
           ) : null}
+          <dl
+            className="passport-provider-boundary"
+            aria-label={en ? 'Consent boundary' : 'Límite de consentimiento'}
+          >
+            <div>
+              <dt>{en ? 'Requested' : 'Se solicita'}</dt>
+              <dd>
+                {en ? 'Passport session and visible profile' : 'Sesión Passport y perfil visible'}
+              </dd>
+            </div>
+            <div>
+              <dt>{en ? 'Not requested' : 'No se solicita'}</dt>
+              <dd>
+                {en
+                  ? 'Wallet, vote, nationality, age, or document'
+                  : 'Wallet, voto, nacionalidad, edad o documento'}
+              </dd>
+            </div>
+          </dl>
           {ports.credential ? (
             <>
               <PrivacyNotice>
@@ -453,8 +587,10 @@ export function PreviewPassportJourney({
             <EnrollmentHandoff
               uri={enrollment.interaction.uri}
               expiresAt={enrollment.interaction.expiresAt}
+              locale={locale}
             />
           ) : null}
+          <CredentialJourneyTutorial locale={locale} />
           {enrollmentExpired ? (
             <div className="passport-notice warning" role="alert">
               <Info size={18} />
@@ -470,7 +606,32 @@ export function PreviewPassportJourney({
               ? 'CICO does not display or retain MRZ, date of birth, images, NFC data, or raw proof in the browser.'
               : 'CICO no muestra ni conserva MRZ, fecha de nacimiento, imagen, NFC o prueba cruda en el navegador.'}
           </PrivacyNotice>
-          <JourneyButton locale={locale} busy={busy} onClick={checkEnrollment}>
+          <div className="passport-poll-status" role="status" aria-live="polite">
+            <span
+              className={polling ? 'passport-poll-dot active' : 'passport-poll-dot'}
+              aria-hidden="true"
+            />
+            <span>
+              <strong>
+                {polling
+                  ? en
+                    ? 'Checking with the provider…'
+                    : 'Consultando al proveedor…'
+                  : en
+                    ? 'Waiting for the provider'
+                    : 'Esperando al proveedor'}
+              </strong>
+              <small>
+                {lastCheckedAt
+                  ? `${en ? 'Last checked' : 'Última comprobación'}: ${new Date(lastCheckedAt).toLocaleTimeString()}`
+                  : en
+                    ? 'Automatic checks every few seconds'
+                    : 'Comprobación automática cada pocos segundos'}
+                {pollBatch > 0 ? ` · ${en ? 'Batch' : 'Lote'} ${pollBatch}` : ''}
+              </small>
+            </span>
+          </div>
+          <JourneyButton locale={locale} busy={busy} onClick={() => void checkEnrollment()}>
             {error
               ? en
                 ? 'Retry verification'
@@ -527,12 +688,26 @@ export function PreviewPassportJourney({
             </span>
             <dl>
               <div>
-                <dt>{en ? 'Country' : 'Nacionalidad'}</dt>
-                <dd>{iso31661NumericToAlpha2[String(credential.country)] ?? credential.country}</dd>
+                <dt>{en ? 'Verified country' : 'País verificado'}</dt>
+                <dd className="credential-country-value">
+                  <span>
+                    {countryName(
+                      iso31661NumericToAlpha2[String(credential.country)] ?? credential.country,
+                      en ? 'en' : 'es',
+                    )}
+                  </span>
+                  <small>
+                    {iso31661NumericToAlpha2[String(credential.country)] ?? credential.country}
+                  </small>
+                </dd>
               </div>
               <div>
                 <dt>{en ? 'Age class' : 'Clase de edad'}</dt>
                 <dd>{credential.ageClass === '18-plus' ? '18+' : credential.ageClass}</dd>
+              </div>
+              <div>
+                <dt>{en ? 'Issuer' : 'Emisor'}</dt>
+                <dd>{credential.issuerId}</dd>
               </div>
               <div>
                 <dt>Assurance</dt>

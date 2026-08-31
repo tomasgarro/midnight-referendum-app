@@ -1,10 +1,16 @@
-# Capybara mascot — art brief and future avatar system
+# Capybara mascot — current assets and future avatar system
 
 ## Status
 
-The onboarding has **reserved slots** for the mascot (`data-mascot="future-capybara"`)
-on the welcome stage and the credential-success stage. They currently render an
-accessible placeholder. Dropping in artwork is a file swap, not a code change.
+The onboarding now renders the reviewed `CapybaraMascot` component with six
+PNG variants in `ui/src/assets/mascot/`: waving, reading, thinking,
+achievement, climbing, and waiting. Welcome and credential-success use the
+calm illustrative moments; serious consent, eligibility, ballot, and receipt
+decisions remain free of decorative mascot treatment.
+
+The variant catalogue below is therefore an implementation record and reuse
+guide, not an unbuilt asset request. The generated profile-avatar concept in
+the final section remains future work.
 
 Deliberately **not** placed on the consent or eligibility stages, or on the
 ballot screen: a cartoon animal beside a serious privacy decision, or beside the
@@ -31,8 +37,8 @@ fight the message.
 
 ## Variant set for the onboarding journey
 
-Each maps to a moment in the flow. Generate as transparent PNG, square, at least
-1024×1024, same style as above.
+Each maps to a moment in the flow. The current transparent PNG assets are
+square and share the same visual language.
 
 | Variant | Where it goes | Prompt seed |
 | --- | --- | --- |
@@ -43,7 +49,7 @@ Each maps to a moment in the flow. Generate as transparent PNG, square, at least
 | **Climbing** | Optional progress states | Capybara halfway up a gentle slope, determined but relaxed |
 | **Waiting** | Enrollment pending | Capybara seated beside a small hourglass, patient and unbothered |
 
-Suggested generation prompt template:
+Original generation prompt template, preserved for future matching variants:
 
 > A cute minimalist sticker illustration of a chubby seated capybara, warm
 > golden-yellow fur with muted grey-brown muzzle and paws, a single small black

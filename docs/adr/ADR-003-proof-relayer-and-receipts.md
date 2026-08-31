@@ -5,7 +5,12 @@
 
 ## Context
 
-The current HTTP proof provider sends private proving witnesses to its configured endpoint. The current relayer exposes separate balance and submit operations, so serialization is not atomic across the complete DUST lifecycle. Cleartext local receipts are not independent proof of canonical success.
+The HTTP proof provider sends private proving witnesses to its configured
+endpoint. The legacy relayer exposes separate balance and submit operations, so
+that compatibility path is not atomic across the complete DUST lifecycle. The
+v2 action path is represented in source, but hosted/Preview operation and
+evidence remain release gates. Cleartext local receipts are not independent
+proof of canonical success.
 
 ## Decision
 

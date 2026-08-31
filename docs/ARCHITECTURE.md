@@ -4,7 +4,10 @@ This document is the ownership map for the active product and target runtime.
 It deliberately separates account consent, civic eligibility, action authority,
 and public receipt resolution. A value crossing one boundary is not authority
 in another. The current review checkout has no verified Undeployed v2 runtime
-transcript; this map is not deployment or Preview evidence.
+transcript for its current source. The preserved `abdd0a2` transcript belongs to
+an older frozen-enrollment implementation; this map is not deployment or
+Preview evidence. See [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md)
+for the current open-enrollment decision.
 
 ```text
 Official Midnight Passport PWA
@@ -23,7 +26,7 @@ Native NFC companion -> evidence provider -> CICO issuer
                                                    v
 browser encrypted vault <- private holder material <- Registry V1 leaf
           |                                             |
-          | local witness + proof                       | frozen root
+          | local witness + proof                       | initial + admitted roots
           v                                             v
      CivicActionPort ----------------------------> Referendum V2
           |
@@ -58,11 +61,13 @@ browser encrypted vault <- private holder material <- Registry V1 leaf
 ## Active and compatibility paths
 
 The active path is Credential Registry V1 plus Referendum V2, selected from a
-versioned runtime catalog. Legacy referendum v1 code, its single-contract
+versioned runtime catalog. Enrollment is open during the published window: the
+referendum pins its initial root and admits later roots only through the
+attested root-publisher path. Legacy referendum v1 code, its single-contract
 reader, `/balance` and `/submit`, and `VITE_MIDNIGHT_CONTRACT_ADDRESS` are
 compatibility-only. No active v2 screen may fall back to them. Public v2
 catalog and referendum state remain readable without Passport, a civic
-credential, or a wallet.
+credential, or a wallet; the user-facing fallback is synthetic and labelled.
 
 ## Security invariants
 
@@ -82,3 +87,7 @@ credential, or a wallet.
 8. A citizen credential can authorize only `castVote`; issuer and organizer
    circuits require separate role-bound capability issuers even if a relay
    allowlist is misconfigured.
+
+9. Passport currently supplies session/consent/profile data only. Rarimo is a
+   temporary NFC evidence adapter behind the issuer boundary; neither is a
+   wallet, recovery, biometric, ETH, or arbitrary-action authority.

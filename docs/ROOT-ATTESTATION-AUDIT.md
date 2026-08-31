@@ -3,6 +3,10 @@
 This procedure lets anyone verify, from public chain data alone, that a
 referendum's electorate was drawn from the real credential registry.
 
+It applies to the current open-enrollment model described in [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md).
+The preserved `abdd0a2` artifact predates that decision and is a historical
+frozen-enrollment run; do not use its values as current deployment evidence.
+
 It exists because of a limitation we cannot engineer away today, stated plainly
 below. Read that first; the procedure only makes sense in light of it.
 

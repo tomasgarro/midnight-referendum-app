@@ -3,7 +3,7 @@
 This document preserves the original hackathon/DNI prototype history. It is
 not evidence for Passport-v2, `CredentialRegistryV1`, `ReferendumV2`, the
 Undeployed v2 runner, or the current browser journey. The values below are
-historical records copied out of the active README so they cannot be mistaken
+historical records copied out of an earlier README so they cannot be mistaken
 for current release evidence.
 
 ## Recorded v1 contract and first ballot

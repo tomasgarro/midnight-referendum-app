@@ -1,0 +1,6 @@
+# These files are created only on the VPS or in a local release workspace.
+.env.*.local
+rarimo/config.yaml
+rarimo/Caddyfile
+artifacts/
+releases/

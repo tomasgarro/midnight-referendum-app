@@ -1,8 +1,12 @@
 # Vercel setup for the Passport showcase
 
+> Historical/alternative-host reference. Hostinger static web plus isolated
+> Hostinger VPS services is the current deployment target. No Vercel deployment
+> or Passport-origin approval is asserted by this checkout.
+
 This guide explains the `husky: command not found` failure and the exact place
-for the deployment credentials. It is a target procedure: no Vercel deployment
-URL or Passport-origin approval is asserted by the current review checkout.
+for the deployment credentials. It is retained for teams that inspect the
+older Vercel workflow; do not treat it as the current release runbook.
 
 ## Why the build failed
 

@@ -1,5 +1,12 @@
 # Passport v2 ZKIR disclosure audit
 
+> Historical source/ZKIR inspection from 24 August 2026. This record is
+> preserved for the inspected compiler output and source snapshot; it is not an
+> independent cryptographic audit and does not certify the current
+> open-enrollment source. Read [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md)
+> and [current release readiness](CURRENT-RELEASE-READINESS.md) for current
+> decisions.
+
 Date: 2026-08-24  
 Compiler language: Compact 0.23.0, repository compiler 0.31.1  
 ZKIR: v2.0 with communications commitments enabled

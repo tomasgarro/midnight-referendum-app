@@ -1,11 +1,12 @@
 # Wave 1 execution plan — local-first Passport referendum showcase
 
 Status: active execution plan for the August 27–September 16, 2026 buildathon
-wave. The local Undeployed v2 stack is the next release gate, and its runtime
-evidence is not verified in the current review checkout. Vercel and custom
-domain work remain parked until local evidence is independently reviewed. The
-cryptographic release gates remain in [`ROADMAP.md`](ROADMAP.md), and the
-deployment procedure remains in [`FIRST-PUBLIC-DEPLOYMENT.md`](FIRST-PUBLIC-DEPLOYMENT.md).
+wave. The current source uses an honest synthetic fallback; the only committed
+Undeployed v2 transcript is historical, SHA-specific evidence for the older
+frozen-enrollment model. Hostinger static publication and custom-domain work
+remain gated until the release artifact is reviewed. The cryptographic release
+gates remain in [`ROADMAP.md`](ROADMAP.md), and the deployment procedure remains
+in [`FIRST-PUBLIC-DEPLOYMENT.md`](FIRST-PUBLIC-DEPLOYMENT.md).
 
 ## Outcome
 
@@ -22,16 +23,17 @@ a transaction, run a relayer, or claim to be an official election system.
 
 ## Baseline entering Wave 1
 
-- The current checkout contains the Passport-first showcase, deployment
-  hardening, and the Vercel install-lifecycle fix. These changes still need a
-  deliberate review/commit before they can be described as `main`.
+- The current checkout contains the Passport-first showcase and static-host
+  hardening. These changes still need a deliberate release review before they
+  can be described as a public release.
 - The showcase is bilingual (English/Spanish), camera-free, and isolated from
   CICO, Rarimo, the proof server, the relayer, the indexer, and real contracts.
 - The Passport bridge validates origin, source window, request ID, and nonce;
   it supports standalone popup and embedded Passport contexts.
-- The Vercel workflow builds one pinned prebuilt artifact and smoke-tests it.
-- A Vercel project, GitHub deployment secrets, a verified public URL, and
-  physical user sessions are still external gates.
+- The Hostinger release path builds one reviewed static artifact and smoke-tests
+  it before upload.
+- Hostinger access, a verified public URL, and physical user sessions are still
+  external gates.
 
 ## Kickoff-deck rules adopted for this wave
 
@@ -163,11 +165,10 @@ Wave 1 submission package:
 ### Lane E — deployment, parked
 
 After Lane A is reproducible and the local journey is reviewed, resume the
-public deployment track: fix the Vercel project/environment configuration,
-run the protected manual workflow, verify CSP/deep links/live Passport from
-the deployed origin, and only then attach a custom Hostinger-managed DNS
-subdomain. Do not spend on Vercel or make DNS changes during the local proof
-phase.
+public deployment track: configure the Hostinger static site, publish the
+reviewed artifact, verify CSP/deep links and the synthetic fallback, and only
+then attach a custom Hostinger-managed DNS subdomain. Do not make DNS changes
+during the local proof phase.
 
 ## Appllama-informed design loop
 
@@ -237,7 +238,7 @@ URLs, or video references into this plan.
 - [ ] Camera, CICO, Rarimo, relayer, proof, indexer, and contract ports remain
       disabled in showcase mode.
 - [ ] English/Spanish language switch persists locally.
-- [ ] Vercel manual workflow completes successfully (parked).
+- [ ] Hostinger static publication completes successfully (parked).
 - [ ] Deployed CSP and deep-link smoke tests pass (parked).
 - [ ] Live Passport popup/embedded flows are verified from the deployed origin
       (parked).
