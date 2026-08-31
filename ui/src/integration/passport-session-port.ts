@@ -96,6 +96,12 @@ export class MidnightPassportSessionAdapter
     // call the bridge with an omitted argument here: a bridge is allowed to
     // have a convenient display-profile default, but that default must never
     // turn a session request into an address/profile disclosure.
+    //
+    // The deployed Passport has no session-only mode -- its parser drops a
+    // request with no fields and answers nothing -- so this path now raises
+    // `invalid_configuration` from the bridge rather than hanging until the
+    // 180 s timeout. Keep it that way: silently substituting a field here
+    // would be exactly the disclosure this branch exists to prevent.
     const raw = await this.bridge.connect(
       profileRequested ? [...this.profileFields] : [],
       request.network,

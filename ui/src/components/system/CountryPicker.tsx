@@ -16,6 +16,9 @@ export interface CountryPickerProps {
   readonly listLabel: string;
   /** Codes offered before the reader types anything. */
   readonly suggested?: readonly string[];
+  /** Restrict a pilot to countries with a complete product journey. */
+  readonly allowed?: readonly string[];
+  readonly searchable?: boolean;
   readonly suggestedLabel: string;
   readonly emptyLabel: string;
 }
@@ -42,6 +45,8 @@ export function CountryPicker({
   searchPlaceholder,
   listLabel,
   suggested = [],
+  allowed,
+  searchable = true,
   suggestedLabel,
   emptyLabel,
 }: CountryPickerProps) {
@@ -52,32 +57,43 @@ export function CountryPicker({
   const trimmed = query.trim().toLocaleLowerCase();
 
   const rows = useMemo(() => {
+    const catalog = allowed?.length
+      ? ASSIGNED_COUNTRIES.filter((country) => allowed.includes(country.alpha2))
+      : ASSIGNED_COUNTRIES;
     if (!trimmed) {
       const picked = new Set([...suggested, value]);
-      return ASSIGNED_COUNTRIES.filter((country) => picked.has(country.alpha2));
+      return catalog.filter((country) => picked.has(country.alpha2));
     }
-    return ASSIGNED_COUNTRIES.filter((country) =>
-      `${resolveCountryName(country.alpha2, locale)} ${country.name} ${country.alpha2} ${country.numeric}`
-        .toLocaleLowerCase()
-        .includes(trimmed),
-    ).slice(0, MAX_VISIBLE);
-  }, [locale, suggested, trimmed, value]);
+    return catalog
+      .filter((country) =>
+        `${resolveCountryName(country.alpha2, locale)} ${country.name} ${country.alpha2} ${country.numeric}`
+          .toLocaleLowerCase()
+          .includes(trimmed),
+      )
+      .slice(0, MAX_VISIBLE);
+  }, [allowed, locale, suggested, trimmed, value]);
 
   return (
     <div className="sys-country">
-      <label className="sys-country__label" htmlFor={searchId}>
-        {searchLabel}
-      </label>
-      <div className="sys-country__search">
-        <MagnifyingGlass size={17} aria-hidden="true" />
-        <input
-          id={searchId}
-          type="search"
-          value={query}
-          placeholder={searchPlaceholder}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </div>
+      {searchable ? (
+        <label className="sys-country__label" htmlFor={searchId}>
+          {searchLabel}
+        </label>
+      ) : (
+        <p className="sys-country__label">{searchLabel}</p>
+      )}
+      {searchable ? (
+        <div className="sys-country__search">
+          <MagnifyingGlass size={17} aria-hidden="true" />
+          <input
+            id={searchId}
+            type="search"
+            value={query}
+            placeholder={searchPlaceholder}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      ) : null}
       {trimmed ? null : <p className="sys-country__hint">{suggestedLabel}</p>}
       {rows.length ? (
         <ul className="sys-country__list" aria-label={listLabel}>

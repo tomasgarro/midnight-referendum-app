@@ -17,13 +17,51 @@
   font-family: var(--font-body);
   min-width: 0;
 }
-
 .votes__head {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
-
+.votes__lead {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.votes__scope {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.votes__scope button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.votes__results,
+.votes__results-head {
+  display: grid;
+  gap: var(--space-3);
+}
+.votes__results-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+.votes__results-head h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 25px;
+}
+.votes__eligible {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 150px;
+  color: var(--positive);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+}
 /* ---- credential not yet prepared ---- */
 .votes__prepare-title {
   font-family: var(--font-display);
@@ -41,7 +79,6 @@
   line-height: 1.5;
   color: var(--ink-muted);
 }
-
 /* ---- scope switch ----
    A segmented control, not two chips: the two scopes are peers and exactly one
    is active, which is what a segmented control means. */
@@ -73,7 +110,6 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-
 /* ---- country picker ---- */
 .votes__country {
   display: flex;
@@ -100,7 +136,6 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-
 /* ---- the list ---- */
 .votes__list {
   list-style: none;
@@ -110,7 +145,6 @@
   flex-direction: column;
   gap: var(--space-3);
 }
-
 .poll {
   display: flex;
   flex-direction: column;
@@ -182,4 +216,25 @@
   font-size: 12px;
   line-height: 1.4;
   color: var(--ink-muted);
+}
+
+/* One line under the scope control, stating what browsing means. It replaces a
+   decorative grid with two floating pins that looked like a map and carried no
+   geography at all. */
+.votes__scope-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.votes__scope-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.votes__scope-note strong {
+  color: var(--ink);
+  font-weight: 650;
 }

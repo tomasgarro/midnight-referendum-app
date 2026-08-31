@@ -50,7 +50,7 @@ describe('Passport-first public showcase', () => {
     );
     expect(await screen.findByText('alice.night')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    await user.click(screen.getByRole('button', { name: /Create my credential/i }));
+    await user.click(screen.getByRole('button', { name: /Create my simulated pass/i }));
     expect(
       screen.getByRole('heading', { name: 'The credential is not connected yet' }),
     ).toBeTruthy();

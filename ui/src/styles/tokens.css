@@ -93,6 +93,36 @@
 }
 
 /*
+ * One dark palette, applied by an explicit attribute rather than by the system
+ * preference alone. A cream default that the OS could silently override was
+ * not a choice anyone could make; `data-theme` is stamped before first paint
+ * by the inline script in index.html, so there is no flash and no duplicate
+ * copy of these tokens to keep in sync.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #151412;
+  --surface: #211f1c;
+  --surface-sunken: #2b2824;
+  --ink: #f5f1ec;
+  --ink-muted: #b6afa6;
+  --line: #39352f;
+  --line-strong: #514b43;
+  --accent: #9a97ff;
+  --accent-ink: #17152d;
+  --accent-hover: #aaa8ff;
+  --accent-wash: #302e55;
+  --positive: #79c79c;
+  --positive-wash: #1d3a2a;
+  --warning: #efb36b;
+  --warning-wash: #402d1c;
+  --danger: #ff938a;
+  --danger-wash: #422522;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/*
  * Tailwind v4 theme mapping.
  *
  * There is no tailwind.config and there was no @theme block, so the semantic

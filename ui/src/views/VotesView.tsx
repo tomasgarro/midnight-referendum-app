@@ -1,22 +1,12 @@
+import { ArrowRight, GlobeHemisphereWest, MapPin, ShieldCheck } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
-import {
-  Button,
-  Callout,
-  Card,
-  CounterRow,
-  Display,
-  EmptyState,
-  Eyebrow,
-  StatGroup,
-  StatRow,
-} from '@/components/system';
+import { Button, Card, Display, EmptyState, Eyebrow } from '@/components/system';
+import { CountryFlag } from '@/components/system/CountryFlag';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
-import type { ConsultationArea } from '@/integration/civic-state';
-import { countryName as getCountryName } from '@/integration/country-catalog';
 import type { CicoLocale } from '@/integration/locale';
-import { countOpenPolls, getPollAvailability } from '@/integration/poll-lifecycle';
+import { getPollAvailability } from '@/integration/poll-lifecycle';
+import type { DiscoveryScope } from '@/integration/product-boundaries';
 import {
-  DASHBOARD_COUNTRIES,
   isCountryPoll,
   isCountryPollForCountry,
   localizePoll,
@@ -25,100 +15,52 @@ import {
 import { ResultsPanel } from '@/views/ResultsPanel';
 import './votes-view.css';
 
-/**
- * The civic dashboard: what you can vote on, and whether you can yet.
- *
- * Four things this screen used to do that it no longer does.
- *
- * The credential was a card with an icon, a bold line, a run-on subtitle and a
- * SINTÉTICA / VERIFICADA badge -- four visual devices for four facts. It is now
- * a labelled StatGroup, which is the same four facts read in a glance. The
- * badge is gone: whether the credential is synthetic is a *value*, not a
- * flag to shout, and it now sits in the row that says so.
- *
- * The World tab carried a whole "dashboard-intro-card" of prose explaining
- * that a wallet appears only for a real action. That is true, and it is
- * already said in the three-line explainer on Explore. Saying it twice made
- * neither instance load-bearing.
- *
- * The open count was a status pill sized like a metric. It is a CounterRow:
- * context for the list, not the point of the screen.
- *
- * The locked-country state was a card built like a poll card, so a scope you
- * cannot enter looked like something you could act on. It is a warning
- * Callout, which is what it is.
- */
-
 const COPY = {
   es: {
-    eyebrow: 'Tu panel cívico',
-    title: 'Consultas para vos',
-    available: 'disponibles',
-    credential: 'Tu credencial',
-    status: 'Estado',
-    ready: 'Credencial lista',
-    country: 'País',
-    age: 'Edad',
-    use: 'Uso',
-    useValue: 'solo para elegibilidad',
-    kindSynthetic: 'sintética',
-    kindVerified: 'verificada',
-    kind: 'Origen',
-    prepareTitle: 'Primero, tu credencial',
-    prepareBody: 'Probás que podés votar sin decir quién sos. No hace falta wallet.',
-    prepare: 'Preparar mi credencial',
-    scope: 'Espacio de participación',
-    world: 'Mundo',
-    countries: 'Países',
-    chooseCountry: 'Elegí un país',
-    searchCountry: 'Buscar por nombre o código',
-    searchCountryLabel: 'Buscar un país',
-    lockedBody:
-      'Tu credencial no prueba elegibilidad para este espacio. Elegirlo en el selector no lo habilita.',
-    lockedHelp: 'Completá el recorrido Passport para desbloquear tu espacio.',
-    empty: 'No hay consultas disponibles en este espacio',
-    open: 'Votación abierta',
-    closed: 'Votación cerrada',
-    closes: 'Cierra el',
-    read: 'Leer propuesta',
-    vote: 'Votá ahora',
-    simulated: 'Cifra simulada para este prototipo.',
-    fromContract: 'Estado público leído del contrato.',
+    eyebrow: 'Descubrir',
+    title: 'Decisiones que podés explorar',
+    lead: 'Explorar un país no declara tu nacionalidad. La elegibilidad se verifica solo cuando querés participar.',
+    world: 'Global',
+    france: 'Francia',
+    argentina: 'Argentina',
+    scopeLabel: 'Alcance de las consultas',
+    globalScope: 'Consultas globales',
+    countryScope: 'Consultas en',
+    browsing: 'Estás explorando',
+    notEligibility: 'Esto no acredita elegibilidad.',
+    open: 'Abierta',
+    closed: 'Cerrada',
+    closes: 'Cierra',
+    read: 'Ver consulta',
+    vote: 'Participar',
+    addEligibility: 'Añadir elegibilidad',
+    simulated: 'Experiencia pública simulada',
+    fromContract: 'Estado público leído desde Midnight',
+    empty: 'No hay consultas publicadas en este alcance todavía.',
+    verifiedFor: 'Elegibilidad lista para',
   },
   en: {
-    eyebrow: 'Your civic dashboard',
-    title: 'Consultations for you',
-    available: 'available',
-    credential: 'Your credential',
-    status: 'Status',
-    ready: 'Credential ready',
-    country: 'Country',
-    age: 'Age',
-    use: 'Use',
-    useValue: 'eligibility only',
-    kindSynthetic: 'synthetic',
-    kindVerified: 'verified',
-    kind: 'Origin',
-    prepareTitle: 'Your credential first',
-    prepareBody: 'You prove you can vote without saying who you are. No wallet needed.',
-    prepare: 'Prepare my credential',
-    scope: 'Participation scope',
-    world: 'World',
-    countries: 'Countries',
-    chooseCountry: 'Choose a country',
-    searchCountry: 'Search by name or code',
-    searchCountryLabel: 'Search for a country',
-    lockedBody:
-      'Your credential does not prove eligibility for this scope. Selecting it does not unlock it.',
-    lockedHelp: 'Complete the Passport journey to unlock your scope.',
-    empty: 'No consultations are available in this scope',
-    open: 'Voting open',
-    closed: 'Voting closed',
+    eyebrow: 'Discover',
+    title: 'Decisions you can explore',
+    lead: 'Browsing a country does not declare your nationality. Eligibility is checked only when you choose to participate.',
+    world: 'Global',
+    france: 'France',
+    argentina: 'Argentina',
+    scopeLabel: 'Consultation scope',
+    globalScope: 'Global consultations',
+    countryScope: 'Consultations in',
+    browsing: 'You are exploring',
+    notEligibility: 'This does not prove eligibility.',
+    open: 'Open',
+    closed: 'Closed',
     closes: 'Closes',
-    read: 'Read proposal',
-    vote: 'Vote now',
-    simulated: 'Simulated figure for this prototype.',
-    fromContract: 'Public state read from the contract.',
+    read: 'View consultation',
+    vote: 'Participate',
+    addEligibility: 'Add eligibility',
+    simulated: 'Simulated public experience',
+    fromContract: 'Public state read from Midnight',
+    empty: 'No consultations are published in this scope yet.',
+    verifiedFor: 'Eligibility ready for',
   },
 } as const;
 
@@ -132,6 +74,19 @@ export interface VotesViewProps {
   readonly locale: CicoLocale;
 }
 
+const SCOPES: ReadonlyArray<{ scope: DiscoveryScope; label: 'world' | 'france' | 'argentina' }> = [
+  { scope: { kind: 'world' }, label: 'world' },
+  { scope: { kind: 'country', code: 'FR' }, label: 'france' },
+  { scope: { kind: 'country', code: 'AR' }, label: 'argentina' },
+];
+
+function sameScope(left: DiscoveryScope, right: DiscoveryScope): boolean {
+  return (
+    left.kind === right.kind &&
+    (left.kind === 'world' || (right.kind === 'country' && left.code === right.code))
+  );
+}
+
 export function VotesView({
   polls,
   credential,
@@ -142,200 +97,127 @@ export function VotesView({
   locale,
 }: VotesViewProps) {
   const copy = COPY[locale];
-  const [area, setArea] = useState<ConsultationArea>('world');
-  const [selectedCountry, setSelectedCountry] = useState(credential?.country ?? 'AR');
-  const [countrySearch, setCountrySearch] = useState('');
+  const [scope, setScope] = useState<DiscoveryScope>({ kind: 'world' });
   const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    if (credential?.country) setSelectedCountry(credential.country);
-  }, [credential?.country]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const selectedCountryName = getCountryName(selectedCountry, locale);
-  const filteredCountries = countrySearch.trim()
-    ? DASHBOARD_COUNTRIES.filter((country) =>
-        `${getCountryName(country.code, locale)} ${country.code} ${country.numeric}`
-          .toLocaleLowerCase()
-          .includes(countrySearch.trim().toLocaleLowerCase()),
-      )
-    : DASHBOARD_COUNTRIES;
-
-  const locked = area === 'countries' && selectedCountry !== credential?.country;
   const visiblePolls =
-    area === 'world'
+    scope.kind === 'world'
       ? polls.filter((poll) => !isCountryPoll(poll))
-      : locked
-        ? []
-        : polls.filter((poll) => isCountryPollForCountry(poll, selectedCountry));
-  const openPollCount = countOpenPolls(visiblePolls, now);
+      : polls.filter((poll) => isCountryPollForCountry(poll, scope.code));
+  const countryLabel =
+    scope.kind === 'country' ? (scope.code === 'FR' ? copy.france : copy.argentina) : copy.world;
+  const eligibleForScope = Boolean(
+    credential && (scope.kind === 'world' || credential.country === scope.code),
+  );
 
   return (
     <main className="votes">
       <header className="votes__head">
         <Eyebrow>{copy.eyebrow}</Eyebrow>
         <Display>{copy.title}</Display>
-        <CounterRow counters={[{ id: 'open', label: copy.available, count: openPollCount }]} />
+        <p className="votes__lead">{copy.lead}</p>
       </header>
 
-      {credential ? (
-        <Card>
-          <StatGroup label={copy.credential}>
-            <StatRow label={copy.status} value={copy.ready} />
-            <StatRow
-              label={copy.country}
-              value={`${getCountryName(credential.country, locale)} (${credential.country})`}
-            />
-            <StatRow label={copy.age} value={credential.ageClass} />
-            <StatRow
-              label={copy.kind}
-              value={
-                credential.kind === 'synthetic-demo-credential'
-                  ? copy.kindSynthetic
-                  : copy.kindVerified
-              }
-            />
-            <StatRow label={copy.use} value={copy.useValue} />
-          </StatGroup>
-        </Card>
-      ) : (
-        <Card className="votes__prepare">
-          <h2 className="votes__prepare-title">{copy.prepareTitle}</h2>
-          <p className="votes__prepare-body">{copy.prepareBody}</p>
-          <Button block onClick={onOpenPassportJourney}>
-            {copy.prepare}
-          </Button>
-        </Card>
-      )}
-
-      <div className="votes__tabs" role="tablist" aria-label={copy.scope}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={area === 'world'}
-          className={`votes__tab ${area === 'world' ? 'votes__tab--active' : ''}`.trim()}
-          onClick={() => setArea('world')}
-        >
-          {copy.world}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={area === 'countries'}
-          className={`votes__tab ${area === 'countries' ? 'votes__tab--active' : ''}`.trim()}
-          onClick={() => setArea('countries')}
-        >
-          {copy.countries}
-        </button>
+      <div className="votes__scope" role="tablist" aria-label={copy.scopeLabel}>
+        {SCOPES.map((item) => {
+          const active = sameScope(scope, item.scope);
+          return (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={active}
+              className={active ? 'active' : ''}
+              key={item.label}
+              onClick={() => setScope(item.scope)}
+            >
+              {item.scope.kind === 'world' ? (
+                <GlobeHemisphereWest size={17} />
+              ) : (
+                <CountryFlag alpha2={item.scope.code} size="sm" />
+              )}
+              {copy[item.label]}
+            </button>
+          );
+        })}
       </div>
 
-      {area === 'countries' ? (
-        <Card className="votes__country">
-          <label className="votes__field-label" htmlFor="country-search">
-            {copy.chooseCountry}
-          </label>
-          <input
-            id="country-search"
-            className="votes__input"
-            type="search"
-            value={countrySearch}
-            onChange={(event) => setCountrySearch(event.target.value)}
-            placeholder={copy.searchCountry}
-            aria-label={copy.searchCountryLabel}
-          />
-          <label className="sr-only" htmlFor="country-selector">
-            {copy.country}
-          </label>
-          <select
-            id="country-selector"
-            className="votes__input"
-            value={selectedCountry}
-            onChange={(event) => setSelectedCountry(event.target.value)}
-          >
-            {filteredCountries.map((country) => (
-              <option key={country.code} value={country.code}>
-                {getCountryName(country.code, locale)}
-              </option>
-            ))}
-          </select>
-        </Card>
-      ) : null}
+      {/* The scope control above is the only way to change scope. There used to
+          be a second segmented control beside it and a third set of pins on a
+          decorative grid below, all doing the same job. */}
+      <p className="votes__scope-note">
+        <MapPin size={15} aria-hidden="true" />
+        <span>
+          {copy.browsing} <strong>{countryLabel}</strong>. {copy.notEligibility}
+        </span>
+      </p>
 
-      {locked ? (
-        <Callout
-          tone="warning"
-          role="status"
-          title={
-            locale === 'es'
-              ? `${selectedCountryName} todavía está bloqueado`
-              : `${selectedCountryName} is still locked`
-          }
-        >
-          {credential ? copy.lockedBody : copy.lockedHelp}
-        </Callout>
-      ) : visiblePolls.length ? (
-        <ul className="votes__list">
-          {visiblePolls.map((poll) => {
-            const displayPoll = localizePoll(poll, locale);
-            const isOpen = getPollAvailability(poll, now).isOpen;
-            return (
-              <li key={poll.id}>
-                <Card className="poll">
-                  <div className="poll__meta">
-                    <span
-                      className={`poll__status ${isOpen ? 'poll__status--open' : ''}`.trim()}
-                      data-open={isOpen}
-                    >
-                      {isOpen ? copy.open : copy.closed}
-                    </span>
-                    <span className="poll__closes">
-                      {copy.closes} {poll.deadline}
-                    </span>
-                  </div>
-                  <h2 className="poll__title">{displayPoll.title}</h2>
-                  <p className="poll__body">{displayPoll.description}</p>
-                  <div className="poll__actions">
-                    {isOpen ? (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          credential ? onStartVote(poll.id) : onOpenPassportJourney()
-                        }
-                      >
-                        {credential ? copy.vote : copy.prepare}
+      <section className="votes__results" aria-labelledby="discover-results-title">
+        <div className="votes__results-head">
+          <div>
+            <p className="sys-eyebrow">
+              {scope.kind === 'world' ? copy.globalScope : copy.countryScope}
+            </p>
+            <h2 id="discover-results-title">{countryLabel}</h2>
+          </div>
+          {eligibleForScope ? (
+            <span className="votes__eligible">
+              <ShieldCheck size={15} weight="fill" /> {copy.verifiedFor} {countryLabel}
+            </span>
+          ) : null}
+        </div>
+
+        {visiblePolls.length ? (
+          <ul className="votes__list">
+            {visiblePolls.map((poll) => {
+              const displayPoll = localizePoll(poll, locale);
+              const isOpen = getPollAvailability(poll, now).isOpen;
+              return (
+                <li key={poll.id}>
+                  <Card className="poll">
+                    <div className="poll__meta">
+                      <span className={`poll__status ${isOpen ? 'poll__status--open' : ''}`.trim()}>
+                        {isOpen ? copy.open : copy.closed}
+                      </span>
+                      <span>
+                        {copy.closes} {poll.deadline}
+                      </span>
+                    </div>
+                    <h3 className="poll__title">{displayPoll.title}</h3>
+                    <p className="poll__body">{displayPoll.description}</p>
+                    <p className="poll__note">
+                      {poll.runtimeContractAddress ? copy.fromContract : copy.simulated}
+                    </p>
+                    <div className="poll__actions">
+                      {isOpen ? (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            eligibleForScope ? onStartVote(poll.id) : onOpenPassportJourney()
+                          }
+                        >
+                          {eligibleForScope ? copy.vote : copy.addEligibility}{' '}
+                          <ArrowRight size={16} />
+                        </Button>
+                      ) : null}
+                      <Button variant="link" size="sm" onClick={() => onOpenPolicy(poll.id)}>
+                        {copy.read}
                       </Button>
-                    ) : null}
-                    <Button variant="link" size="sm" onClick={() => onOpenPolicy(poll.id)}>
-                      {copy.read}
-                    </Button>
-                  </div>
-                  <p className="poll__note">
-                    {poll.runtimeContractAddress
-                      ? copy.fromContract
-                      : `${poll.participation}. ${copy.simulated}`}
-                  </p>
-                </Card>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <EmptyState message={copy.empty} />
-      )}
+                    </div>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState message={copy.empty} />
+        )}
+      </section>
 
-      {polls.some((poll) => poll.runtimeContractAddress) ? (
-        visiblePolls.map((poll) => (
-          <ResultsPanel
-            key={`results-${poll.id}`}
-            contractAddress={poll.runtimeContractAddress ?? null}
-            title={localizePoll(poll, locale).title}
-            locale={locale}
-          />
-        ))
-      ) : area === 'world' ? (
+      {scope.kind === 'world' ? (
         <ResultsPanel contractAddress={publicContractAddress} locale={locale} />
       ) : null}
     </main>

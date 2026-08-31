@@ -45,6 +45,59 @@ export interface Poll {
 export type VoteReceipt = PassportReceiptRecord;
 
 const EN_POLL_COPY: Record<string, Partial<Poll>> = {
+  'reglas-de-verificacion': {
+    title: 'Open verification rules',
+    description:
+      'A global consultation on whether this platform should publish its eligibility rules before each vote opens.',
+    question:
+      'Before opening each consultation, should this platform publish the exact eligibility rule it will apply, and the window during which that rule can be challenged?',
+    opened: 'August 29, 2026',
+    deadline: 'October 4, 2026',
+    eligible: 'Any eligibility pass',
+    participation: '2,140 simulated responses',
+    whyNow:
+      'It is the only question in this catalogue that belongs to no country: it is about how this platform works, and a pass from anywhere can answer it.',
+    legalFrame:
+      'Product governance. It is not an official consultation of any state, and not a public service.',
+    evidence:
+      'The outcome would apply to this platform and nothing else. Participation figures are simulated.',
+    evidenceLabel: 'GLOBAL CONSULTATION · product governance',
+    argumentsFor: [
+      'Publishing the rule before opening lets people argue about it while it can still change.',
+      'A known challenge window gives anyone excluded by the rule somewhere to go.',
+    ],
+    argumentsAgainst: [
+      'Publishing the rule in advance also helps anyone looking to work around it.',
+      'A fixed window can delay urgent consultations without improving the outcome.',
+    ],
+    uncertainty:
+      'How long the window runs, who rules on a challenge, and what happens to an already-open consultation are not defined in this demo.',
+  },
+  'france-mobilite': {
+    title: 'Everyday mobility in the France pilot',
+    description: 'A simulated pilot consultation on safer, simpler low-emission local travel.',
+    question:
+      'Should the France pilot prioritise safer walking and cycling routes around schools and public transport connections?',
+    opened: 'August 29, 2026',
+    deadline: 'October 4, 2026',
+    whyNow:
+      'This fictional consultation exists to test the complete French eligibility and voting journey on real mobile hardware.',
+    legalFrame:
+      'Product pilot only. It is not an official French consultation or a government service.',
+    evidence:
+      'No policy outcome is claimed. Figures and participation are simulated for product testing.',
+    evidenceLabel: 'SIMULATED PILOT · no official status',
+    argumentsFor: [
+      'Safer connections can make short daily journeys easier without a car.',
+      'A focused pilot can reveal accessibility and implementation needs.',
+    ],
+    argumentsAgainst: [
+      'Street changes can move traffic or reduce loading and parking space.',
+      'A local pilot may not represent rural or regional mobility needs.',
+    ],
+    uncertainty:
+      'The location, budget, implementation authority, and measured effects are intentionally not defined in this product demo.',
+  },
   'tierras-rurales': {
     title: 'Rural land and foreign ownership',
     description:
@@ -52,7 +105,7 @@ const EN_POLL_COPY: Record<string, Partial<Poll>> = {
     question:
       'Should Argentina keep national limits and controls on foreign ownership and possession of rural land, with regular public review?',
     opened: 'August 8, 2026',
-    deadline: 'August 16, 2026',
+    deadline: 'October 4, 2026',
     whyNow:
       'Law 26.737 remains under debate. The consultation presents the current legal frame and the open questions without taking an institutional position.',
     legalFrame:
@@ -180,6 +233,72 @@ export function localizePoll(poll: Poll, locale: CicoLocale): Poll {
 
 export const POLLS: Poll[] = [
   {
+    id: 'reglas-de-verificacion',
+    title: 'Reglas de verificación abiertas',
+    description:
+      'Una consulta global sobre si esta plataforma debe publicar sus reglas de elegibilidad antes de abrir cada votación.',
+    question:
+      '¿Debería esta plataforma publicar, antes de abrir cada consulta, la regla exacta de elegibilidad que va a aplicar y el período durante el cual se puede impugnar?',
+    opened: '29 de agosto de 2026',
+    deadline: '4 de octubre de 2026',
+    opensAt: '2026-08-29T00:00:00+00:00',
+    closesAt: '2026-10-04T23:59:59+00:00',
+    eligible: 'Cualquier pase de elegibilidad',
+    participation: '2.140 participaciones simuladas',
+    whyNow:
+      'Es la única pregunta de este catálogo que no pertenece a ningún país: trata sobre cómo funciona esta plataforma, y quien tenga un pase de cualquier país puede responderla.',
+    legalFrame:
+      'Gobernanza del producto. No es una consulta oficial de ningún Estado ni un servicio público.',
+    evidence:
+      'El resultado se aplicaría a esta plataforma y a nada más. Las cifras de participación son simuladas.',
+    evidenceLabel: 'CONSULTA GLOBAL · gobernanza del producto',
+    argumentsFor: [
+      'Publicar la regla antes de abrir permite discutirla mientras todavía se puede cambiar.',
+      'Una ventana de impugnación conocida da a quien queda afuera un camino para reclamar.',
+    ],
+    argumentsAgainst: [
+      'Publicar la regla con antelación también le sirve a quien quiera buscarle la vuelta.',
+      'Una ventana fija puede retrasar consultas urgentes sin mejorar el resultado.',
+    ],
+    uncertainty:
+      'La duración de la ventana, quién resuelve una impugnación y qué pasa con una consulta ya abierta no están definidos en esta demo.',
+    // A question about this platform's own rules has no external authority to
+    // cite. Inventing one would be worse than citing nothing.
+    sources: [],
+  },
+  {
+    id: 'france-mobilite',
+    title: 'Mobilité du quotidien — pilote France',
+    description:
+      'Une consultation pilote simulée sur des déplacements locaux plus sûrs et plus simples.',
+    question:
+      'Le pilote France devrait-il prioriser des itinéraires piétons et cyclables plus sûrs autour des écoles et des transports publics ?',
+    opened: '29 août 2026',
+    deadline: '4 octobre 2026',
+    opensAt: '2026-08-29T00:00:00+02:00',
+    closesAt: '2026-10-04T23:59:59+02:00',
+    eligible: 'Pilote limité',
+    participation: '1.284 participations simulées',
+    whyNow:
+      'Cette consultation fictive sert à tester de bout en bout le parcours français d’éligibilité et de vote sur téléphone réel.',
+    legalFrame:
+      'Pilote produit uniquement. Ce service n’est ni une consultation officielle française ni un service public.',
+    evidence:
+      'Aucun résultat de politique publique n’est revendiqué. Les chiffres sont simulés pour les tests produit.',
+    evidenceLabel: 'PILOTE SIMULÉ · aucun statut officiel',
+    argumentsFor: [
+      'Des connexions plus sûres peuvent faciliter les trajets courts sans voiture.',
+      'Un pilote ciblé peut révéler les besoins d’accessibilité et de mise en œuvre.',
+    ],
+    argumentsAgainst: [
+      'Les changements de voirie peuvent déplacer le trafic ou réduire les espaces de livraison et de stationnement.',
+      'Un pilote local ne représente pas nécessairement les besoins ruraux ou régionaux.',
+    ],
+    uncertainty:
+      'Le lieu, le budget, l’autorité de mise en œuvre et les effets mesurés ne sont volontairement pas définis dans cette démo.',
+    sources: [],
+  },
+  {
     id: 'tierras-rurales',
     title: 'Tierras rurales y propiedad extranjera',
     description:
@@ -187,9 +306,12 @@ export const POLLS: Poll[] = [
     question:
       '¿Debería Argentina mantener un régimen nacional de límites y controles sobre la titularidad y posesión extranjera de tierras rurales, con revisión pública periódica?',
     opened: '8 de agosto de 2026',
-    deadline: '16 de agosto de 2026',
+    // Argentina is a pilot scope, so its consultation has to be open for the
+    // scope to be walkable at all. It closed on 16 August, which left the
+    // Argentina tab showing one closed card and no action.
+    deadline: '4 de octubre de 2026',
     opensAt: '2026-08-08T00:00:00-03:00',
-    closesAt: '2026-08-16T23:59:59-03:00',
+    closesAt: '2026-10-04T23:59:59-03:00',
     eligible: '143.820',
     participation: '8.914 participaciones de demo',
     whyNow:
@@ -426,8 +548,25 @@ export function requireDefaultPoll(polls: readonly Poll[]): Poll {
 }
 
 export const DEFAULT_POLL = requireDefaultPoll(POLLS);
-const COUNTRY_POLL_IDS = new Set(['tierras-rurales']);
-export const COUNTRY_POLL_COUNTRIES = new Map([['tierras-rurales', 'AR']]);
+// Fiscal federalism, labour reform, pensions and energy tariffs are Argentine
+// questions about Argentine law. They sat under World, which promised a scope
+// the catalogue never had.
+const COUNTRY_POLL_IDS = new Set([
+  'france-mobilite',
+  'tierras-rurales',
+  'federalismo-fiscal',
+  'reforma-laboral',
+  'jubilaciones',
+  'energia-renovable',
+]);
+export const COUNTRY_POLL_COUNTRIES = new Map([
+  ['france-mobilite', 'FR'],
+  ['tierras-rurales', 'AR'],
+  ['federalismo-fiscal', 'AR'],
+  ['reforma-laboral', 'AR'],
+  ['jubilaciones', 'AR'],
+  ['energia-renovable', 'AR'],
+]);
 export const DASHBOARD_COUNTRIES = ASSIGNED_COUNTRIES.map((country) => ({
   code: country.alpha2,
   numeric: country.numeric,

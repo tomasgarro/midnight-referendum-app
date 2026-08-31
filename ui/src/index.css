@@ -517,6 +517,13 @@ button:disabled {
   body {
     padding: 34px 20px;
   }
+  /* The shell is a full-viewport column, so the frame padding has to come out
+     of its height or the column overflows by exactly that much and takes the
+     bottom bar's labels off-screen with it. */
+  .app-shell {
+    height: calc(100dvh - 68px);
+    min-height: calc(100dvh - 68px);
+  }
 }
 
 @media (max-width: 375px) {
@@ -2048,6 +2055,13 @@ button:disabled {
 }
 .unified-onboarding .unified-consent-grid > div:last-child dt {
   color: var(--warning);
+}
+/* The override above re-themes these panels' backgrounds but the values kept
+   the light theme's ink, so in dark mode the consent screen rendered navy on
+   brown -- roughly 1.2:1, invisible. The screen exists to say what is and is
+   not requested, so it was saying nothing at all. */
+.unified-onboarding .unified-consent-grid dd {
+  color: var(--ink);
 }
 .unified-onboarding .passport-action-button {
   border-radius: var(--r-pill);

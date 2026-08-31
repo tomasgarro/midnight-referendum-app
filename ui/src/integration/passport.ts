@@ -483,14 +483,16 @@ export class PassportIdentityBridge {
     if (relyingPartyError) {
       throw new PassportBridgeError(relyingPartyError, 'invalid_relying_party_origin');
     }
-    // Keep the convenience default minimal. An explicit empty list is valid
-    // for a session-only handshake; it must not be confused with an invalid
-    // list containing only unknown field names.
+    // Keep the convenience default minimal. An empty list used to be treated as
+    // a valid session-only handshake, but the deployed Passport drops such a
+    // request in its parser and sends nothing back at all -- so the caller sat
+    // through the full 180 s timeout and reported it as Passport being slow.
+    // Fail here instead, where the message names the actual mistake.
     const requestedFields =
       fields === undefined
         ? (['displayName'] satisfies PassportProfileField[])
         : [...new Set(fields)].filter(isField);
-    if (fields !== undefined && fields.length > 0 && requestedFields.length === 0) {
+    if (fields !== undefined && requestedFields.length === 0) {
       throw new PassportBridgeError(
         'Passport profile requires at least one field',
         'invalid_configuration',
