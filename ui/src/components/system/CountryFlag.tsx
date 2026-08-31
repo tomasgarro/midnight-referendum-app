@@ -24,6 +24,10 @@ let cachedSupport: boolean | null = null;
 function detectFlagSupport(): boolean {
   if (cachedSupport !== null) return cachedSupport;
   if (typeof document === 'undefined') return false;
+  // jsdom intentionally has no canvas renderer and logs a noisy "not
+  // implemented" error before returning null. The code fallback is exactly
+  // what the test environment should exercise, so avoid calling it there.
+  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) return false;
   try {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');

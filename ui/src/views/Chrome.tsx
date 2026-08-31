@@ -1,4 +1,12 @@
-import { BookOpen, Fingerprint, Stamp, UserCircle, X } from '@phosphor-icons/react';
+import {
+  ClockCounterClockwise,
+  Fingerprint,
+  GlobeHemisphereWest,
+  IdentificationCard,
+  Scan,
+  UserCircle,
+  X,
+} from '@phosphor-icons/react';
 import type { CivicPassportSession } from 'midnight-referendum-api';
 import { Button } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
@@ -88,32 +96,42 @@ export function AppHeader({
 export interface BottomNavProps {
   readonly tab: Tab;
   readonly onChange: (tab: Tab) => void;
+  readonly onVerify: () => void;
   readonly locale: CicoLocale;
 }
 
-export function BottomNav({ tab, onChange, locale }: BottomNavProps) {
+export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
   const copy = APP_COPY[locale];
   const items = [
-    { id: 'explore' as const, label: copy.nav.explore, Icon: BookOpen },
-    { id: 'votes' as const, label: copy.nav.votes, Icon: Stamp },
-    { id: 'profile' as const, label: copy.nav.profile, Icon: UserCircle },
+    { id: 'discover' as const, label: copy.nav.discover, Icon: GlobeHemisphereWest },
+    { id: 'credentials' as const, label: copy.nav.credentials, Icon: IdentificationCard },
+    { id: 'verify' as const, label: copy.nav.verify, Icon: Scan, action: true },
+    { id: 'activity' as const, label: copy.nav.activity, Icon: ClockCounterClockwise },
+    { id: 'passport' as const, label: copy.nav.passport, Icon: UserCircle },
   ];
   return (
     <nav
       className="chrome-nav"
       aria-label={locale === 'es' ? 'Navegación principal' : 'Primary navigation'}
     >
-      {items.map(({ id, label, Icon }) => (
+      {items.map(({ id, label, Icon, action }) => (
         <button
           type="button"
           key={id}
-          className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''}`.trim()}
-          onClick={() => onChange(id)}
-          aria-current={tab === id ? 'page' : undefined}
+          className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''} ${action ? 'chrome-nav__item--verify' : ''}`.trim()}
+          onClick={() => (action ? onVerify() : onChange(id as Tab))}
+          aria-current={!action && tab === id ? 'page' : undefined}
+          aria-label={
+            action
+              ? `${label} · ${locale === 'es' ? 'documento físico' : 'physical document'}`
+              : undefined
+          }
         >
           {/* Tab switching is met 100+ times a day, so it gets the platform
               default and nothing else: no slide, no icon animation. */}
-          <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
+          <span className="chrome-nav__icon">
+            <Icon size={action ? 25 : 22} weight={!action && tab === id ? 'fill' : 'regular'} />
+          </span>
           <span>{label}</span>
         </button>
       ))}

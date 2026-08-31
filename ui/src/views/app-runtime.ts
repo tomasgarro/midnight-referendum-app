@@ -8,7 +8,7 @@
 import { resolveAppMode } from '@/integration/app-mode';
 import type { CicoLocale } from '@/integration/locale';
 
-export type Tab = 'explore' | 'votes' | 'profile';
+export type Tab = 'discover' | 'credentials' | 'activity' | 'passport';
 /**
  * `verify` and `eligible` are gone. Nothing ever set them: `startVote` sends a
  * credentialled user straight to `choose` and everyone else into the Passport
@@ -21,17 +21,29 @@ export type FlowStage = 'choose' | 'review' | 'processing' | 'receipt';
 /** The active app keeps the same language across identity, jury, and receipt surfaces. */
 export const APP_COPY = {
   es: {
-    brand: 'Referéndum Cívico',
-    brandNote: 'Prototipo independiente',
+    brand: 'referendum.earth',
+    brandNote: 'Privacidad con Midnight',
     language: 'Idioma',
-    nav: { explore: 'Explorá', votes: 'Votá', profile: 'Mi perfil' },
+    nav: {
+      discover: 'Descubrir',
+      credentials: 'Credenciales',
+      verify: 'Verificar',
+      activity: 'Actividad',
+      passport: 'Passport',
+    },
     network: { undeployed: 'Local no desplegado', preview: 'Preview', demo: 'Demo local' },
   },
   en: {
-    brand: 'Civic Referendum',
-    brandNote: 'Independent prototype',
+    brand: 'referendum.earth',
+    brandNote: 'Privacy powered by Midnight',
     language: 'Language',
-    nav: { explore: 'Explore', votes: 'Vote', profile: 'Profile' },
+    nav: {
+      discover: 'Discover',
+      credentials: 'Credentials',
+      verify: 'Verify',
+      activity: 'Activity',
+      passport: 'Passport',
+    },
     network: { undeployed: 'Undeployed local', preview: 'Preview', demo: 'Local demo' },
   },
 } as const;

@@ -262,6 +262,78 @@
   color: var(--positive);
 }
 
+.profile__account {
+  display: grid;
+  gap: var(--space-3);
+}
+.profile__account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.profile__account-row button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--accent);
+}
+.profile__account > code {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+}
+.profile__account dl {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.profile__account dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.profile__account dt {
+  color: var(--ink-muted);
+}
+.profile__account dd {
+  margin: 0;
+  font-weight: 650;
+}
+.profile__row--danger strong,
+.profile__row--danger > svg {
+  color: var(--danger);
+}
+.profile__remove-confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--danger-wash);
+}
+.profile__remove-confirm p {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.profile__remove-confirm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 /* ---- leading icons on settings rows ----
    The reference settings screens all carry one, and it is what makes a run of
    rows scannable instead of a wall of left-aligned labels. */

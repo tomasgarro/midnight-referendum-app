@@ -26,15 +26,6 @@ const APP_MODE = resolveAppMode(import.meta.env.MODE, import.meta.env.VITE_APP_M
 const REAL_RUNTIME_ENABLED = APP_MODE === 'preview' || APP_MODE === 'undeployed';
 const IS_UNDEPLOYED = APP_MODE === 'undeployed';
 /** Set to run the wallet-less sponsored-relayer path. */
-const RELAYER_URL = REAL_RUNTIME_ENABLED ? import.meta.env.VITE_RELAYER_URL?.trim() || '' : '';
-const PROOF_SERVER_URL = REAL_RUNTIME_ENABLED
-  ? import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || ''
-  : '';
-const CICO_API_URL = REAL_RUNTIME_ENABLED
-  ? import.meta.env.VITE_PASSPORT_V2_API_URL?.trim() || ''
-  : '';
-const NETWORK_ID =
-  import.meta.env.VITE_MIDNIGHT_NETWORK?.trim() || (IS_UNDEPLOYED ? 'undeployed' : 'preview');
 const INDEXER_URL =
   import.meta.env.VITE_MIDNIGHT_INDEXER_URL?.trim() ||
   (APP_MODE === 'preview' ? 'https://indexer.preview.midnight.network/api/v4/graphql' : '');
@@ -42,7 +33,8 @@ const INDEXER_WS_URL =
   import.meta.env.VITE_MIDNIGHT_INDEXER_WS_URL?.trim() ||
   (APP_MODE === 'preview' ? 'wss://indexer.preview.midnight.network/api/v4/graphql/ws' : '');
 
-export const RELAYER_MODE = RELAYER_URL !== '';
+/** Generic remote proving is not a citizen capability. */
+export const RELAYER_MODE = false;
 
 export function MidnightProvidersProvider({ children }: { children: ReactNode }) {
   const { connectedApi, status } = useWallet();
@@ -89,53 +81,6 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
       setPublicReadError(err instanceof Error ? err.message : 'No se pudo preparar el indexer');
     }
 
-    // Relayer mode is the default civic path: the citizen has no wallet, so
-    // providers must come up without one. The wallet path stays available for
-    // organizer actions and as a fallback when no relayer is configured.
-    if (RELAYER_URL) {
-      import('midnight-referendum-api')
-        .then(({ createReferendumV2WalletlessProviders, HttpWalletlessActionCapabilityIssuer }) => {
-          if (!PROOF_SERVER_URL || !CICO_API_URL) {
-            throw new Error('El relayer v2 requiere proof server y CICO API configurados');
-          }
-          if (NETWORK_ID !== 'preview' && NETWORK_ID !== 'undeployed') {
-            throw new Error('El relayer v2 solo admite Preview o Undeployed');
-          }
-          return createReferendumV2WalletlessProviders({
-            relayUrl: RELAYER_URL,
-            proofServerUri: PROOF_SERVER_URL,
-            networkId: NETWORK_ID,
-            indexerUri: INDEXER_URL,
-            indexerWsUri: INDEXER_WS_URL,
-            capabilityIssuer: new HttpWalletlessActionCapabilityIssuer({
-              baseUrl: CICO_API_URL,
-            }),
-          });
-        })
-        .then((runtime) => {
-          if (!cancelled) {
-            setProviders(null);
-            setReferendumV2Providers(runtime.providers);
-            setReferendumV2ActionContext(runtime.actionContext);
-            setError(null);
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            setReferendumV2Providers(null);
-            setReferendumV2ActionContext(null);
-            setError(
-              err instanceof Error
-                ? `No se pudo contactar el relayer v2: ${err.message}`
-                : 'No se pudo contactar el relayer v2',
-            );
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
     if (status !== 'connected' || !connectedApi) {
       setProviders(null);
       setReferendumV2Providers(null);
@@ -147,12 +92,8 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
     import('midnight-referendum-api')
       .then(({ createProviders, createReferendumV2WalletProviders }) =>
         Promise.all([
-          createProviders(connectedApi, {
-            proofServerUri: import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || undefined,
-          }),
-          createReferendumV2WalletProviders(connectedApi, {
-            proofServerUri: import.meta.env.VITE_MIDNIGHT_PROOF_SERVER_URL?.trim() || undefined,
-          }),
+          createProviders(connectedApi),
+          createReferendumV2WalletProviders(connectedApi),
         ]),
       )
       .then(([legacy, referendumV2]) => {

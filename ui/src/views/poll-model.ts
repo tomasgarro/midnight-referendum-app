@@ -45,6 +45,31 @@ export interface Poll {
 export type VoteReceipt = PassportReceiptRecord;
 
 const EN_POLL_COPY: Record<string, Partial<Poll>> = {
+  'france-mobilite': {
+    title: 'Everyday mobility in the France pilot',
+    description: 'A simulated pilot consultation on safer, simpler low-emission local travel.',
+    question:
+      'Should the France pilot prioritise safer walking and cycling routes around schools and public transport connections?',
+    opened: 'August 29, 2026',
+    deadline: 'October 4, 2026',
+    whyNow:
+      'This fictional consultation exists to test the complete French eligibility and voting journey on real mobile hardware.',
+    legalFrame:
+      'Product pilot only. It is not an official French consultation or a government service.',
+    evidence:
+      'No policy outcome is claimed. Figures and participation are simulated for product testing.',
+    evidenceLabel: 'SIMULATED PILOT · no official status',
+    argumentsFor: [
+      'Safer connections can make short daily journeys easier without a car.',
+      'A focused pilot can reveal accessibility and implementation needs.',
+    ],
+    argumentsAgainst: [
+      'Street changes can move traffic or reduce loading and parking space.',
+      'A local pilot may not represent rural or regional mobility needs.',
+    ],
+    uncertainty:
+      'The location, budget, implementation authority, and measured effects are intentionally not defined in this product demo.',
+  },
   'tierras-rurales': {
     title: 'Rural land and foreign ownership',
     description:
@@ -179,6 +204,38 @@ export function localizePoll(poll: Poll, locale: CicoLocale): Poll {
 }
 
 export const POLLS: Poll[] = [
+  {
+    id: 'france-mobilite',
+    title: 'Mobilité du quotidien — pilote France',
+    description:
+      'Une consultation pilote simulée sur des déplacements locaux plus sûrs et plus simples.',
+    question:
+      'Le pilote France devrait-il prioriser des itinéraires piétons et cyclables plus sûrs autour des écoles et des transports publics ?',
+    opened: '29 août 2026',
+    deadline: '4 octobre 2026',
+    opensAt: '2026-08-29T00:00:00+02:00',
+    closesAt: '2026-10-04T23:59:59+02:00',
+    eligible: 'Pilote limité',
+    participation: '1.284 participations simulées',
+    whyNow:
+      'Cette consultation fictive sert à tester de bout en bout le parcours français d’éligibilité et de vote sur téléphone réel.',
+    legalFrame:
+      'Pilote produit uniquement. Ce service n’est ni une consultation officielle française ni un service public.',
+    evidence:
+      'Aucun résultat de politique publique n’est revendiqué. Les chiffres sont simulés pour les tests produit.',
+    evidenceLabel: 'PILOTE SIMULÉ · aucun statut officiel',
+    argumentsFor: [
+      'Des connexions plus sûres peuvent faciliter les trajets courts sans voiture.',
+      'Un pilote ciblé peut révéler les besoins d’accessibilité et de mise en œuvre.',
+    ],
+    argumentsAgainst: [
+      'Les changements de voirie peuvent déplacer le trafic ou réduire les espaces de livraison et de stationnement.',
+      'Un pilote local ne représente pas nécessairement les besoins ruraux ou régionaux.',
+    ],
+    uncertainty:
+      'Le lieu, le budget, l’autorité de mise en œuvre et les effets mesurés ne sont volontairement pas définis dans cette démo.',
+    sources: [],
+  },
   {
     id: 'tierras-rurales',
     title: 'Tierras rurales y propiedad extranjera',
@@ -426,8 +483,11 @@ export function requireDefaultPoll(polls: readonly Poll[]): Poll {
 }
 
 export const DEFAULT_POLL = requireDefaultPoll(POLLS);
-const COUNTRY_POLL_IDS = new Set(['tierras-rurales']);
-export const COUNTRY_POLL_COUNTRIES = new Map([['tierras-rurales', 'AR']]);
+const COUNTRY_POLL_IDS = new Set(['france-mobilite', 'tierras-rurales']);
+export const COUNTRY_POLL_COUNTRIES = new Map([
+  ['france-mobilite', 'FR'],
+  ['tierras-rurales', 'AR'],
+]);
 export const DASHBOARD_COUNTRIES = ASSIGNED_COUNTRIES.map((country) => ({
   code: country.alpha2,
   numeric: country.numeric,

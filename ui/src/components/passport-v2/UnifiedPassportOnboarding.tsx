@@ -29,13 +29,13 @@ interface UnifiedPassportOnboardingProps {
   onLocaleChange?: (locale: CicoLocale) => void;
 }
 
-const DEFAULT_DEMO_COUNTRY = 'AR';
+const DEFAULT_DEMO_COUNTRY = 'FR';
 /**
  * The shortlist shown before anyone searches. It exists to make the point the
  * screen is making -- that the consultation is open from anywhere -- visible
  * without typing, rather than to privilege these six places.
  */
-const SUGGESTED_COUNTRIES = ['AR', 'BR', 'ES', 'MX', 'US', 'DE'] as const;
+const SUGGESTED_COUNTRIES = ['FR', 'AR'] as const;
 
 /**
  * Six screens across four named stages.
@@ -93,18 +93,18 @@ const copy = {
     back: 'Volver a la app',
     language: 'Idioma',
     previousStep: 'Paso anterior',
-    stages: ['Bienvenida', 'Passport', 'Evidencia', 'Lista'],
+    stages: ['Bienvenida', 'Passport', 'Documento', 'Pase listo'],
     step: (n: number, total: number) => `Paso ${n} de ${total}`,
     demoEnvironment: 'Demo',
     liveEnvironment: 'Passport en vivo',
     origin: 'Origen',
-    originSynthetic: 'Credencial sintética',
+    originSynthetic: 'Pase simulado',
     why: '¿Por qué se necesita esto?',
 
     // 1 · welcome
     welcomeTitle: 'Demostrá que podés votar. Sin demostrar quién sos.',
     welcomeBody:
-      'En estas consultas públicas, tu identidad y tu respuesta viajan separadas. Sobre Midnight, tu voto se sella en tu propio teléfono: ni nosotros ni la red pueden vincularlo con vos. Preparemos tu acceso.',
+      'Midnight Passport abre tu cuenta. Un pasaporte físico puede comprobar elegibilidad. El resultado es un pase pequeño para participar. En esta demo, todo el recorrido es simulado y no se envía un voto real.',
     start: 'Comenzar',
     explore: 'Explorar sin conectar',
 
@@ -112,16 +112,16 @@ const copy = {
     privacyTitle: 'Qué protege tu voto',
     privacyItems: [
       [
-        'Passport',
-        'Tu ingreso seguro. Vos elegís qué campos de tu perfil ve la app, y nada más sale de ahí.',
+        'Midnight Passport',
+        'Tu cuenta segura para esta experiencia Preview y el nombre que elegís mostrar.',
       ],
       [
-        'Credencial',
-        'Prueba que cumplís los requisitos sin mostrar tu documento. El proveedor no se lo queda.',
+        'Pasaporte físico',
+        'El documento se usa en un paso separado para comprobar elegibilidad. No está guardado dentro de Passport.',
       ],
       [
-        'Tu voto',
-        'Viaja sellado y separado de tu identidad. Al cerrar se publican los totales, nunca quién votó qué.',
+        'Pase de elegibilidad',
+        'Guarda solo el resultado mínimo que una consulta necesita. La demo lo etiqueta siempre como simulado.',
       ],
     ],
     continue: 'Continuar',
@@ -152,12 +152,12 @@ const copy = {
       'Una wallet solo aparece cuando hay que aprobar y pagar una acción real en la red. Este recorrido de demo no la necesita y no te la va a pedir.',
 
     // 5 · eligibility + country
-    eligibilityTitle: 'Votá desde donde estés',
+    eligibilityTitle: 'Creá tu pase de elegibilidad',
     eligibilityBody:
-      'Tu credencial demuestra desde qué país participás y que sos mayor de edad. Nada más: ni tu nombre, ni tu documento, ni tu cara.',
+      'El pase representa país y mayoría de edad. Es distinto de tu cuenta Passport y de tu pasaporte físico.',
     demoBanner: 'DEMO · SIN LECTURA NFC NI PRUEBA REAL',
     demoBannerBody:
-      'Este entorno no lee ningún documento ni genera una prueba real. Elegí un país y te damos una credencial sintética para recorrer la experiencia.',
+      'Este entorno no lee ningún documento ni genera una prueba real. Elegí Francia o Argentina y te damos un pase simulado para recorrer la experiencia.',
     evidenceWhy: '¿Cómo funciona con un documento real?',
     evidenceSteps: [
       ['Pedido preparado', 'Se crea un vínculo temporal y de un solo uso con este navegador.'],
@@ -171,22 +171,22 @@ const copy = {
       ],
     ],
     countryLabel: '¿Desde qué país participás?',
-    countrySearch: 'Buscá cualquier país',
+    countrySearch: 'Buscar Francia o Argentina',
     countryList: 'Países disponibles',
-    countrySuggested: 'Elegí uno, o buscá entre los 249 países del mundo.',
+    countrySuggested: 'El piloto comienza con Francia y Argentina.',
     countryEmpty: 'No encontramos ese país. Probá con otro nombre o su código.',
-    createCredential: 'Crear mi credencial',
+    createCredential: 'Crear mi pase simulado',
 
     // 6 · success
-    successTitle: 'Tu credencial está lista',
+    successTitle: 'Tu pase de elegibilidad está listo',
     successBody: 'Ya podés ver qué consultas están abiertas para vos y emitir un voto de prueba.',
-    successMark: 'Credencial creada',
+    successMark: 'Pase creado',
     country: 'País de prueba',
     age: 'Clase de edad',
     issuer: 'Emisor',
     issuerValue: 'CICO demo · prueba',
     dashboard: 'Ver las consultas',
-    privacy: 'Tu documento, tu secreto de voto y tu elección no aparecen en esta credencial.',
+    privacy: 'Este pase simulado no contiene un documento ni una elección.',
 
     // showcase dead-end
     unavailableTitle: 'La credencial todavía no está conectada',
@@ -198,7 +198,7 @@ const copy = {
     holderBindingVerified:
       'Holder binding verificado para esta sesión. No mostramos sus bytes ni lo tratamos como un dato de elegibilidad.',
     holderBindingUnsupported:
-      'Esta versión de Passport no expone un holder binding verificado. La sesión sigue separada de la credencial.',
+      'Esta versión de Passport todavía no ofrece el vínculo necesario para una elegibilidad real. La demo mantiene la cuenta y el pase separados.',
     mascotWaving: 'Carpincho saludando',
     mascotReading: 'Carpincho leyendo un libro',
     mascotThinking: 'Carpincho pensando',
@@ -208,33 +208,33 @@ const copy = {
     back: 'Back to the app',
     language: 'Language',
     previousStep: 'Previous step',
-    stages: ['Welcome', 'Passport', 'Evidence', 'Ready'],
+    stages: ['Welcome', 'Passport', 'Document', 'Pass ready'],
     step: (n: number, total: number) => `Step ${n} of ${total}`,
     demoEnvironment: 'Demo',
     liveEnvironment: 'Live Passport',
     origin: 'Origin',
-    originSynthetic: 'Synthetic credential',
+    originSynthetic: 'Simulated pass',
     why: 'Why is this needed?',
 
     welcomeTitle: 'Prove you can vote. Without proving who you are.',
     welcomeBody:
-      'In these public consultations, your identity and your response travel separately. On Midnight, your vote is sealed on your own phone: neither we nor the network can link it back to you. Let’s get you ready.',
+      'Midnight Passport opens your account. A physical passport can prove eligibility. The result is a small pass for participation. In this demo the whole journey is simulated and no real vote is sent.',
     start: 'Get started',
     explore: 'Explore without connecting',
 
     privacyTitle: 'What protects your vote',
     privacyItems: [
       [
-        'Passport',
-        'Your secure sign-in. You choose which profile fields the app sees, and nothing else leaves it.',
+        'Midnight Passport',
+        'Your secure account for this Preview experience and the name you choose to display.',
       ],
       [
-        'Credential',
-        'It proves you meet the rules without showing your document. The provider does not keep it.',
+        'Physical passport',
+        'The document is used in a separate eligibility step. It is not stored inside Passport.',
       ],
       [
-        'Your vote',
-        'It travels sealed and separate from your identity. At close only totals are published, never who voted what.',
+        'Eligibility pass',
+        'It keeps only the minimum result a consultation needs. The demo always labels it as simulated.',
       ],
     ],
     continue: 'Continue',
@@ -262,12 +262,12 @@ const copy = {
     walletBody:
       'A wallet only appears when a real on-chain action has to be approved and paid for. This demo journey does not need one and will not ask for it.',
 
-    eligibilityTitle: 'Vote from wherever you are',
+    eligibilityTitle: 'Create your eligibility pass',
     eligibilityBody:
-      'Your credential proves which country you take part from, and that you are an adult. Nothing else: not your name, not your document, not your face.',
+      'The pass represents country and adult status. It is separate from your Passport account and your physical passport.',
     demoBanner: 'DEMO · NO NFC READ OR REAL PROOF',
     demoBannerBody:
-      'This environment reads no document and generates no real proof. Pick a country and we will issue a synthetic credential so you can walk the experience.',
+      'This environment reads no document and generates no real proof. Pick France or Argentina and we will issue a simulated pass so you can walk the experience.',
     evidenceWhy: 'How does this work with a real document?',
     evidenceSteps: [
       ['Request prepared', 'A temporary, single-use link is created with this browser.'],
@@ -281,21 +281,21 @@ const copy = {
       ],
     ],
     countryLabel: 'Which country are you taking part from?',
-    countrySearch: 'Search any country',
+    countrySearch: 'Search France or Argentina',
     countryList: 'Available countries',
-    countrySuggested: 'Pick one, or search all 249 countries in the world.',
+    countrySuggested: 'The pilot begins with France and Argentina.',
     countryEmpty: 'No country matched. Try another name or its code.',
-    createCredential: 'Create my credential',
+    createCredential: 'Create my simulated pass',
 
-    successTitle: 'Your credential is ready',
+    successTitle: 'Your eligibility pass is ready',
     successBody: 'You can now see which consultations are open to you and cast a test vote.',
-    successMark: 'Credential created',
+    successMark: 'Pass created',
     country: 'Test country',
     age: 'Age class',
     issuer: 'Issuer',
     issuerValue: 'CICO demo · test',
     dashboard: 'See the consultations',
-    privacy: 'Your document, voting secret, and choice do not appear in this credential.',
+    privacy: 'This simulated pass contains no document or voting choice.',
 
     unavailableTitle: 'The credential is not connected yet',
     unavailableBody:
@@ -306,7 +306,7 @@ const copy = {
     holderBindingVerified:
       'Holder binding verified for this session. We do not display its bytes or treat it as an eligibility claim.',
     holderBindingUnsupported:
-      'This Passport build does not expose a verified holder binding. The session remains separate from any credential.',
+      'This Passport build does not yet expose the link required for real eligibility. The demo keeps the account and pass separate.',
     mascotWaving: 'Capybara waving hello',
     mascotReading: 'Capybara reading a book',
     mascotThinking: 'Capybara thinking',
@@ -621,6 +621,8 @@ export function UnifiedPassportOnboarding({
                 searchPlaceholder={t.countrySearch}
                 listLabel={t.countryList}
                 suggested={SUGGESTED_COUNTRIES}
+                allowed={SUGGESTED_COUNTRIES}
+                searchable={false}
                 suggestedLabel={t.countrySuggested}
                 emptyLabel={t.countryEmpty}
               />

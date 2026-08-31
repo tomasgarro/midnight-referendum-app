@@ -148,8 +148,8 @@
 .chrome-nav {
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-1);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
   padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
   background: var(--ground);
   border-top: 1px solid var(--line);
@@ -159,16 +159,41 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-height: 52px;
-  padding: 6px 4px;
+  min-height: 58px;
+  min-width: 0;
+  padding: 6px 1px;
   border: 0;
   border-radius: var(--r-input);
   background: transparent;
   color: var(--ink-muted);
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   cursor: pointer;
+}
+.chrome-nav__icon {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 27px;
+}
+.chrome-nav__item--verify {
+  position: relative;
+  color: var(--ink);
+}
+.chrome-nav__item--verify .chrome-nav__icon {
+  width: 50px;
+  height: 50px;
+  margin-top: -25px;
+  border: 4px solid var(--ground);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.chrome-nav__item--verify:active .chrome-nav__icon {
+  transform: scale(0.96);
 }
 .chrome-nav__item:focus-visible {
   outline: 2px solid var(--accent);

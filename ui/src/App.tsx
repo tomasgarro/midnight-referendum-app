@@ -27,13 +27,18 @@ import {
 } from '@/integration/preview';
 import { deriveProfileId, deriveReceiptProfileKey } from '@/integration/profile';
 import { rarimoIsoCountryMapper } from '@/integration/rarimo-country-mapper';
-import { loadPassportReceipts, savePassportReceipt } from '@/integration/receipt-store';
+import {
+  clearPassportReceipts,
+  loadPassportReceipts,
+  savePassportReceipt,
+} from '@/integration/receipt-store';
 import {
   MidnightProvidersProvider,
   RELAYER_MODE,
   useMidnightProviders,
 } from '@/providers/midnight-providers';
 import { WalletProvider } from '@/providers/wallet-context';
+import { ActivityView } from '@/views/ActivityView';
 import {
   APP_MODE,
   APP_NETWORK_LABEL,
@@ -45,7 +50,7 @@ import {
   type Tab,
 } from '@/views/app-runtime';
 import { AppHeader, BottomNav } from '@/views/Chrome';
-import { ExploreView } from '@/views/ExploreView';
+import { CredentialsView } from '@/views/CredentialsView';
 import { PolicyDetailView } from '@/views/PolicyDetailView';
 import { ProfileView } from '@/views/ProfileView';
 import {
@@ -80,7 +85,7 @@ function CivicApp() {
   const initialOnboardingRequired = shouldShowFirstRunOnboarding();
   // Spanish is the product's default; an explicit persisted choice still wins.
   const [locale, setLocale] = useState<CicoLocale>(() => detectLocale('es-AR'));
-  const [tab, setTab] = useState<Tab>('votes');
+  const [tab, setTab] = useState<Tab>('discover');
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
   const [onboardingRequired, setOnboardingRequired] = useState(initialOnboardingRequired);
@@ -91,6 +96,7 @@ function CivicApp() {
   const [activePollId, setActivePollId] = useState(APP_MODE === 'demo' ? DEFAULT_POLL.id : '');
   const [receipt, setReceipt] = useState<VoteReceipt | null>(null);
   const [receipts, setReceipts] = useState<VoteReceipt[]>([]);
+  const [receiptProfileKey, setReceiptProfileKey] = useState('');
   const [credential, setCredential] = useState<DemoCredentialSummary | null>(null);
   const [passportSession, setPassportSession] = useState<CivicPassportSession | null>(null);
   const [passportError, setPassportError] = useState<string | null>(null);
@@ -111,7 +117,7 @@ function CivicApp() {
     window.sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1');
     setOnboardingRequired(false);
     setPassportJourneyOpen(false);
-    setTab('votes');
+    setTab('discover');
   };
   const replayOnboarding = () => {
     setFlowStage(null);
@@ -247,11 +253,12 @@ function CivicApp() {
         active = false;
       };
     }
-    void deriveReceiptProfileKey(passportSession).then((receiptProfileKey) =>
-      loadPassportReceipts(receiptProfileKey).then((stored) => {
+    void deriveReceiptProfileKey(passportSession).then((nextReceiptProfileKey) => {
+      setReceiptProfileKey(nextReceiptProfileKey);
+      return loadPassportReceipts(nextReceiptProfileKey).then((stored) => {
         if (active) setReceipts(stored);
-      }),
-    );
+      });
+    });
     return () => {
       active = false;
     };
@@ -417,23 +424,41 @@ function CivicApp() {
     setFlowStage('receipt');
   };
 
+  const lockAndDisconnect = async () => {
+    await passportSessionPort.disconnect();
+    setPassportSession(null);
+    setPassportError(null);
+  };
+  const removeLocalData = async () => {
+    const credentialPort = passportJourneyPorts.credential;
+    if (credentialPort) await credentialPort.clearCredential();
+    if (receiptProfileKey) await clearPassportReceipts(receiptProfileKey);
+    await passportSessionPort.disconnect();
+    setCredential(null);
+    setReceipts([]);
+    setReceipt(null);
+    setPassportSession(null);
+    setReceiptProfileKey('');
+  };
+
   const currentTabContent =
-    tab === 'explore' ? (
-      <ExploreView
-        polls={polls}
-        publicContractAddress={runtimeContractAddress}
-        onOpenPolicy={setPolicyDetailId}
+    tab === 'credentials' ? (
+      <CredentialsView
+        credentials={credential ? [credential] : []}
+        onVerify={() => setPassportJourneyOpen(true)}
         locale={locale}
       />
-    ) : tab === 'profile' ? (
+    ) : tab === 'activity' ? (
+      <ActivityView polls={polls} receipts={receipts} locale={locale} />
+    ) : tab === 'passport' ? (
       <ProfileView
-        polls={polls}
         passportSession={passportSession}
         profileId={profileId}
-        receipts={receipts}
         walletStatus={walletStatus}
         onConnectPassport={() => void connectPassport()}
         onReplayOnboarding={replayOnboarding}
+        onLockAndDisconnect={() => void lockAndDisconnect()}
+        onRemoveLocalData={removeLocalData}
         locale={locale}
         onLocaleChange={changeLocale}
       />
@@ -517,7 +542,7 @@ function CivicApp() {
               onConfirm={() => void confirmVote()}
               onViewReceipt={() => {
                 setFlowStage(null);
-                setTab('profile');
+                setTab('activity');
               }}
               walletStatus={walletStatus}
               previewError={previewError}
@@ -542,6 +567,11 @@ function CivicApp() {
       {!passportJourneyOpen && !flowStage && !selectedPolicy ? (
         <BottomNav
           tab={tab}
+          onVerify={() => {
+            setFlowStage(null);
+            setPolicyDetailId(null);
+            setPassportJourneyOpen(true);
+          }}
           onChange={(nextTab) => {
             setPassportJourneyOpen(false);
             navigate(nextTab);
@@ -561,7 +591,7 @@ function CivicApp() {
             onClick={() => {
               setReceiptToastVisible(false);
               setFlowStage(null);
-              setTab('profile');
+              setTab('activity');
             }}
           >
             <CheckCircle size={18} />{' '}

@@ -1,154 +1,124 @@
 import {
   ArrowUpRight,
+  Check,
+  Copy,
   Fingerprint,
-  Receipt,
+  LockKey,
   SealCheck,
   Translate,
+  Trash,
   Wallet as WalletIcon,
 } from '@phosphor-icons/react';
 import type { CivicPassportSession } from 'midnight-referendum-api';
-import {
-  Button,
-  Callout,
-  Card,
-  Display,
-  EmptyState,
-  Eyebrow,
-  StatGroup,
-  StatRow,
-} from '@/components/system';
+import { useState } from 'react';
+import { Button, Card, Display, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
-import { CHAIN_RUNTIME_ENABLED, networkLabel } from '@/views/app-runtime';
-import { CopyReceiptButton } from '@/views/CopyReceiptButton';
-import { localizePoll, type Poll, type VoteReceipt } from '@/views/poll-model';
-import { ReceiptVerifier } from '@/views/ReceiptVerifier';
+import { networkLabel } from '@/views/app-runtime';
 import './profile-view.css';
-
-/**
- * Your identity, your receipts, and the app's settings.
- *
- * This was five cards, each with an eyebrow, an h2, a Phosphor icon and a
- * paragraph, to carry what is really a settings list: three facts about the
- * profile, two links, and a list of receipts. It is now the pattern every
- * settings screen in the reference set uses -- an uppercase group label on the
- * ground, then a run of rows -- which is the same information in roughly a
- * third of the height.
- *
- * The language <select> moved here from the app header. A control used once,
- * if ever, does not belong in chrome that is on screen for every second of
- * every session; the header now carries identity and nothing else.
- *
- * The .night domains card was an icon, an eyebrow, an h2, a paragraph, a link
- * and a small print line for something that is not built yet. It is one row
- * that says so.
- */
 
 const COPY = {
   es: {
-    eyebrow: 'Mi identidad',
-    fallbackName: 'Tu espacio ciudadano',
-    lead: 'Tus comprobantes viven acá. Tu identidad Passport nunca se convierte en tu voto.',
-    connect: 'Conectar Passport',
-    profile: 'Tu perfil',
-    identifier: 'Identificador',
-    passport: 'Passport',
-    connected: 'conectado',
-    stateConnected: 'Passport conectado',
-    statePending: 'Passport sin conectar',
-    pendingM: 'pendiente',
-    wallet: 'Wallet',
-    walletConnected: 'conectada',
-    walletPending: 'no conectada',
-    identifierNote:
-      'El identificador es solo de presentación. No participa en la elegibilidad, ni en el compromiso, ni en la marca anónima.',
+    fallbackName: 'Tu Passport ciudadano',
+    stateConnected: 'Midnight Passport conectado',
+    statePending: 'Midnight Passport sin conectar',
+    lead: 'Tu cuenta para esta experiencia Preview. La elegibilidad y los comprobantes viven en secciones separadas.',
+    connect: 'Conectar Midnight Passport',
+    account: 'Cuenta Midnight Passport',
+    address: 'Dirección Preview',
+    unavailable: 'Passport no devolvió una dirección',
+    copyAddress: 'Copiar dirección',
+    network: 'Red',
+    passportStatus: 'Estado',
+    connected: 'Conectado',
+    wallet: 'Wallet de desarrollo',
+    walletConnected: 'Conectada',
     preferences: 'Preferencias',
     language: 'Idioma',
-    help: 'Ayuda',
-    review: 'Revisar el recorrido',
-    reviewHint: 'Volvé a la explicación de Passport sin cambiar tu identidad.',
+    help: 'Ayuda y seguridad',
+    review: 'Revisar cómo funciona',
+    reviewHint: 'Passport, documento físico y pase de elegibilidad, paso a paso.',
     domains: 'Identidad .night',
-    domainsHint: 'Registrar un alias requiere wallet y DUST; todavía no se hace acá.',
-    receipts: 'Mis comprobantes',
-    privacy:
-      'Estos comprobantes se guardan cifrados solo en este dispositivo; la red nunca puede vincularlos con vos.',
-    emptyTitle: 'Sin comprobantes todavía',
-    empty: 'Cuando votes, tu comprobante aparece acá.',
-    consultation: 'Consulta ciudadana',
-    confirmedOn: 'Confirmado en',
-    simulatedOn: 'Simulado en',
+    domainsHint: 'Función externa de Midnight; no cambia tu elegibilidad.',
+    session: 'Sesión en este dispositivo',
+    lock: 'Bloquear y conservar datos',
+    lockHint: 'Cierra la sesión; conserva pases y comprobantes cifrados localmente.',
+    remove: 'Eliminar datos locales',
+    removeHint:
+      'Borra de este navegador el pase y los comprobantes. No elimina tu cuenta Passport.',
+    removeConfirm: 'Confirmar eliminación local',
+    cancel: 'Cancelar',
   },
   en: {
-    eyebrow: 'My identity',
-    fallbackName: 'Your civic space',
-    lead: 'Your receipts live here. Your Passport identity never becomes your vote.',
-    connect: 'Connect Passport',
-    profile: 'Your profile',
-    identifier: 'Identifier',
-    passport: 'Passport',
-    connected: 'connected',
-    stateConnected: 'Passport connected',
-    statePending: 'Passport not connected',
-    pendingM: 'pending',
-    wallet: 'Wallet',
-    walletConnected: 'connected',
-    walletPending: 'not connected',
-    identifierNote:
-      'The identifier is for presentation only. It is not part of eligibility, the commitment, or the anonymous marker.',
+    fallbackName: 'Your citizen Passport',
+    stateConnected: 'Midnight Passport connected',
+    statePending: 'Midnight Passport not connected',
+    lead: 'Your account for this Preview experience. Eligibility and receipts live in separate sections.',
+    connect: 'Connect Midnight Passport',
+    account: 'Midnight Passport account',
+    address: 'Preview address',
+    unavailable: 'Passport did not return an address',
+    copyAddress: 'Copy address',
+    network: 'Network',
+    passportStatus: 'Status',
+    connected: 'Connected',
+    wallet: 'Developer wallet',
+    walletConnected: 'Connected',
     preferences: 'Preferences',
     language: 'Language',
-    help: 'Help',
-    review: 'Review the journey',
-    reviewHint: 'Revisit the Passport explanation without changing your identity.',
+    help: 'Help and security',
+    review: 'Review how it works',
+    reviewHint: 'Passport, physical document, and eligibility pass, step by step.',
     domains: '.night identity',
-    domainsHint: 'Registering an alias needs a wallet and DUST; it does not happen here yet.',
-    receipts: 'My receipts',
-    privacy:
-      'These receipts are stored encrypted on this device only; the network can never link them to you.',
-    emptyTitle: 'No receipts yet',
-    empty: 'When you vote, your receipt appears here.',
-    consultation: 'Civic consultation',
-    confirmedOn: 'Confirmed on',
-    simulatedOn: 'Simulated on',
+    domainsHint: 'An external Midnight feature; it does not change eligibility.',
+    session: 'Session on this device',
+    lock: 'Lock and keep data',
+    lockHint: 'Ends the session while keeping locally encrypted passes and receipts.',
+    remove: 'Remove local data',
+    removeHint:
+      'Deletes the pass and receipts from this browser. It does not delete your Passport account.',
+    removeConfirm: 'Confirm local deletion',
+    cancel: 'Cancel',
   },
 } as const;
 
 export interface ProfileViewProps {
-  readonly polls: readonly Poll[];
   readonly passportSession: CivicPassportSession | null;
   readonly profileId: string;
-  readonly receipts: readonly VoteReceipt[];
   readonly walletStatus: string;
   readonly onConnectPassport: () => void;
   readonly onReplayOnboarding: () => void;
+  readonly onLockAndDisconnect: () => void;
+  readonly onRemoveLocalData: () => Promise<void>;
   readonly locale: CicoLocale;
   readonly onLocaleChange: (locale: CicoLocale) => void;
 }
 
 export function ProfileView({
-  polls,
   passportSession,
   profileId,
-  receipts,
   walletStatus,
   onConnectPassport,
   onReplayOnboarding,
+  onLockAndDisconnect,
+  onRemoveLocalData,
   locale,
   onLocaleChange,
 }: ProfileViewProps) {
   const copy = COPY[locale];
+  const [copied, setCopied] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const address = passportSession?.accountAddress ?? null;
+  const displayId = address ?? (passportSession ? profileId : copy.unavailable);
 
-  const receiptTitle = (receipt: VoteReceipt): string => {
-    if (!receipt.pollId) return copy.consultation;
-    const found = polls.find((poll) => poll.id === receipt.pollId);
-    return found ? localizePoll(found, locale).title : copy.consultation;
+  const copyIdentifier = async () => {
+    if (!passportSession) return;
+    await navigator.clipboard.writeText(displayId);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
   };
 
   return (
     <main className="profile">
-      {/* An identity block rather than a page title. The reference profiles all
-          lead with who you are and what state you are in; this one led with an
-          eyebrow and a display heading, which told the reader the name of the
-          screen they had just tapped. */}
       <header className="profile__head">
         <div className="profile__identity">
           <span className="profile__avatar" aria-hidden="true">
@@ -163,41 +133,48 @@ export function ProfileView({
           </div>
         </div>
         <p className="profile__lead">{copy.lead}</p>
-        {passportSession ? null : (
-          <Button variant="secondary" onClick={onConnectPassport}>
-            {copy.connect}
-          </Button>
-        )}
+        {!passportSession ? <Button onClick={onConnectPassport}>{copy.connect}</Button> : null}
       </header>
 
-      <Card>
-        <StatGroup label={copy.profile}>
-          <StatRow
-            label={copy.identifier}
-            value={<code className="profile__code">{profileId}</code>}
-          />
-          <StatRow label={copy.passport} value={passportSession ? copy.connected : copy.pendingM} />
-          {/* In demo there is no wallet anywhere in the product, so this row
-              reported a permanent "no conectada" for a thing the reader was
-              never offered and cannot connect. It appears where a wallet is
-              actually part of the path. */}
-          {CHAIN_RUNTIME_ENABLED ? (
-            <StatRow
-              label={copy.wallet}
-              value={walletStatus === 'connected' ? copy.walletConnected : copy.walletPending}
-            />
-          ) : null}
-        </StatGroup>
-      </Card>
-      <Callout>{copy.identifierNote}</Callout>
+      <section className="profile__section" aria-labelledby="passport-account-title">
+        <Eyebrow>{copy.account}</Eyebrow>
+        <h2 className="sr-only" id="passport-account-title">
+          {copy.account}
+        </h2>
+        <Card className="profile__account">
+          <div className="profile__account-row">
+            <span>{copy.address}</span>
+            <button type="button" onClick={() => void copyIdentifier()} disabled={!passportSession}>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              <span className="sr-only">{copy.copyAddress}</span>
+            </button>
+          </div>
+          <code>{displayId}</code>
+          <dl>
+            <div>
+              <dt>{copy.network}</dt>
+              <dd>{networkLabel(locale)}</dd>
+            </div>
+            <div>
+              <dt>{copy.passportStatus}</dt>
+              <dd>{passportSession ? copy.connected : '—'}</dd>
+            </div>
+            {walletStatus === 'connected' ? (
+              <div>
+                <dt>{copy.wallet}</dt>
+                <dd>{copy.walletConnected}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </Card>
+      </section>
 
       <section className="profile__section">
         <Eyebrow>{copy.preferences}</Eyebrow>
         <Card className="profile__rows" flush>
           <div className="profile__row">
             <label className="profile__row-label" htmlFor="profile-language">
-              <Translate size={18} aria-hidden="true" />
-              {copy.language}
+              <Translate size={18} aria-hidden="true" /> {copy.language}
             </label>
             <select
               id="profile-language"
@@ -243,51 +220,48 @@ export function ProfileView({
         </Card>
       </section>
 
-      <section className="profile__section" aria-labelledby="profile-history-title">
-        <Eyebrow>{`${copy.receipts} · ${networkLabel(locale)}`}</Eyebrow>
-        <h2 className="sr-only" id="profile-history-title">
-          {copy.receipts}
-        </h2>
-        <p className="profile__hint">{copy.privacy}</p>
-        {receipts.length ? (
-          <ul className="profile__receipts">
-            {receipts.map((receipt) => (
-              <li key={receipt.id}>
-                <Card className="profile__receipt">
-                  <strong className="profile__receipt-title">{receiptTitle(receipt)}</strong>
-                  <span className="profile__receipt-meta">
-                    {new Date(receipt.createdAt).toLocaleDateString(
-                      locale === 'es' ? 'es-AR' : 'en-GB',
-                    )}{' '}
-                    ·{' '}
-                    {receipt.status === 'confirmed'
-                      ? `${copy.confirmedOn} ${receipt.network}`
-                      : `${copy.simulatedOn} ${receipt.network}`}
-                  </span>
-                  <span className="profile__receipt-actions">
-                    <code className="profile__code">{receipt.id}</code>
-                    <CopyReceiptButton receiptId={receipt.id} locale={locale} />
-                    {receipt.explorerUrl ? (
-                      <a
-                        className="profile__link"
-                        href={receipt.explorerUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <ArrowUpRight size={16} aria-label={`${receipt.id} · explorer`} />
-                      </a>
-                    ) : null}
-                  </span>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState icon={<Receipt size={26} />} title={copy.emptyTitle} message={copy.empty} />
-        )}
+      <section className="profile__section">
+        <Eyebrow>{copy.session}</Eyebrow>
+        <Card className="profile__rows" flush>
+          <button
+            type="button"
+            className="profile__row profile__row--action"
+            onClick={onLockAndDisconnect}
+            disabled={!passportSession}
+          >
+            <LockKey size={18} aria-hidden="true" />
+            <span>
+              <strong>{copy.lock}</strong>
+              <small>{copy.lockHint}</small>
+            </span>
+          </button>
+          {!confirmRemove ? (
+            <button
+              type="button"
+              className="profile__row profile__row--action profile__row--danger"
+              onClick={() => setConfirmRemove(true)}
+            >
+              <Trash size={18} aria-hidden="true" />
+              <span>
+                <strong>{copy.remove}</strong>
+                <small>{copy.removeHint}</small>
+              </span>
+            </button>
+          ) : (
+            <div className="profile__remove-confirm" role="alert">
+              <p>{copy.removeHint}</p>
+              <div>
+                <Button variant="secondary" size="sm" onClick={() => setConfirmRemove(false)}>
+                  {copy.cancel}
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => void onRemoveLocalData()}>
+                  {copy.removeConfirm}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
       </section>
-
-      <ReceiptVerifier receipts={receipts} locale={locale} />
     </main>
   );
 }
