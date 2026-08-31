@@ -517,6 +517,13 @@ button:disabled {
   body {
     padding: 34px 20px;
   }
+  /* The shell is a full-viewport column, so the frame padding has to come out
+     of its height or the column overflows by exactly that much and takes the
+     bottom bar's labels off-screen with it. */
+  .app-shell {
+    height: calc(100dvh - 68px);
+    min-height: calc(100dvh - 68px);
+  }
 }
 
 @media (max-width: 375px) {

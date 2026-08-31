@@ -1,11 +1,4 @@
-import {
-  ArrowRight,
-  GlobeHemisphereWest,
-  List,
-  MapPin,
-  MapTrifold,
-  ShieldCheck,
-} from '@phosphor-icons/react';
+import { ArrowRight, GlobeHemisphereWest, MapPin, ShieldCheck } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { Button, Card, Display, EmptyState, Eyebrow } from '@/components/system';
 import { CountryFlag } from '@/components/system/CountryFlag';
@@ -30,10 +23,7 @@ const COPY = {
     world: 'Global',
     france: 'Francia',
     argentina: 'Argentina',
-    map: 'Mapa',
-    list: 'Lista',
     scopeLabel: 'Alcance de las consultas',
-    viewLabel: 'Vista de descubrimiento',
     globalScope: 'Consultas globales',
     countryScope: 'Consultas en',
     browsing: 'Estás explorando',
@@ -56,10 +46,7 @@ const COPY = {
     world: 'Global',
     france: 'France',
     argentina: 'Argentina',
-    map: 'Map',
-    list: 'List',
     scopeLabel: 'Consultation scope',
-    viewLabel: 'Discovery view',
     globalScope: 'Global consultations',
     countryScope: 'Consultations in',
     browsing: 'You are exploring',
@@ -111,7 +98,6 @@ export function VotesView({
 }: VotesViewProps) {
   const copy = COPY[locale];
   const [scope, setScope] = useState<DiscoveryScope>({ kind: 'world' });
-  const [view, setView] = useState<'map' | 'list'>('map');
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
@@ -159,57 +145,15 @@ export function VotesView({
         })}
       </div>
 
-      <div className="votes__view-switch" role="tablist" aria-label={copy.viewLabel}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'map'}
-          className={view === 'map' ? 'active' : ''}
-          onClick={() => setView('map')}
-        >
-          <MapTrifold size={17} /> {copy.map}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'list'}
-          className={view === 'list' ? 'active' : ''}
-          onClick={() => setView('list')}
-        >
-          <List size={17} /> {copy.list}
-        </button>
-      </div>
-
-      {view === 'map' ? (
-        <section className="discover-map" aria-label={`${copy.browsing} ${countryLabel}`}>
-          <div className="discover-map__grid" aria-hidden="true" />
-          <button
-            type="button"
-            className="discover-map__pin discover-map__pin--fr"
-            data-active={scope.kind === 'country' && scope.code === 'FR'}
-            onClick={() => setScope({ kind: 'country', code: 'FR' })}
-          >
-            <span />
-            FR
-          </button>
-          <button
-            type="button"
-            className="discover-map__pin discover-map__pin--ar"
-            data-active={scope.kind === 'country' && scope.code === 'AR'}
-            onClick={() => setScope({ kind: 'country', code: 'AR' })}
-          >
-            <span />
-            AR
-          </button>
-          <div className="discover-map__caption">
-            <MapPin size={17} />
-            <span>
-              <strong>{countryLabel}</strong>
-              <small>{copy.notEligibility}</small>
-            </span>
-          </div>
-        </section>
-      ) : null}
+      {/* The scope control above is the only way to change scope. There used to
+          be a second segmented control beside it and a third set of pins on a
+          decorative grid below, all doing the same job. */}
+      <p className="votes__scope-note">
+        <MapPin size={15} aria-hidden="true" />
+        <span>
+          {copy.browsing} <strong>{countryLabel}</strong>. {copy.notEligibility}
+        </span>
+      </p>
 
       <section className="votes__results" aria-labelledby="discover-results-title">
         <div className="votes__results-head">

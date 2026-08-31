@@ -17,7 +17,6 @@
   font-family: var(--font-body);
   min-width: 0;
 }
-
 .votes__head {
   display: flex;
   flex-direction: column;
@@ -34,151 +33,10 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
 }
-.votes__scope button,
-.votes__view-switch button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: var(--ink-muted);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
-}
 .votes__scope button.active {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-ink);
-}
-.votes__scope button:focus-visible,
-.votes__view-switch button:focus-visible,
-.discover-map__pin:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.votes__view-switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--r-pill);
-  background: var(--surface-sunken);
-}
-.votes__view-switch button {
-  border: 0;
-  background: transparent;
-}
-.votes__view-switch button.active {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgba(26, 26, 24, 0.08);
-}
-.discover-map {
-  position: relative;
-  min-height: 220px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  background:
-    radial-gradient(
-      circle at 38% 35%,
-      color-mix(in srgb, var(--accent) 10%, transparent) 0 20%,
-      transparent 21%
-    ),
-    var(--surface);
-}
-.discover-map__grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.5;
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, black, transparent 86%);
-}
-.discover-map::before,
-.discover-map::after {
-  content: "";
-  position: absolute;
-  border: 1px solid var(--line-strong);
-  border-radius: 52% 48% 58% 42%;
-  background: var(--surface-sunken);
-  opacity: 0.7;
-  transform: rotate(-12deg);
-}
-.discover-map::before {
-  top: 25px;
-  left: 58px;
-  width: 118px;
-  height: 86px;
-}
-.discover-map::after {
-  top: 58px;
-  right: 50px;
-  width: 104px;
-  height: 112px;
-}
-.discover-map__pin {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  min-width: 44px;
-  min-height: 44px;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font-size: 10px;
-  font-weight: 800;
-}
-.discover-map__pin span {
-  display: block;
-  width: 15px;
-  height: 15px;
-  border: 3px solid var(--surface);
-  border-radius: 50%;
-  background: var(--ink-muted);
-  box-shadow: 0 0 0 1px var(--line-strong);
-}
-.discover-map__pin[data-active="true"] span {
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash);
-}
-.discover-map__pin--fr {
-  top: 53px;
-  right: 105px;
-}
-.discover-map__pin--ar {
-  top: 126px;
-  left: 122px;
-}
-.discover-map__caption {
-  position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-3);
-  left: var(--space-3);
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--r-input);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: var(--shadow-card);
-}
-.discover-map__caption > span {
-  display: grid;
-  gap: 2px;
-}
-.discover-map__caption small {
-  color: var(--ink-muted);
 }
 .votes__results,
 .votes__results-head {
@@ -204,7 +62,6 @@
   font-weight: 700;
   text-align: right;
 }
-
 /* ---- credential not yet prepared ---- */
 .votes__prepare-title {
   font-family: var(--font-display);
@@ -222,7 +79,6 @@
   line-height: 1.5;
   color: var(--ink-muted);
 }
-
 /* ---- scope switch ----
    A segmented control, not two chips: the two scopes are peers and exactly one
    is active, which is what a segmented control means. */
@@ -254,7 +110,6 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-
 /* ---- country picker ---- */
 .votes__country {
   display: flex;
@@ -281,7 +136,6 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-
 /* ---- the list ---- */
 .votes__list {
   list-style: none;
@@ -291,7 +145,6 @@
   flex-direction: column;
   gap: var(--space-3);
 }
-
 .poll {
   display: flex;
   flex-direction: column;
@@ -363,4 +216,25 @@
   font-size: 12px;
   line-height: 1.4;
   color: var(--ink-muted);
+}
+
+/* One line under the scope control, stating what browsing means. It replaces a
+   decorative grid with two floating pins that looked like a map and carried no
+   geography at all. */
+.votes__scope-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.votes__scope-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.votes__scope-note strong {
+  color: var(--ink);
+  font-weight: 650;
 }

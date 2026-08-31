@@ -34,6 +34,13 @@ import {
   savePassportReceipt,
 } from '@/integration/receipt-store';
 import {
+  applyTheme,
+  detectThemePreference,
+  persistThemePreference,
+  type ThemePreference,
+  watchSystemTheme,
+} from '@/integration/theme';
+import {
   MidnightProvidersProvider,
   RELAYER_MODE,
   useMidnightProviders,
@@ -86,6 +93,7 @@ function CivicApp() {
   const initialOnboardingRequired = shouldShowFirstRunOnboarding();
   // Spanish is the product's default; an explicit persisted choice still wins.
   const [locale, setLocale] = useState<CicoLocale>(() => detectLocale('es-AR'));
+  const [theme, setTheme] = useState<ThemePreference>(detectThemePreference);
   const [tab, setTab] = useState<Tab>('discover');
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
@@ -109,6 +117,15 @@ function CivicApp() {
   const [passportError, setPassportError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [receiptToastVisible, setReceiptToastVisible] = useState(false);
+  useEffect(() => {
+    applyTheme(theme);
+    if (theme !== 'system') return;
+    return watchSystemTheme(() => applyTheme('system'));
+  }, [theme]);
+  const changeTheme = (next: ThemePreference) => {
+    persistThemePreference(next);
+    setTheme(next);
+  };
   const changeLocale = (nextLocale: CicoLocale) => {
     setLocale(nextLocale);
     persistLocale(nextLocale);
@@ -475,6 +492,8 @@ function CivicApp() {
         onRemoveLocalData={removeLocalData}
         locale={locale}
         onLocaleChange={changeLocale}
+        theme={theme}
+        onThemeChange={changeTheme}
       />
     ) : (
       <VotesView

@@ -4,6 +4,7 @@ import {
   Copy,
   Fingerprint,
   LockKey,
+  Palette,
   SealCheck,
   Translate,
   Trash,
@@ -13,6 +14,7 @@ import type { CivicPassportSession } from 'midnight-referendum-api';
 import { useState } from 'react';
 import { Button, Card, Display, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
+import type { ThemePreference } from '@/integration/theme';
 import { networkLabel } from '@/views/app-runtime';
 import './profile-view.css';
 
@@ -34,6 +36,10 @@ const COPY = {
     walletConnected: 'Conectada',
     preferences: 'Preferencias',
     language: 'Idioma',
+    theme: 'Apariencia',
+    themeSystem: 'Según el dispositivo',
+    themeLight: 'Crema',
+    themeDark: 'Oscuro',
     help: 'Ayuda y seguridad',
     review: 'Revisar cómo funciona',
     reviewHint: 'Passport, documento físico y pase de elegibilidad, paso a paso.',
@@ -65,6 +71,10 @@ const COPY = {
     walletConnected: 'Connected',
     preferences: 'Preferences',
     language: 'Language',
+    theme: 'Appearance',
+    themeSystem: 'Match device',
+    themeLight: 'Cream',
+    themeDark: 'Dark',
     help: 'Help and security',
     review: 'Review how it works',
     reviewHint: 'Passport, physical document, and eligibility pass, step by step.',
@@ -91,6 +101,8 @@ export interface ProfileViewProps {
   readonly onRemoveLocalData: () => Promise<void>;
   readonly locale: CicoLocale;
   readonly onLocaleChange: (locale: CicoLocale) => void;
+  readonly theme: ThemePreference;
+  readonly onThemeChange: (theme: ThemePreference) => void;
 }
 
 export function ProfileView({
@@ -103,6 +115,8 @@ export function ProfileView({
   onRemoveLocalData,
   locale,
   onLocaleChange,
+  theme,
+  onThemeChange,
 }: ProfileViewProps) {
   const copy = COPY[locale];
   const [copied, setCopied] = useState(false);
@@ -184,6 +198,21 @@ export function ProfileView({
             >
               <option value="es">Español</option>
               <option value="en">English</option>
+            </select>
+          </div>
+          <div className="profile__row">
+            <label className="profile__row-label" htmlFor="profile-theme">
+              <Palette size={18} aria-hidden="true" /> {copy.theme}
+            </label>
+            <select
+              id="profile-theme"
+              className="profile__select"
+              value={theme}
+              onChange={(event) => onThemeChange(event.target.value as ThemePreference)}
+            >
+              <option value="system">{copy.themeSystem}</option>
+              <option value="light">{copy.themeLight}</option>
+              <option value="dark">{copy.themeDark}</option>
             </select>
           </div>
         </Card>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../App';
@@ -90,10 +90,17 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Actividad' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Passport$/ })).toBeTruthy();
 
-    // Verify is reachable, but it is labelled as the thing it does rather than
-    // a place you can be, and it never becomes the current page.
+    // Verify is reachable, but it is not a peer of the tabs: it carries no
+    // visible label, it lives outside the nav, and it never becomes current.
+    // Inside the nav it told a screen reader there were five items of which
+    // only four could ever be the page.
+    const nav = screen.getByRole('navigation');
+    expect(within(nav).getAllByRole('button')).toHaveLength(4);
+
     const verify = screen.getByRole('button', { name: /Verificar · documento físico/ });
+    expect(nav.contains(verify)).toBe(false);
     expect(verify.getAttribute('aria-current')).toBeNull();
+    expect(verify.textContent).toBe('');
     expect(screen.queryByRole('button', { name: /^Verificar$/ })).toBeNull();
   });
 

@@ -145,10 +145,15 @@
 }
 
 /* ---- tab bar ---- */
+/* The bar and the action are siblings: the action overlaps the bar visually
+   without being one of its items. */
+.chrome-bar {
+  position: relative;
+}
 .chrome-nav {
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
   background: var(--ground);
@@ -177,23 +182,43 @@
   min-width: 32px;
   min-height: 27px;
 }
-.chrome-nav__item--verify {
-  position: relative;
-  color: var(--ink);
-}
-.chrome-nav__item--verify .chrome-nav__icon {
-  width: 50px;
-  height: 50px;
-  margin-top: -25px;
+/* Measured off the reference apps: a 60px circle protruding about a quarter of
+   its height, not half. The ground-coloured ring is what separates it from the
+   bar. It never takes a selected state, because it is not a place. */
+.chrome-verify {
+  position: absolute;
+  bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px) + 14px);
+  left: 50%;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  transform: translateX(-50%);
   border: 4px solid var(--ground);
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: var(--shadow-card);
+  cursor: pointer;
   transition: transform var(--dur-press) var(--ease-out);
 }
-.chrome-nav__item--verify:active .chrome-nav__icon {
-  transform: scale(0.96);
+.chrome-verify:active {
+  transform: translateX(-50%) scale(0.96);
+}
+.chrome-verify:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+/* The duration collapse alone left the press scale firing instantly rather than
+   not at all -- it is the one transform in the shell, and the guard missed it. */
+@media (prefers-reduced-motion: reduce) {
+  .chrome-verify,
+  .chrome-verify:active {
+    transform: translateX(-50%);
+    transition: none;
+  }
 }
 .chrome-nav__item:focus-visible {
   outline: 2px solid var(--accent);
@@ -260,6 +285,6 @@
    above `.chrome-header` and `.chrome-nav`, which is a descending-specificity
    cascade: it worked only because the descendant selectors are stronger. */
 .app-shell > .chrome-header,
-.app-shell > .chrome-nav {
+.app-shell > .chrome-bar {
   flex: none;
 }

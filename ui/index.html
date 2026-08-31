@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>midnight-referendum</title>
+    <!--
+      Stamp the theme before first paint. The dark palette is keyed on
+      data-theme alone, so without this a device set to dark would show the
+      cream ground for one frame and then swap.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('cico-theme');
+        } catch (error) {
+          stored = null;
+        }
+        var resolved =
+          stored === 'light' || stored === 'dark'
+            ? stored
+            : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.dataset.theme = resolved;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

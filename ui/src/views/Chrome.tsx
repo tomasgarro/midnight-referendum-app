@@ -102,39 +102,53 @@ export interface BottomNavProps {
 
 export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
   const copy = APP_COPY[locale];
+  const es = locale === 'es';
   const items = [
     { id: 'discover' as const, label: copy.nav.discover, Icon: GlobeHemisphereWest },
     { id: 'credentials' as const, label: copy.nav.credentials, Icon: IdentificationCard },
-    { id: 'verify' as const, label: copy.nav.verify, Icon: Scan, action: true },
     { id: 'activity' as const, label: copy.nav.activity, Icon: ClockCounterClockwise },
     { id: 'passport' as const, label: copy.nav.passport, Icon: UserCircle },
   ];
+  const verifyLabel = `${copy.nav.verify} · ${es ? 'documento físico' : 'physical document'}`;
   return (
-    <nav
-      className="chrome-nav"
-      aria-label={locale === 'es' ? 'Navegación principal' : 'Primary navigation'}
-    >
-      {items.map(({ id, label, Icon, action }) => (
-        <button
-          type="button"
-          key={id}
-          className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''} ${action ? 'chrome-nav__item--verify' : ''}`.trim()}
-          onClick={() => (action ? onVerify() : onChange(id as Tab))}
-          aria-current={!action && tab === id ? 'page' : undefined}
-          aria-label={
-            action
-              ? `${label} · ${locale === 'es' ? 'documento físico' : 'physical document'}`
-              : undefined
-          }
-        >
-          {/* Tab switching is met 100+ times a day, so it gets the platform
-              default and nothing else: no slide, no icon animation. */}
-          <span className="chrome-nav__icon">
-            <Icon size={action ? 25 : 22} weight={!action && tab === id ? 'fill' : 'regular'} />
-          </span>
-          <span>{label}</span>
-        </button>
-      ))}
-    </nav>
+    <div className="chrome-bar">
+      <nav className="chrome-nav" aria-label={es ? 'Navegación principal' : 'Primary navigation'}>
+        {items.map(({ id, label, Icon }) => (
+          <button
+            type="button"
+            key={id}
+            className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''}`.trim()}
+            onClick={() => onChange(id)}
+            aria-current={tab === id ? 'page' : undefined}
+          >
+            {/* Tab switching is met 100+ times a day, so it gets the platform
+                default and nothing else: no slide, no icon animation. */}
+            <span className="chrome-nav__icon">
+              <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
+            </span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+      {/*
+        Verify sits outside the nav, and carries no visible label.
+
+        It was the third of five buttons inside the same <nav>, which told a
+        screen reader there were five navigation items while only four could
+        ever be current. And a labelled raised circle reads as a fifth
+        destination styled loudly -- the exact meaning this shell removed.
+        Every reference app studied leaves the centre action unlabelled and
+        outside the tab group; the name lives in aria-label and the tooltip.
+      */}
+      <button
+        type="button"
+        className="chrome-verify"
+        onClick={onVerify}
+        aria-label={verifyLabel}
+        title={verifyLabel}
+      >
+        <Scan size={28} weight="regular" />
+      </button>
+    </div>
   );
 }
