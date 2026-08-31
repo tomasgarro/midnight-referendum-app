@@ -1,4 +1,11 @@
-import { ArrowUpRight } from '@phosphor-icons/react';
+import {
+  ArrowUpRight,
+  Fingerprint,
+  Receipt,
+  SealCheck,
+  Translate,
+  Wallet as WalletIcon,
+} from '@phosphor-icons/react';
 import type { CivicPassportSession } from 'midnight-referendum-api';
 import {
   Button,
@@ -11,7 +18,7 @@ import {
   StatRow,
 } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
-import { networkLabel } from '@/views/app-runtime';
+import { CHAIN_RUNTIME_ENABLED, networkLabel } from '@/views/app-runtime';
 import { CopyReceiptButton } from '@/views/CopyReceiptButton';
 import { localizePoll, type Poll, type VoteReceipt } from '@/views/poll-model';
 import { ReceiptVerifier } from '@/views/ReceiptVerifier';
@@ -46,6 +53,8 @@ const COPY = {
     identifier: 'Identificador',
     passport: 'Passport',
     connected: 'conectado',
+    stateConnected: 'Passport conectado',
+    statePending: 'Passport sin conectar',
     pendingM: 'pendiente',
     wallet: 'Wallet',
     walletConnected: 'conectada',
@@ -62,7 +71,8 @@ const COPY = {
     receipts: 'Mis comprobantes',
     privacy:
       'Estos comprobantes se guardan cifrados solo en este dispositivo; la red nunca puede vincularlos con vos.',
-    empty: 'Todavía no tenés comprobantes en este navegador.',
+    emptyTitle: 'Sin comprobantes todavía',
+    empty: 'Cuando votes, tu comprobante aparece acá.',
     consultation: 'Consulta ciudadana',
     confirmedOn: 'Confirmado en',
     simulatedOn: 'Simulado en',
@@ -76,6 +86,8 @@ const COPY = {
     identifier: 'Identifier',
     passport: 'Passport',
     connected: 'connected',
+    stateConnected: 'Passport connected',
+    statePending: 'Passport not connected',
     pendingM: 'pending',
     wallet: 'Wallet',
     walletConnected: 'connected',
@@ -92,7 +104,8 @@ const COPY = {
     receipts: 'My receipts',
     privacy:
       'These receipts are stored encrypted on this device only; the network can never link them to you.',
-    empty: 'You have no receipts in this browser yet.',
+    emptyTitle: 'No receipts yet',
+    empty: 'When you vote, your receipt appears here.',
     consultation: 'Civic consultation',
     confirmedOn: 'Confirmed on',
     simulatedOn: 'Simulated on',
@@ -132,9 +145,23 @@ export function ProfileView({
 
   return (
     <main className="profile">
+      {/* An identity block rather than a page title. The reference profiles all
+          lead with who you are and what state you are in; this one led with an
+          eyebrow and a display heading, which told the reader the name of the
+          screen they had just tapped. */}
       <header className="profile__head">
-        <Eyebrow>{copy.eyebrow}</Eyebrow>
-        <Display>{passportSession?.profile?.displayName ?? copy.fallbackName}</Display>
+        <div className="profile__identity">
+          <span className="profile__avatar" aria-hidden="true">
+            <Fingerprint size={26} weight="bold" />
+          </span>
+          <div className="profile__identity-copy">
+            <Display>{passportSession?.profile?.displayName ?? copy.fallbackName}</Display>
+            <span className="profile__state" data-on={Boolean(passportSession)}>
+              <SealCheck size={14} weight="bold" />
+              {passportSession ? copy.stateConnected : copy.statePending}
+            </span>
+          </div>
+        </div>
         <p className="profile__lead">{copy.lead}</p>
         {passportSession ? null : (
           <Button variant="secondary" onClick={onConnectPassport}>
@@ -150,10 +177,16 @@ export function ProfileView({
             value={<code className="profile__code">{profileId}</code>}
           />
           <StatRow label={copy.passport} value={passportSession ? copy.connected : copy.pendingM} />
-          <StatRow
-            label={copy.wallet}
-            value={walletStatus === 'connected' ? copy.walletConnected : copy.walletPending}
-          />
+          {/* In demo there is no wallet anywhere in the product, so this row
+              reported a permanent "no conectada" for a thing the reader was
+              never offered and cannot connect. It appears where a wallet is
+              actually part of the path. */}
+          {CHAIN_RUNTIME_ENABLED ? (
+            <StatRow
+              label={copy.wallet}
+              value={walletStatus === 'connected' ? copy.walletConnected : copy.walletPending}
+            />
+          ) : null}
         </StatGroup>
       </Card>
       <Callout>{copy.identifierNote}</Callout>
@@ -163,6 +196,7 @@ export function ProfileView({
         <Card className="profile__rows" flush>
           <div className="profile__row">
             <label className="profile__row-label" htmlFor="profile-language">
+              <Translate size={18} aria-hidden="true" />
               {copy.language}
             </label>
             <select
@@ -186,6 +220,7 @@ export function ProfileView({
             className="profile__row profile__row--action"
             onClick={onReplayOnboarding}
           >
+            <Fingerprint size={18} aria-hidden="true" />
             <span>
               <strong>{copy.review}</strong>
               <small>{copy.reviewHint}</small>
@@ -198,6 +233,7 @@ export function ProfileView({
             target="_blank"
             rel="noreferrer"
           >
+            <WalletIcon size={18} aria-hidden="true" />
             <span>
               <strong>{copy.domains}</strong>
               <small>{copy.domainsHint}</small>
@@ -247,7 +283,7 @@ export function ProfileView({
             ))}
           </ul>
         ) : (
-          <EmptyState message={copy.empty} />
+          <EmptyState icon={<Receipt size={26} />} title={copy.emptyTitle} message={copy.empty} />
         )}
       </section>
 

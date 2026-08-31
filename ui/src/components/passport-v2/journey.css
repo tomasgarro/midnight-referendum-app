@@ -1,0 +1,267 @@
+/*
+ * Journey screen styling, kept out of index.css on purpose.
+ *
+ * index.css is a 2,800-line legacy sheet mid-migration from the sky-blue
+ * palette to the warm-light tokens, and it already carries ~99 descending-
+ * specificity warnings. Appending new low-specificity rules to the end of it
+ * inherits that problem for no benefit: these rules belong to two components,
+ * so they live beside them and load with them, the way the view stylesheets
+ * already do.
+ */
+/* ===================== Journey screens (Passport v2) =====================
+ *
+ * The screen is the page now, not a card on a page. The old markup nested a
+ * `.unified-card` inside a `.page-content` inside the app shell, which drew
+ * two frames around every question and cost 32px of horizontal room on a
+ * 375px screen for the privilege. Content sits directly on the warm ground;
+ * the only boxed things are the pieces that are genuinely separate objects --
+ * the consent rows, the numbered lists, the credential summary.
+ */
+.unified-onboarding .journey-screen,
+.preview-journey .journey-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--space-5) 0 var(--space-8);
+}
+.journey-screen .capybara-mascot {
+  align-self: center;
+  margin-bottom: var(--space-4);
+}
+.journey-screen .sys-success {
+  margin-bottom: var(--space-3);
+}
+.journey-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 6.6vw, 30px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.journey-screen__title:focus-visible {
+  outline: 3px solid var(--accent-wash);
+  outline-offset: 4px;
+  border-radius: var(--space-1);
+}
+.unified-onboarding .journey-screen__body,
+.preview-journey .journey-screen__body {
+  margin: var(--space-3) 0 0;
+  max-width: 36rem;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+/* Actions are a single block at the end of the screen, so "what do I do
+   next" is answered in one place instead of wherever the markup happened to
+   put a button. */
+.journey-screen__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+.journey-screen__actions .passport-action-button {
+  margin-top: 0;
+}
+.unified-onboarding .journey-screen .passport-action-button.quiet,
+.preview-journey .journey-screen .passport-action-button.quiet {
+  min-height: 44px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+}
+.journey-field {
+  margin-top: var(--space-5);
+}
+
+/* The "why" disclosure: closed by default, quiet when closed, and never a
+   card -- an always-open explanation is what it replaces. */
+.journey-why {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.journey-why + .journey-why {
+  margin-top: 0;
+  border-top: 0;
+}
+.journey-why > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.journey-why > summary::-webkit-details-marker {
+  display: none;
+}
+.journey-why > summary::after {
+  content: "＋";
+  margin-left: auto;
+  font-size: 15px;
+  line-height: 1;
+}
+.journey-why[open] > summary::after {
+  content: "−";
+}
+.journey-why > div {
+  padding: 0 0 var(--space-4);
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.journey-why .unified-evidence-list {
+  margin-top: 0;
+}
+
+/* Demo truth, stated once, immediately above the action it qualifies. */
+.journey-demo-banner {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--r-input);
+  background: var(--warning-wash);
+}
+.journey-demo-banner strong {
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+.journey-demo-banner small {
+  color: #7f3f0c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Credential summary as rows, not one tinted slab.
+ *
+ * The slab put four label/value pairs on a single lavender ground where the
+ * only separation was line spacing, so "Argentina (AR)" and "18+" read as one
+ * paragraph. Each fact is its own row now, and they stagger in behind the
+ * success mark -- the one place in the journey where motion is earning
+ * something, because the reader has just finished a task and there is nothing
+ * for them to do while it plays. */
+.credential-summary-rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+}
+.credential-summary-rows > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  animation: credential-row-in 320ms var(--ease-out) both;
+}
+.credential-summary-rows > div:nth-child(1) {
+  animation-delay: 260ms;
+}
+.credential-summary-rows > div:nth-child(2) {
+  animation-delay: 330ms;
+}
+.credential-summary-rows > div:nth-child(3) {
+  animation-delay: 400ms;
+}
+.credential-summary-rows > div:nth-child(4) {
+  animation-delay: 470ms;
+}
+.credential-summary-rows dt {
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.credential-summary-rows dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+.credential-country {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+@keyframes credential-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .credential-summary-rows > div {
+    animation: none;
+  }
+}
+
+/* Success hero: the mascot, with the completion mark pinned to its corner. */
+/* The hero is sized to the mascot, not to the column, so the badge lands on
+   the mascot's corner instead of the far edge of the screen. */
+.journey-success-hero {
+  position: relative;
+  width: var(--success-hero-size, 168px);
+  margin: 0 auto var(--space-4);
+}
+.journey-success-hero .capybara-mascot {
+  margin-bottom: 0;
+}
+.journey-success-hero .sys-success {
+  position: absolute;
+  right: -10px;
+  bottom: 2px;
+  margin: 0;
+}
+
+/* The Preview journey shares the demo journey's screen grammar. */
+/* Same as the demo journey: the screen is the page, not a card on a page. */
+.preview-journey .passport-journey-card.unified-card {
+  padding: var(--space-5) 0 var(--space-8);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.preview-journey .unified-card h2 {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 6.6vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.preview-journey .unified-card > p:not(.eyebrow) {
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+.preview-journey .journey-why summary {
+  justify-content: space-between;
+}
+.preview-journey .passport-tutorial-transcript {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}

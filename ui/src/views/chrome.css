@@ -16,14 +16,11 @@
   display: flex;
   flex-direction: column;
   height: 100dvh;
+  min-height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   background: var(--ground);
   box-shadow: 0 0 42px rgba(26, 26, 24, 0.06);
-}
-.app-shell > .chrome-header,
-.app-shell > .chrome-nav {
-  flex: none;
 }
 /* Every route is either a plain <main> or a Screen. A <main> scrolls itself; a
    Screen holds its footer still and scrolls its body instead. */
@@ -232,4 +229,12 @@
 .receipt-toast-close:focus-visible {
   outline: 2px solid var(--surface);
   outline-offset: 2px;
+}
+
+/* The shell's own children, after the blocks that define them. These sat
+   above `.chrome-header` and `.chrome-nav`, which is a descending-specificity
+   cascade: it worked only because the descendant selectors are stronger. */
+.app-shell > .chrome-header,
+.app-shell > .chrome-nav {
+  flex: none;
 }

@@ -1,19 +1,18 @@
-import { Check } from '@phosphor-icons/react';
-import type { CivicPassportSession } from 'midnight-referendum-api';
+import { Check, X } from '@phosphor-icons/react';
 import {
   Button,
   Callout,
   Card,
   Display,
   Eyebrow,
+  JourneyProgress,
   Screen,
   Sheet,
   StatGroup,
   StatRow,
-  StepHeader,
+  SuccessMark,
 } from '@/components/system';
 import { WalletWidget } from '@/components/wallet-widget';
-import { countryName as getCountryName } from '@/integration/country-catalog';
 import type { CicoLocale } from '@/integration/locale';
 import { RELAYER_MODE } from '@/providers/midnight-providers';
 import { CHAIN_RUNTIME_ENABLED, type FlowStage, networkLabel } from '@/views/app-runtime';
@@ -22,13 +21,19 @@ import { type Choice, localizePoll, type Poll, type VoteReceipt } from '@/views/
 import './vote-flow.css';
 
 /**
- * Casting a vote: three steps and a confirmation.
+ * Casting a vote: one choice, a confirmation, and a receipt.
  *
- * The labelled FlowStepper is gone. It spent roughly a third of a 375px
- * screen drawing three pills that said "Entendé / Verificá / Votá" -- three
- * words the user could not act on, above the content they came for.
- * StepHeader states the same progress in one line and announces it in full
- * to a screen reader.
+ * It used to claim three steps. `verify` and `eligible` were the first two,
+ * and nothing in the app could reach them -- `startVote` sends a credentialled
+ * user directly to `choose` -- so the first screen a voter ever saw announced
+ * "Paso 3 de 3". Both screens are deleted rather than wired up: everything
+ * they said (your Passport profile is separate from your vote, your evidence
+ * never left the device) is now said once, in the Passport journey, where the
+ * reader is actually deciding whether to share it.
+ *
+ * What is left is the real sequence, and it drives the same filling bar the
+ * Passport journey uses, so the product has one progress language instead of
+ * three competing ones.
  *
  * Review is now a Sheet over the choice screen rather than a fourth screen.
  * Confirming a vote is a short interruption the user answers and dismisses:
@@ -49,26 +54,6 @@ const COPY = {
     step: (n: number, total: number) => `Paso ${n} de ${total}`,
     close: 'Salir sin votar',
     back: 'Volver',
-    // verify
-    verifyTitle: 'Antes de votar',
-    verifyBody:
-      'Passport aporta tu perfil visible. No firma el voto: el secreto anónimo queda separado.',
-    connect: 'Conectar Passport',
-    connected: 'Passport conectado',
-    rules: 'Reglas de esta demo',
-    identity: 'Identidad',
-    eligibility: 'Elegibilidad',
-    pending: 'pendiente',
-    checkEligibility: 'Validar elegibilidad',
-    localMode: 'Modo local: podés recorrer la interfaz, pero no se crea ningún comprobante.',
-    // eligible
-    eligibleTitle: 'Listo, podés votar',
-    eligibleBody: 'Tu elegibilidad es ahora un compromiso anónimo.',
-    checked: 'Elegibilidad',
-    verified: 'verificada',
-    evidence: 'Evidencia cruda',
-    neverLeft: 'no salió de tu dispositivo',
-    continue: 'Continuar al voto',
     // choose
     chooseLabel: 'Tu respuesta',
     yes: 'Sí',
@@ -88,6 +73,7 @@ const COPY = {
     howSent: 'Cómo se envía',
     signer: 'Firma',
     relayer: 'relay atómico, sin ver tu elección',
+    signerDemo: 'nada sale de este dispositivo',
     wallet: 'Wallet',
     walletConnected: 'conectada',
     walletPending: 'pendiente',
@@ -106,6 +92,10 @@ const COPY = {
       'La prueba se crea localmente; el relay reserva DUST, envía una vez y espera confirmación.',
     processingWallet:
       'El flujo reúne prueba, balanceo DUST/NIGHT, aprobación del wallet y confirmación canónica.',
+    processingDuration: 'Suele tardar entre 30 y 90 segundos. No cierres esta pantalla.',
+    processingDurationDemo: 'En demo esto es inmediato: no se envía nada a ninguna red.',
+    processingNoCancel:
+      'Una vez enviada, la transacción no se puede cancelar desde acá. Si algo falla, volvés a la pantalla de confirmación y podés reintentar.',
     // receipt
     receiptTitle: 'Gracias por participar',
     receiptBody: 'Guardá este identificador para verificar el resultado.',
@@ -124,24 +114,6 @@ const COPY = {
     step: (n: number, total: number) => `Step ${n} of ${total}`,
     close: 'Leave without voting',
     back: 'Back',
-    verifyTitle: 'Before you vote',
-    verifyBody:
-      'Passport provides your visible profile. It does not sign the vote: the anonymous secret stays separate.',
-    connect: 'Connect Passport',
-    connected: 'Passport connected',
-    rules: 'Demo rules',
-    identity: 'Identity',
-    eligibility: 'Eligibility',
-    pending: 'pending',
-    checkEligibility: 'Check eligibility',
-    localMode: 'Local mode: you can explore the interface, but no receipt is created.',
-    eligibleTitle: 'You are ready to vote',
-    eligibleBody: 'Your eligibility is now an anonymous commitment.',
-    checked: 'Eligibility',
-    verified: 'verified',
-    evidence: 'Raw evidence',
-    neverLeft: 'never left your device',
-    continue: 'Continue to vote',
     chooseLabel: 'Your response',
     yes: 'Yes',
     no: 'No',
@@ -159,6 +131,7 @@ const COPY = {
     howSent: 'How it is sent',
     signer: 'Signed by',
     relayer: 'atomic relay, never sees your choice',
+    signerDemo: 'nothing leaves this device',
     wallet: 'Wallet',
     walletConnected: 'connected',
     walletPending: 'pending',
@@ -176,6 +149,10 @@ const COPY = {
       'The proof is created locally; the relay reserves DUST, submits once, and waits for confirmation.',
     processingWallet:
       'The flow combines proof, DUST/NIGHT balancing, wallet approval, and canonical confirmation.',
+    processingDuration: 'This usually takes 30 to 90 seconds. Do not close this screen.',
+    processingDurationDemo: 'In demo this is instant: nothing is sent to any network.',
+    processingNoCancel:
+      'Once submitted, the transaction cannot be cancelled from here. If it fails you return to the confirmation screen and can retry.',
     receiptTitle: 'Thank you for participating',
     receiptBody: 'Save this identifier to verify the result.',
     receiptGroup: 'Your receipt',
@@ -191,7 +168,15 @@ const COPY = {
   },
 } as const;
 
-const TOTAL_STEPS = 3;
+/**
+ * The three screens a vote actually has. Review is a sheet over `choose`, not
+ * a screen, so it does not get a stop on the bar.
+ */
+const VOTE_SCREENS: readonly FlowStage[] = ['choose', 'processing', 'receipt'];
+const VOTE_STAGE_LABEL = {
+  es: { choose: 'Elegí', processing: 'Enviando', receipt: 'Comprobante' },
+  en: { choose: 'Choose', processing: 'Submitting', receipt: 'Receipt' },
+} as const;
 
 export interface VoteFlowProps {
   readonly poll: Poll;
@@ -203,12 +188,8 @@ export interface VoteFlowProps {
   readonly onConfirm: () => void;
   readonly onViewReceipt: () => void;
   readonly walletStatus: string;
-  readonly passportSession: CivicPassportSession | null;
-  readonly onConnectPassport: () => void;
-  readonly credentialCountry: string | null;
   readonly previewError: string | null;
   readonly receipt: VoteReceipt | null;
-  readonly previewReady: boolean;
   readonly dustBalance?: bigint | null;
   readonly locale: CicoLocale;
 }
@@ -223,12 +204,8 @@ export function VoteFlow({
   onConfirm,
   onViewReceipt,
   walletStatus,
-  passportSession,
-  onConnectPassport,
-  credentialCountry,
   previewError,
   receipt,
-  previewReady,
   dustBalance = null,
   locale,
 }: VoteFlowProps) {
@@ -237,99 +214,45 @@ export function VoteFlow({
   const live = CHAIN_RUNTIME_ENABLED;
   const choiceLabel = (value: Choice) =>
     value === 'YES' ? copy.yes : value === 'NO' ? copy.no : copy.abstain;
-
-  if (stage === 'verify') {
-    return (
-      <Screen
-        header={
-          <StepHeader
-            step={1}
-            total={TOTAL_STEPS}
-            label={copy.step(1, TOTAL_STEPS)}
-            onClose={onClose}
-            closeLabel={copy.close}
-          />
-        }
-        footer={
-          <Button block disabled={live && !previewReady} onClick={() => onStage('eligible')}>
-            {copy.checkEligibility}
-          </Button>
-        }
-      >
-        <Display>{copy.verifyTitle}</Display>
-        <p className="flow__body">{copy.verifyBody}</p>
-        <Card>
-          <StatGroup label={copy.rules}>
-            <StatRow
-              label={copy.identity}
-              value={
-                passportSession
-                  ? (passportSession.profile?.displayName ?? copy.connected)
-                  : copy.pending
-              }
-            />
-            <StatRow
-              label={copy.eligibility}
-              value={
-                credentialCountry ? `${getCountryName(credentialCountry, locale)} · 18+` : '18+'
-              }
-            />
-          </StatGroup>
-        </Card>
-        {passportSession ? null : (
-          <Button variant="secondary" block onClick={onConnectPassport}>
-            {copy.connect}
-          </Button>
-        )}
-        {live ? null : <Callout>{copy.localMode}</Callout>}
-      </Screen>
-    );
-  }
-
-  if (stage === 'eligible') {
-    return (
-      <Screen
-        header={
-          <StepHeader
-            step={2}
-            total={TOTAL_STEPS}
-            label={copy.step(2, TOTAL_STEPS)}
-            onBack={() => onStage('verify')}
-            backLabel={copy.back}
-            onClose={onClose}
-            closeLabel={copy.close}
-          />
-        }
-        footer={
-          <Button block onClick={() => onStage('choose')}>
-            {copy.continue}
-          </Button>
-        }
-      >
-        <Display>{copy.eligibleTitle}</Display>
-        <p className="flow__body">{copy.eligibleBody}</p>
-        <Card>
-          <StatGroup>
-            <StatRow label={copy.checked} value={copy.verified} />
-            <StatRow label={copy.evidence} value={copy.neverLeft} />
-          </StatGroup>
-        </Card>
-      </Screen>
-    );
-  }
+  const screenIndex = Math.max(VOTE_SCREENS.indexOf(stage === 'review' ? 'choose' : stage), 0);
+  const stageKey = (stage === 'review' ? 'choose' : stage) as keyof (typeof VOTE_STAGE_LABEL)['es'];
+  /* The same bar the Passport journey draws, continuing rather than restarting
+     a second numbering scheme. Closing stays available on every screen except
+     the one where a submission is already in flight. */
+  const header = (closable: boolean) => (
+    <div className="flow__head">
+      <JourneyProgress
+        current={screenIndex + 1}
+        total={VOTE_SCREENS.length}
+        stageLabel={VOTE_STAGE_LABEL[locale][stageKey]}
+        label={copy.step(screenIndex + 1, VOTE_SCREENS.length)}
+      />
+      {closable ? (
+        <button type="button" className="flow__close" onClick={onClose} aria-label={copy.close}>
+          <X size={19} />
+        </button>
+      ) : null}
+    </div>
+  );
 
   if (stage === 'processing') {
     return (
-      <Screen>
+      <Screen header={header(false)}>
         <Display>{copy.processingTitle}</Display>
         <p className="flow__body">
           {RELAYER_MODE ? copy.processingRelayer : copy.processingWallet}
         </p>
         {/* Indeterminate: the pipeline reports no percentage, so the bar must
-            not imply one. */}
+            not imply one. What it can honestly report is how long this
+            normally takes, which is the difference between waiting and
+            wondering whether the app has stopped. */}
         <div className="flow__indeterminate" role="progressbar" aria-label={copy.processingTitle}>
           <span />
         </div>
+        <p className="flow__wait-note" role="status">
+          {live ? copy.processingDuration : copy.processingDurationDemo}
+        </p>
+        {live ? <Callout>{copy.processingNoCancel}</Callout> : null}
       </Screen>
     );
   }
@@ -338,12 +261,14 @@ export function VoteFlow({
     const confirmed = receipt?.status === 'confirmed';
     return (
       <Screen
+        header={header(false)}
         footer={
           <Button block onClick={onViewReceipt}>
             {copy.viewReceipt}
           </Button>
         }
       >
+        <SuccessMark label={copy.receiptTitle} size="sm" />
         <Display>{copy.receiptTitle}</Display>
         <p className="flow__body">{copy.receiptBody}</p>
         <Card>
@@ -386,15 +311,7 @@ export function VoteFlow({
   return (
     <>
       <Screen
-        header={
-          <StepHeader
-            step={TOTAL_STEPS}
-            total={TOTAL_STEPS}
-            label={copy.step(TOTAL_STEPS, TOTAL_STEPS)}
-            onClose={onClose}
-            closeLabel={copy.close}
-          />
-        }
+        header={header(true)}
         footer={
           <Button block disabled={!choice} onClick={() => onStage('review')}>
             {copy.review}
@@ -455,7 +372,13 @@ export function VoteFlow({
         </StatGroup>
         <div className="flow__sheet-group">
           <StatGroup label={copy.howSent}>
-            {RELAYER_MODE ? (
+            {/* In demo there is no wallet anywhere in the path, so "Wallet:
+                pendiente / DUST: saldo no disponible" reported two failures
+                about a thing the reader was never asked for and cannot fix.
+                The demo says what actually happens instead. */}
+            {!live ? (
+              <StatRow label={copy.signer} value={copy.signerDemo} />
+            ) : RELAYER_MODE ? (
               <StatRow label={copy.signer} value={copy.relayer} />
             ) : (
               <>

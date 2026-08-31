@@ -393,7 +393,12 @@ function CivicApp() {
       return;
     }
     const nextReceipt: VoteReceipt = {
-      id: 'demo-tx-cico-2026-0001',
+      // One fixed identifier for every simulated vote silently destroyed the
+      // previous receipt: receipts are de-duplicated by id, so voting on a
+      // second consultation replaced the first one in the profile and the
+      // verifier could never find it again. A simulated receipt is still
+      // clearly simulated -- it just has to be its own receipt.
+      id: `demo-${activePollId}-${Date.now().toString(36)}`,
       pollId: activePollId,
       createdAt: new Date().toISOString(),
       status: 'simulated',
@@ -515,12 +520,8 @@ function CivicApp() {
                 setTab('profile');
               }}
               walletStatus={walletStatus}
-              passportSession={passportSession}
-              onConnectPassport={() => void connectPassport()}
-              credentialCountry={credential?.country ?? null}
               previewError={previewError}
               receipt={receipt}
-              previewReady={previewReadiness.state === 'ready'}
               dustBalance={dustBalance}
               locale={locale}
             />

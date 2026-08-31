@@ -216,3 +216,74 @@
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
+
+/* ---- identity block ----
+   Who you are and what state you are in, in one glance. The header used to
+   open with an eyebrow reading "Mi identidad" above a display heading -- the
+   name of the screen the reader had just tapped. */
+.profile__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.profile__avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.profile__identity-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.profile__identity-copy .sys-display {
+  font-size: clamp(22px, 6vw, 26px);
+}
+.profile__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 2px var(--space-3) 2px var(--space-2);
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.profile__state[data-on="true"] {
+  background: var(--positive-wash);
+  color: var(--positive);
+}
+
+/* ---- leading icons on settings rows ----
+   The reference settings screens all carry one, and it is what makes a run of
+   rows scannable instead of a wall of left-aligned labels. */
+.profile__row-label,
+.profile__row--action {
+  gap: var(--space-3);
+}
+.profile__row-label {
+  display: inline-flex;
+  align-items: center;
+}
+/* The icon sits with the row's title, not with the centre of a two-line row,
+   so a row that wraps does not push its own mark out of alignment. */
+.profile__row > svg,
+.profile__row-label > svg,
+.profile__row--action > svg {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 1px;
+  color: var(--ink-muted);
+}
+.profile__row-label > svg {
+  align-self: center;
+  margin-top: 0;
+}

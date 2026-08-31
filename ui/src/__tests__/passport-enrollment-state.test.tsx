@@ -60,7 +60,9 @@ describe('opaque Passport enrollment state', () => {
       container.querySelector('[data-tutorial-media-gate="rights-review-required"]'),
     ).toBeTruthy();
     expect(container.querySelector('video')).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Leer transcripción/i }));
+    // The tutorial is a disclosure now: the poster and the "media unavailable"
+    // notice advertised a video the component never had.
+    await user.click(screen.getByText(/Qué pasa en el teléfono/i));
     expect(screen.getByText(/Escaneá el QR/i)).toBeTruthy();
   });
 });

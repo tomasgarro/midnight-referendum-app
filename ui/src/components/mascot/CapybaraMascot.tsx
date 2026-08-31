@@ -1,10 +1,19 @@
 import type { CSSProperties } from 'react';
-import achievementSrc from '@/assets/mascot/capybara-achievement.png';
-import climbingSrc from '@/assets/mascot/capybara-climbing.png';
-import readingSrc from '@/assets/mascot/capybara-reading.png';
-import thinkingSrc from '@/assets/mascot/capybara-thinking.png';
-import waitingSrc from '@/assets/mascot/capybara-waiting.png';
-import wavingSrc from '@/assets/mascot/capybara-waving.png';
+/*
+ * WebP at 640px, not PNG at 1024px.
+ *
+ * All six variants are statically imported, so every build shipped all six
+ * whether or not a screen used them: 5.78 MB of 1024-square PNGs for artwork
+ * that is never drawn larger than 190 CSS px. At 640 square there is still
+ * more than 3x the pixels a 190px slot needs on a 3x display, and the set is
+ * 395 KB. The 1024px PNGs stay in the repository as the editable source.
+ */
+import achievementSrc from '@/assets/mascot/capybara-achievement.webp';
+import climbingSrc from '@/assets/mascot/capybara-climbing.webp';
+import readingSrc from '@/assets/mascot/capybara-reading.webp';
+import thinkingSrc from '@/assets/mascot/capybara-thinking.webp';
+import waitingSrc from '@/assets/mascot/capybara-waiting.webp';
+import wavingSrc from '@/assets/mascot/capybara-waving.webp';
 import './CapybaraMascot.css';
 
 export type CapybaraMascotVariant =
@@ -27,38 +36,38 @@ interface MascotAsset {
 const MASCOT_ASSETS: Record<CapybaraMascotVariant, MascotAsset> = {
   waving: {
     src: wavingSrc,
-    width: 1024,
-    height: 1024,
+    width: 640,
+    height: 640,
     label: 'Capybara waving hello',
   },
   reading: {
     src: readingSrc,
-    width: 1024,
-    height: 1024,
+    width: 640,
+    height: 640,
     label: 'Capybara reading a book',
   },
   thinking: {
     src: thinkingSrc,
-    width: 1024,
-    height: 1024,
+    width: 640,
+    height: 640,
     label: 'Capybara thinking',
   },
   achievement: {
     src: achievementSrc,
-    width: 1024,
-    height: 1024,
+    width: 640,
+    height: 640,
     label: 'Capybara holding a small flag on a hill',
   },
   climbing: {
     src: climbingSrc,
-    width: 1024,
-    height: 1024,
+    width: 640,
+    height: 640,
     label: 'Capybara climbing a gentle hill',
   },
   waiting: {
     src: waitingSrc,
-    width: 1024,
-    height: 1024,
+    width: 640,
+    height: 640,
     label: 'Capybara waiting beside an hourglass',
   },
 };

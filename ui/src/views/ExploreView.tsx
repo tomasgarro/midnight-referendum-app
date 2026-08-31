@@ -1,6 +1,9 @@
-import { ArrowRight } from '@phosphor-icons/react';
-import { Card, Display, Eyebrow } from '@/components/system';
+import { ArrowRight, BookOpen, ChartBar, Eye } from '@phosphor-icons/react';
+import { useState } from 'react';
+import { CapybaraMascot } from '@/components/mascot';
+import { Card, Display, EmptyState, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
+import { getPollAvailability } from '@/integration/poll-lifecycle';
 import { HowItWorks } from '@/views/HowItWorks';
 import { localizePoll, type Poll } from '@/views/poll-model';
 import { ResultsPanel } from '@/views/ResultsPanel';
@@ -31,7 +34,18 @@ const COPY = {
     title: 'Decidir en comunidad, con información clara.',
     lead: 'Leé la propuesta, mirá los totales públicos. No hace falta iniciar sesión.',
     library: 'Biblioteca',
-    read: 'Consulta, fuentes y consecuencias posibles',
+    libraryTitle: 'Las consultas, en detalle',
+    open: 'Abierta',
+    closed: 'Cerrada',
+    closes: 'cierra el',
+    closed_on: 'cerró el',
+    filterAll: 'Todas',
+    filterOpen: 'Abiertas',
+    filterClosed: 'Cerradas',
+    filterLabel: 'Filtrar consultas',
+    emptyFilter: 'No hay consultas en este filtro.',
+    countOne: 'consulta',
+    countMany: 'consultas',
     resultsEyebrow: 'Resultados públicos',
     resultsTitle: 'Lo que cualquiera puede leer, sin iniciar sesión',
     transparency: 'Transparencia',
@@ -39,14 +53,25 @@ const COPY = {
     public: 'Queda público',
     private: 'Nunca sale de tu teléfono',
     glossary: 'En criollo',
-    mascotAlt: 'Ilustración de un gaucho saludando',
+    mascotAlt: 'Carpincho leyendo un documento',
   },
   en: {
     welcome: 'Welcome',
     title: 'Decide together, with clear information.',
     lead: 'Read the proposal, read the public totals. No sign-in needed.',
     library: 'Library',
-    read: 'Consultation, sources, and possible consequences',
+    libraryTitle: 'The consultations, in full',
+    open: 'Open',
+    closed: 'Closed',
+    closes: 'closes',
+    closed_on: 'closed',
+    filterAll: 'All',
+    filterOpen: 'Open',
+    filterClosed: 'Closed',
+    filterLabel: 'Filter consultations',
+    emptyFilter: 'No consultations match this filter.',
+    countOne: 'consultation',
+    countMany: 'consultations',
     resultsEyebrow: 'Public results',
     resultsTitle: 'What anyone can read, without signing in',
     transparency: 'Transparency',
@@ -54,7 +79,7 @@ const COPY = {
     public: 'Public',
     private: 'Never leaves your device',
     glossary: 'In plain terms',
-    mascotAlt: 'Illustration of a gaucho waving',
+    mascotAlt: 'Capybara reading a document',
   },
 } as const;
 
@@ -116,6 +141,38 @@ const GLOSSARY = {
   ],
 } as const;
 
+/**
+ * A section header: a small accent icon, the section's eyebrow, and its title.
+ *
+ * Every section here used to open with a bare Eyebrow and, sometimes, an
+ * unstyled h2 -- so three sections that do quite different jobs (a list you
+ * act on, live numbers, a static explanation) all announced themselves the
+ * same way. The icon is the cheapest way to make them distinguishable while
+ * scrolling, and it borrows the leading-badge idiom the reference apps use for
+ * exactly this.
+ */
+function SectionHead({
+  icon,
+  eyebrow,
+  children,
+}: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="explore__head">
+      <span className="explore__head-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <div>
+        <p className="sys-eyebrow">{eyebrow}</p>
+        <h2 className="explore__section-title">{children}</h2>
+      </div>
+    </div>
+  );
+}
+
 export interface ExploreViewProps {
   readonly polls: readonly Poll[];
   readonly publicContractAddress: string | null;
@@ -130,7 +187,18 @@ export function ExploreView({
   locale,
 }: ExploreViewProps) {
   const copy = COPY[locale];
+  const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
   const runtimePolls = polls.filter((poll) => poll.runtimeContractAddress);
+  const openPolls = polls.filter((poll) => getPollAvailability(poll).isOpen);
+  const counts = {
+    all: polls.length,
+    open: openPolls.length,
+    closed: polls.length - openPolls.length,
+  };
+  const visible =
+    filter === 'all'
+      ? polls
+      : polls.filter((poll) => getPollAvailability(poll).isOpen === (filter === 'open'));
 
   return (
     <main className="explore">
@@ -141,35 +209,78 @@ export function ExploreView({
         <Display>{copy.title}</Display>
         <div className="explore__hero-foot">
           <p className="explore__lead">{copy.lead}</p>
-          <img className="explore__mascot" src="/assets/gaucho-waving.png" alt={copy.mascotAlt} />
+          {/* The gaucho PNG was the only place in the product still using a
+              second mascot; every other surface is the capybara. */}
+          <CapybaraMascot variant="reading" alt={copy.mascotAlt} size={96} />
         </div>
       </header>
 
       <section className="explore__section" aria-labelledby="library-title">
-        <Eyebrow>{copy.library}</Eyebrow>
-        <h2 className="sr-only" id="library-title">
-          {copy.library}
-        </h2>
-        <ul className="explore__library">
-          {polls.map((poll) => (
-            <li key={poll.id}>
-              <button type="button" onClick={() => onOpenPolicy(poll.id)}>
-                <span>
-                  <strong>{localizePoll(poll, locale).title}</strong>
-                  <small>{copy.read}</small>
-                </span>
-                <ArrowRight size={18} />
-              </button>
-            </li>
+        <SectionHead icon={<BookOpen size={16} weight="bold" />} eyebrow={copy.library}>
+          {copy.libraryTitle}
+        </SectionHead>
+        {/* A filter row, because the library is the one part of this screen
+            that grows. Four rows need no filter; forty do, and the chips are
+            how a reader gets to "what can I still vote on" without reading
+            every deadline. */}
+        <div className="explore__filters" role="tablist" aria-label={copy.filterLabel}>
+          {(
+            [
+              ['all', copy.filterAll],
+              ['open', copy.filterOpen],
+              ['closed', copy.filterClosed],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              type="button"
+              key={id}
+              role="tab"
+              aria-selected={filter === id}
+              className={`explore__chip ${filter === id ? 'explore__chip--on' : ''}`.trim()}
+              onClick={() => setFilter(id)}
+            >
+              {label}
+              <span className="explore__chip-count">{counts[id]}</span>
+            </button>
           ))}
-        </ul>
+        </div>
+        {visible.length ? (
+          <ul className="explore__library">
+            {/* Every row used to carry the identical subtitle "Consulta,
+                fuentes y consecuencias posibles". Four rows, one sentence,
+                repeated: it distinguished nothing and pushed the titles apart.
+                The subtitle now says the thing that differs between rows, and
+                a status dot makes open-vs-closed readable without reading. */}
+            {visible.map((poll) => {
+              const isOpen = getPollAvailability(poll).isOpen;
+              const display = localizePoll(poll, locale);
+              return (
+                <li key={poll.id}>
+                  <button type="button" onClick={() => onOpenPolicy(poll.id)}>
+                    <span className="explore__row-copy">
+                      <span className="explore__row-status">
+                        <i className="explore__dot" data-open={isOpen} aria-hidden="true" />
+                        {isOpen ? copy.open : copy.closed} · {isOpen ? copy.closes : copy.closed_on}{' '}
+                        {poll.deadline}
+                      </span>
+                      <strong>{display.title}</strong>
+                      <small>{display.description}</small>
+                    </span>
+                    <ArrowRight size={18} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState message={copy.emptyFilter} />
+        )}
       </section>
 
       <section className="explore__section" aria-labelledby="public-results-title">
-        <Eyebrow>{copy.resultsEyebrow}</Eyebrow>
-        <h2 className="explore__section-title" id="public-results-title">
-          {copy.resultsTitle}
-        </h2>
+        <SectionHead icon={<ChartBar size={16} weight="bold" />} eyebrow={copy.resultsEyebrow}>
+          <span id="public-results-title">{copy.resultsTitle}</span>
+        </SectionHead>
         {runtimePolls.length ? (
           runtimePolls.map((poll) => (
             <ResultsPanel
@@ -187,10 +298,9 @@ export function ExploreView({
       <HowItWorks locale={locale} />
 
       <section className="explore__section" aria-labelledby="visibility-title">
-        <Eyebrow>{copy.transparency}</Eyebrow>
-        <h2 className="explore__section-title" id="visibility-title">
-          {copy.visibilityTitle}
-        </h2>
+        <SectionHead icon={<Eye size={16} weight="bold" />} eyebrow={copy.transparency}>
+          <span id="visibility-title">{copy.visibilityTitle}</span>
+        </SectionHead>
         {/* Two inventories in the same ink. They were a green column and a red
             column, which made "private" read as the bad outcome. */}
         <Card className="explore__visibility">
@@ -213,11 +323,12 @@ export function ExploreView({
         </Card>
       </section>
 
-      <section className="explore__section" aria-labelledby="glossary-title">
-        <Eyebrow>{copy.glossary}</Eyebrow>
-        <h2 className="sr-only" id="glossary-title">
-          {copy.glossary}
-        </h2>
+      {/* Third explainer on one screen, behind a tap. HowItWorks is the
+          canonical three-line statement and the visibility inventory is the
+          specific list; the glossary is reference material for the reader who
+          wants the words, not something everyone should scroll past. */}
+      <details className="explore__section journey-why">
+        <summary>{copy.glossary}</summary>
         <dl className="explore__glossary">
           {GLOSSARY[locale].map(({ term, meaning }) => (
             <div key={term}>
@@ -226,7 +337,7 @@ export function ExploreView({
             </div>
           ))}
         </dl>
-      </section>
+      </details>
 
       {/*
        * TODO(product): "Suggest a consultation" entry point.

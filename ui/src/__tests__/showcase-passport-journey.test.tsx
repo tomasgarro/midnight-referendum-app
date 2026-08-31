@@ -41,7 +41,7 @@ describe('Passport-first public showcase', () => {
       />,
     );
 
-    expect(screen.getByText(/Live Passport · provider-owned/i)).toBeTruthy();
+    expect(screen.getByText('Live Passport')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Get started/i }));
     await user.click(screen.getByRole('button', { name: /Continue/i }));
     await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
@@ -50,14 +50,14 @@ describe('Passport-first public showcase', () => {
     );
     expect(await screen.findByText('alice.night')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    await user.click(screen.getByRole('button', { name: /Prepare credential/i }));
+    await user.click(screen.getByRole('button', { name: /Create my credential/i }));
     expect(
       screen.getByRole('heading', { name: 'The credential is not connected yet' }),
     ).toBeTruthy();
     // The guarantee is unchanged: a live journey never presents a synthetic
     // credential. Only the wording of the thing it must not show has changed.
     expect(screen.queryByText(/Synthetic credential/i)).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Explore World/i }));
+    await user.click(screen.getByRole('button', { name: /Explore the consultations/i }));
     expect(onCredentialReady).not.toHaveBeenCalled();
   });
 
@@ -83,8 +83,9 @@ describe('Passport-first public showcase', () => {
     expect(
       screen.getByRole('heading', { name: 'Demostrá que podés votar. Sin demostrar quién sos.' }),
     ).toBeTruthy();
-    expect(screen.getByText(/PASSPORT EN VIVO · PROVEEDOR RESPONSABLE/i)).toBeTruthy();
+    expect(screen.getByText('Passport en vivo')).toBeTruthy();
     expect(window.localStorage.getItem('cico-locale')).toBe('es');
-    expect(screen.getByRole('list', { name: 'Tu primer recorrido' })).toBeTruthy();
+    // One progress indicator, announced rather than drawn as four pills.
+    expect(screen.getByRole('progressbar', { name: 'Paso 1 de 6' })).toBeTruthy();
   });
 });

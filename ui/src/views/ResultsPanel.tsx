@@ -1,5 +1,6 @@
 import { Callout, Card, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
+import { CHAIN_RUNTIME_ENABLED } from '@/views/app-runtime';
 import { usePublicReferendumState } from '@/views/use-public-referendum-state';
 import './results-panel.css';
 
@@ -39,6 +40,12 @@ const PHASE_COPY = {
     },
     FINALIZED: { label: 'Final result', note: 'Counting is closed and published.' },
   },
+} as const;
+
+/** In demo there is no contract behind this panel, and saying so is the point. */
+const DEMO_NOTE = {
+  es: 'Demo local: no hay contrato ni recuento detrás de este panel. En Preview los totales se leen del contrato.',
+  en: 'Local demo: there is no contract or tally behind this panel. On Preview the totals are read from the contract.',
 } as const;
 
 const CHOICE_LABEL = {
@@ -88,7 +95,9 @@ export function ResultsPanel({ contractAddress, title, locale }: ResultsPanelPro
         <h2 className="results__title" id={headingId}>
           {title ?? (locale === 'es' ? 'Resultados públicos' : 'Public results')}
         </h2>
-        <p className="results__note">{copy.COMMIT.note}</p>
+        <p className="results__note">
+          {CHAIN_RUNTIME_ENABLED ? copy.COMMIT.note : DEMO_NOTE[locale]}
+        </p>
         {eligible === null ? null : (
           <p className="results__eligible">
             <strong>{eligible.toString()}</strong>{' '}
