@@ -12,6 +12,7 @@ import type { OnboardingStage } from '@/integration/civic-state';
 import { countryName, findAssignedCountry } from '@/integration/country-catalog';
 import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
+import { PassportScanTutorial } from './PassportScanTutorial';
 import './journey.css';
 
 type OnboardingMode = 'demo' | 'showcase' | 'undeployed';
@@ -603,18 +604,12 @@ export function UnifiedPassportOnboarding({
             <strong>{t.demoBanner}</strong>
             <small>{t.demoBannerBody}</small>
           </div>
+          {/* The walkthrough carries its own three steps, and they are the
+              same three this list used to describe in the abstract. Two
+              numbered lists of three, one above the other, inside one
+              disclosure, is the repetition this pass exists to remove. */}
           <WhyDetails summary={t.evidenceWhy}>
-            <ol className="unified-evidence-list">
-              {t.evidenceSteps.map(([title, body], index) => (
-                <li key={title}>
-                  <span>{index + 1}</span>
-                  <div>
-                    <strong>{title}</strong>
-                    <small>{body}</small>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <PassportScanTutorial locale={localizedLocale} />
           </WhyDetails>
           {mode === 'showcase' ? null : (
             <div className="journey-field">

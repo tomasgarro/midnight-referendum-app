@@ -288,30 +288,38 @@ eligibility must "never fall back to a legacy document reader".
 **Recommended next step**: delete them. Left in place this pass because it is
 outside the UX scope that was asked for and it touches four test files.
 
-### F-27 · The RariMe recordings are not the right tutorial media — Open
+### F-27 · The scan walkthrough — resolved, with one clip and not the others
 
-The reviewer asked whether the RariMe screen recordings in
-`Midnight/rarimo information/uxui flow rarimo` could be clipped into the
-evidence screen. They were examined frame by frame. Two reasons not to:
+The reviewer asked whether the RariMe screen recordings could be clipped into
+the journey. Examined frame by frame, they are not equivalent:
 
-1. **They are RariMe's branded product UI**, published from our origin. That is
-   a redistribution decision, not a design one.
-2. **The content contradicts this release's boundary.** The only clip that
-   actually shows the passport step (`screen-20260830-171307.mp4`, first
-   seconds) sits one tab away from a Wallet screen showing an ETH balance and a
-   Profile screen offering Recovery Method, Auth Method and Delete account.
-   `CURRENT-RELEASE-READINESS.md` states that wallet, recovery and ETH are *not*
-   current release capabilities and that no release may imply they exist. A
-   video tour of them, embedded in our onboarding, implies exactly that.
-   The second recording (`...171609.mp4`) is the freedomtool.org marketing site,
-   not a passport walkthrough at all.
+- `screen-20260830-171307.mp4` is a tour of the RariMe product — its Wallet tab
+  showing an ETH balance, its Profile offering Recovery Method and Delete
+  account. `CURRENT-RELEASE-READINESS.md` states that wallet, recovery and ETH
+  are **not** current release capabilities and that no release may imply they
+  exist. **Not used.**
+- `screen-20260830-171609.mp4` is the freedomtool.org marketing site, not a
+  walkthrough at all. **Not used.**
+- `how-to-scan.mp4` is the scan tutorial, and it is the right material.
 
-**Recommended next step**: if the evidence screen needs visual guidance, draw
-it -- a short looping illustration of the phone-on-chip gesture, in the
-capybara's style, showing only the step we are asking for. That is on-brand,
-carries no rights question, weighs a fraction of a 9 MB clip, and cannot
-advertise capabilities this release does not have. The written six-step
-disclosure stays either way.
+**Done**: three segments cut from `how-to-scan.mp4` — remove the case
+(8.80–11.20s), photograph the passport page (11.60–15.50s), hold the phone
+against the chip (16.10–19.30s) — joined into a 9.5s silent loop and cropped to
+`896×840+40+300` so the provider's step counter, close button and "Let's scan"
+CTA are out of frame. Shipped as an 83 KB WebM with an 85 KB MP4 fallback and a
+3.5 KB poster.
+
+It renders inside the "how does this work with a real document?" disclosure on
+the eligibility screen and inside the evidence-screen disclosure on the Preview
+journey — where a reader is actually about to scan, not on the welcome screen.
+Captions are ours and bilingual; the footage carries the gesture. The three
+abstract steps that used to sit under it were deleted, because they described
+the same three moments the clip now shows.
+
+**Still open**: the clip is a recording of a third party's product UI served
+from our origin. That is a redistribution question for whoever owns the
+relationship with Rarimo, not a design one, and it is listed as decision A6 in
+the VPS readiness checklist.
 
 ---
 

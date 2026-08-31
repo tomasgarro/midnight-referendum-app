@@ -58,3 +58,6 @@ ui/public/managed/referendum-v2/
 .agents/
 .claude/
 skills-lock.json
+
+# Static deployment archives are large build outputs, reproducible from a tag.
+deploy/hostinger/artifacts/*.zip
