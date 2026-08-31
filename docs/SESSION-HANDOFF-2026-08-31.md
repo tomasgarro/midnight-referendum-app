@@ -23,11 +23,11 @@ running the app actually exposed.
 | Item | State |
 | --- | --- |
 | `main` | `9021841` (PR #20 merged) |
-| `feat/premium-civic-shell` | 5 commits, **PR #21 open**, not merged |
-| Live static demo | `lightskyblue-emu-103266.hostingersite.com`, serving `index-BQ0oUuO0.js` — the `demo` build of `c256336` |
+| `feat/premium-civic-shell` | 7 commits, **PR #21 open**, not merged |
+| Live static demo | `lightskyblue-emu-103266.hostingersite.com`, serving `index-BQ0oUuO0.js` — the `demo` build of `c256336`. **Behind the branch**: it predates the theme control and the map removal |
 | VPS `hermes-agent.vps` | Untouched. Still only the unrelated `hermes-agent-c3p7` project |
 
-The five commits on the branch:
+The seven commits on the branch:
 
 | SHA | What |
 | --- | --- |
@@ -36,6 +36,8 @@ The five commits on the branch:
 | `63621da` | Field-less Passport hang fixed, allowlisting docs corrected |
 | `c256336` | World scope made genuinely global |
 | `1872bb1` | Consent-screen contrast fixed, live-session evidence recorded |
+| `1ebc664` | This handoff |
+| `c7ee364` | Theme control, fake map deleted, Verify taken out of the tab group, desktop frame overflow fixed |
 
 ## 3. Verification — what was actually run
 
@@ -134,25 +136,34 @@ The onboarding privacy stage states all three by name and says the document is
    it is open.
 2. **The AppLlama polish list** —
    [`../research/premium-ux/appllama-round-2.md`](../research/premium-ux/appllama-round-2.md),
-   ~25 checkboxed items each naming its file and its justifying reference. The
-   two highest-value are unarguable and not yet done:
-   - **The Verify control is labelled.** Zero of five reference apps label a
-     centre action. With a label it reads as a fifth destination, which is the
-     exact meaning the restructure removed.
-   - **The Verify control is inside the tab group.** It can never take
-     `aria-current`, so screen readers announce five nav items of which four
-     can be current. Render it as a sibling of the tablist.
-   - Also outstanding: `validUntil`/`assurance` captured then discarded by
-     `CredentialsView`; both credential buttons calling the same handler; two
-     visually identical adjacent segmented controls in Discover;
-     `prefers-reduced-motion` not neutralising the centre control's scale.
-3. **Deploy a showcase build to a real HTTPS origin** if a shareable live-Passport
+   ~25 checkboxed items each naming its file and its justifying reference.
+
+   Done in `c7ee364`: Verify unlabelled and outside the tab group, its geometry
+   corrected to the measured 60px/-16px, the reduced-motion gap on its press
+   scale closed, and the duplicate Discover switcher removed along with the
+   decorative map.
+
+   Still outstanding, and worth doing next: `validUntil`/`assurance` are
+   captured by `CivicCredentialSummary` and then discarded by `CredentialsView`,
+   so the pass shows issuer and age class but not expiry — the one fact that
+   decides whether it is usable. Both credential buttons still call the same
+   handler, so "renew or replace" and "add" are the same click with no
+   confirmation. A pre-scan tips step with named failure modes (glare, wrong
+   page, moving during the NFC read) is not built.
+
+3. **The visual register is an open question, not a settled one.** The reader
+   said the cream tone was what they liked and was lukewarm on the rest. The
+   theme control returns cream as an explicit choice, but it hands back a
+   palette that already existed rather than reworking anything. If the cream
+   version still does not land, that is a visual pass — palette, type, density
+   — and a different AppLlama round from the navigation one already run.
+4. **Deploy a showcase build to a real HTTPS origin** if a shareable live-Passport
    demo is wanted. `cardanoschool.org` is owned and active until 2026-11-05 but
    has **no website or certificate attached** — it resolves to a Hostinger IP
    and serves nothing. Setting it up means creating a website, issuing a cert,
    and waiting on DNS. Not required for the popup flow to work.
-4. **Physical NFC**, untested on real hardware. France is the polished path.
-5. **VPS stack**, not started. Isolate it in its own Compose project; never
+5. **Physical NFC**, untested on real hardware. France is the polished path.
+6. **VPS stack**, not started. Isolate it in its own Compose project; never
    touch `hermes-agent-c3p7`.
 
 ## 8. Known issues not yet fixed
@@ -172,10 +183,11 @@ The onboarding privacy stage states all three by name and says the document is
 
 ## 9. Working rules worth keeping
 
-- Verify claims by running the thing. Four of this session's defects — the
+- Verify claims by running the thing. Five of this session's defects — the
   Verify re-onboarding loop, the closed Argentine consultation, the invisible
-  consent values, and the dead `ExploreView` — were invisible in review and
-  obvious on first run.
+  consent values, the dead `ExploreView`, and a shell that overflowed its
+  desktop frame and pushed the nav labels off-screen — were invisible in review
+  and obvious on first run.
 - Do not weaken a test to make it pass. Every legacy assertion this session was
   rewritten against the new contract, never deleted.
 - Never state a privacy property the deployed data flow does not support.

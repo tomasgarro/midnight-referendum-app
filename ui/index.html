@@ -10,18 +10,17 @@
       cream ground for one frame and then swap.
     -->
     <script>
-      (function () {
+      (() => {
+        let stored = null;
         try {
-          var stored = window.localStorage.getItem('cico-theme');
-        } catch (error) {
+          stored = window.localStorage.getItem('cico-theme');
+        } catch {
           stored = null;
         }
-        var resolved =
-          stored === 'light' || stored === 'dark'
-            ? stored
-            : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-              ? 'dark'
-              : 'light';
+        const prefersDark =
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const resolved =
+          stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light';
         document.documentElement.dataset.theme = resolved;
       })();
     </script>
