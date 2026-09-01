@@ -7,6 +7,7 @@ import {
   UserCircle,
   X,
 } from '@phosphor-icons/react';
+import { Fragment } from 'react';
 import { MidnightMark, VotingMark } from '@/components/brand/MidnightMark';
 import { Button } from '@/components/system';
 import { LanguageToggle } from '@/components/system/LanguageToggle';
@@ -165,22 +166,24 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
   return (
     <div className="chrome-bar">
       <nav className="chrome-nav" aria-label={chrome.primaryNav}>
-        {items.map(({ id, label, Icon }) => (
-          <button
-            type="button"
-            key={id}
-            className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''}`.trim()}
-            onClick={() => onChange(id)}
-            aria-current={tab === id ? 'page' : undefined}
-            aria-label={label}
-            title={label}
-          >
-            {/* Tab switching is met 100+ times a day, so it gets the platform
-                default and nothing else: no slide, no icon animation. */}
-            <span className="chrome-nav__icon">
-              <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
-            </span>
-          </button>
+        {items.map(({ id, label, Icon }, index) => (
+          <Fragment key={id}>
+            {index === 2 ? <span className="chrome-nav__center-slot" aria-hidden="true" /> : null}
+            <button
+              type="button"
+              className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''}`.trim()}
+              onClick={() => onChange(id)}
+              aria-current={tab === id ? 'page' : undefined}
+              aria-label={label}
+              title={label}
+            >
+              {/* Tab switching is met 100+ times a day, so it gets the platform
+                  default and nothing else: no slide, no icon animation. */}
+              <span className="chrome-nav__icon">
+                <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
+              </span>
+            </button>
+          </Fragment>
         ))}
       </nav>
       {/*

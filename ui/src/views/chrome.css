@@ -178,7 +178,7 @@
 .chrome-nav {
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   width: min(100%, 420px);
   margin: 0 auto;
@@ -207,6 +207,10 @@
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
+}
+.chrome-nav__center-slot {
+  min-width: 0;
+  min-height: 56px;
 }
 .chrome-nav__icon {
   display: grid;
