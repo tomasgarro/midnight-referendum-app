@@ -154,13 +154,20 @@ export function DocumentVerificationJourney({
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  /* Leaving the capture step by any route -- back, manual entry, unmounting --
-     must release the camera. A stream left running keeps the recording
-     indicator lit, which reads as surveillance. */
+  /* Leaving the capture step by any route -- back, manual entry, a failed read
+     -- must release the camera. A stream left running keeps the recording
+     indicator lit, which reads as surveillance.
+
+     Deliberately two effects. Returning `stopCamera` as this one's cleanup
+     also fired it on the way *into* capture, because React tears down the
+     previous run before the new one: the stream opened and was closed in the
+     same tick, so the preview never appeared. Unmount is the other effect's
+     job, and it has no dependency that changes. */
   useEffect(() => {
     if (step !== 'capture') stopCamera();
-    return stopCamera;
   }, [step, stopCamera]);
+
+  useEffect(() => stopCamera, [stopCamera]);
 
   const acceptRecord = useCallback(
     (record: MrzRecord, source: DocumentReadResult['source']) => {

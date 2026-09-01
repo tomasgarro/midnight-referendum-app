@@ -177,6 +177,25 @@ describe('DocumentVerificationJourney', () => {
     expect(screen.getByText('Proceso de votación')).toBeTruthy();
   });
 
+  it('keeps the stream alive through the transition into the capture step', async () => {
+    const stop = vi.fn();
+    const track = { stop } as unknown as MediaStreamTrack;
+    const stream = { getTracks: () => [track] } as unknown as MediaStream;
+    stubMediaDevices(() => Promise.resolve(stream));
+    const user = userEvent.setup();
+
+    render(
+      <DocumentVerificationJourney locale="en" onDocumentRead={vi.fn()} initialStep="permission" />,
+    );
+    await user.click(screen.getByRole('button', { name: /allow the camera/i }));
+    await screen.findByRole('heading', { name: /show the data page/i });
+
+    /* React tears down the previous effect run before the new one, so a
+       cleanup that stopped the camera closed the stream in the same tick it
+       was opened and the preview never appeared. */
+    expect(stop).not.toHaveBeenCalled();
+  });
+
   it('releases the camera when it leaves the capture step', async () => {
     const stop = vi.fn();
     const track = { stop } as unknown as MediaStreamTrack;
