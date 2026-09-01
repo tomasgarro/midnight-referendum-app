@@ -56,9 +56,9 @@
 }
 .chrome-mark {
   display: block;
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
 }
 .chrome-actions {
   display: inline-flex;
@@ -221,7 +221,7 @@
    visual weight without adding another line of chrome. */
 .chrome-verify {
   position: absolute;
-  top: -2px;
+  top: 14px;
   left: 50%;
   z-index: 21;
   display: flex;
@@ -244,12 +244,10 @@
   background: var(--surface);
   box-shadow: 0 9px 24px rgba(26, 26, 24, 0.16);
 }
-.chrome-verify__logo {
+.chrome-verify__mark {
   display: block;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 44px;
+  height: 44px;
 }
 .chrome-verify:active {
   transform: translateX(-50%) scale(0.96);

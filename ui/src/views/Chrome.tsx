@@ -7,7 +7,7 @@ import {
   UserCircle,
   X,
 } from '@phosphor-icons/react';
-import midnightBallotLogo from '@/assets/brand/midnight-ballot-logo.png';
+import { MidnightMark, VotingMark } from '@/components/brand/MidnightMark';
 import { Button } from '@/components/system';
 import { LanguageToggle } from '@/components/system/LanguageToggle';
 import type { CicoLocale } from '@/integration/locale';
@@ -95,7 +95,7 @@ export function AppHeader({
   return (
     <header className="chrome-header">
       <div className="chrome-header__identity">
-        <img className="chrome-mark" src={midnightBallotLogo} alt="midnight.vote" />
+        <MidnightMark className="chrome-mark" title="midnight.vote" size={44} />
         <span className={`chrome-environment chrome-environment--${APP_MODE}`}>
           <span className="chrome-environment__dot" aria-hidden="true" />
           {environment}
@@ -201,7 +201,7 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
         title={verifyLabel}
       >
         <span className="chrome-verify__disc">
-          <img className="chrome-verify__logo" src={midnightBallotLogo} alt="" />
+          <VotingMark className="chrome-verify__mark" size={44} />
         </span>
       </button>
     </div>

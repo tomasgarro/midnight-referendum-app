@@ -106,7 +106,8 @@ describe('App', () => {
     // The action is icon-led now; its purpose remains available to assistive
     // technology and the tooltip without adding another line to the capsule.
     expect(verify.textContent?.trim()).toBe('');
-    expect(verify.querySelector('img')).toBeTruthy();
+    expect(verify.querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'midnight.vote' })).toBeTruthy();
   });
 
   it('keeps the compact utility shell visible and opens the settings surface', async () => {
