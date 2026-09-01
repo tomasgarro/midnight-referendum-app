@@ -214,14 +214,13 @@
   width: 40px;
   height: 40px;
 }
-/* Measured off the reference apps: a larger disc with a restrained lift. The
-   ground-coloured ring is what separates it from the capsule. It never takes
-   a selected state, because it is an action rather than a place. Its name is
-   retained in the accessible label and tooltip, while the mark carries the
-   visual weight without adding another line of chrome. */
+/* The action overlaps the capsule, but shares its material instead of sitting
+   inside a ground-coloured aperture. That makes the bar read as one composed
+   navigation surface, while the thin edge keeps the action legible. It never
+   takes a selected state, because it is an action rather than a place. */
 .chrome-verify {
   position: absolute;
-  top: 21px;
+  top: 24px;
   left: 50%;
   z-index: 21;
   display: flex;
@@ -239,10 +238,12 @@
   place-items: center;
   width: 72px;
   height: 72px;
-  border: 5px solid var(--ground);
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 50%;
-  background: var(--surface);
-  box-shadow: 0 9px 24px rgba(26, 26, 24, 0.16);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  box-shadow: 0 4px 14px rgba(26, 26, 24, 0.12);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
 }
 .chrome-verify__mark {
   display: block;
