@@ -92,27 +92,25 @@ would be visible to a participant in a pilot:
 | No duplicate-vote reminder | Nothing warns that this credential already voted on a consultation; the chain rejects it, but only after proof generation. | F-15 |
 | Physical NFC never tested | The entire NFC path is unobserved on hardware. This remains the single largest unverified claim. | Matrix §1 |
 
-## Local release-candidate artifact
+## Deployed synthetic jury artifact
 
 The current synthetic fallback was built with `VITE_APP_MODE=demo` and packaged
 with `index.html` at the ZIP root:
 
-- local path: `deploy/hostinger/artifacts/passport-preview-demo-20260831.zip`;
-- SHA-256: `6ab8066ef7e71e6b0609c01aa5776d78163a42f11a72ca851a7b07879d3b7677`;
+- local path: `deploy/hostinger/artifacts/ui_jury-demo.zip`;
+- SHA-256: `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`;
 - privacy scan: `npm run verify:showcase` passed;
-- UI tests at the time of packaging: 25 files and 169 tests passed (the
-  current tree is 26 files and 179 tests);
+- archive comparison: all 79 files match the reviewed `ui/dist`;
+- hosted verification: HTTPS 200, expected rendered jury copy, and the first
+  390 px interaction passed without page or console errors;
 - build caveats: the main JavaScript bundle remains about 5.1 MB and the
   ledger WASM about 10.1 MB; the Midnight indexer dependency also emits an
   `isomorphic-ws` browser-export warning during Vite build.
 
-This archive predates the 31 August journey rebuild. It is still the artifact
-behind the live demo URL, and it is superseded as a release candidate: repackage
-and re-scan before quoting a hash as current evidence.
-
-This hash binds the local ZIP only. It becomes public deployment evidence only
-after upload, HTTPS verification, route fallback checks, external smoke tests,
-and source-SHA recording.
+This is the artifact currently served at
+`https://lightskyblue-emu-103266.hostingersite.com/`. The evidence proves the
+synthetic UI artifact and its first interaction; full deep-link, response-header
+and responsive-width certification remains a separate release gate.
 
 For the deployment gate list, see
 [`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md),

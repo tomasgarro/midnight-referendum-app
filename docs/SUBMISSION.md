@@ -72,7 +72,7 @@ Rarimo verification, or canonical on-chain receipt.
 | Contract policy and ports | Checked-in Compact contracts, provider-neutral ports, simulator/unit coverage, and a historical local lifecycle | A current Preview deployment, funded action, or current release manifest |
 | Rarimo/NFC | Temporary adapter boundary, minimal-claim design, and source/conformance tests | Hosted verifier, authenticated callback, real proof, or a physical NFC/ePassport run |
 | Historical Undeployed v2 | Exact source SHA, tree, manifest digest, and preserved local transcript at [`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/) | Evidence for this checkout, Preview, Passport approval, or NFC |
-| Static public artifact | A legacy Hostinger URL and a local packaged synthetic artifact are recorded in readiness docs | Current public release certification until repackaging, deep-link, header, privacy, and SHA checks are rerun |
+| Static public artifact | Current Hostinger synthetic demo, exact archive SHA, privacy scan, 79-file build match, HTTPS render, first mobile interaction, and green release CI | Full deep-link, header/CSP, and responsive-width public-release certification |
 
 ## Privacy and trust boundaries
 
@@ -171,8 +171,8 @@ stateDiagram-v2
   and replay run is evidenced.
 - No Passport credential, Preview address, wallet, recovery, biometric,
   `.night` ownership, or Passport-to-contract authority is claimed.
-- The Hostinger URL is an older static artifact, not current Preview evidence;
-  the current source must be repackaged and externally reverified first.
+- The current Hostinger artifact is synthetic UI evidence, not Preview,
+  credential, NFC, Rarimo, or canonical-receipt evidence.
 - Synthetic state is not proof of document authenticity, citizenship, adult
   status, human uniqueness, or anti-coercion.
 
@@ -186,9 +186,11 @@ ballot choices.
       reviewer/date are recorded together.
 - [ ] `npm ci`, production build, formatting/lint, unit/simulator tests, and
       targeted Chromium journey tests pass from the same checkout.
-- [ ] The static artifact is repackaged from that SHA; HTTPS home, SPA
-      deep-link, headers/CSP, 320/390/tablet/desktop widths, and privacy/network
-      scans are externally rechecked.
+- [x] The static artifact has an exact SHA, passed its privacy scan, matches all
+      79 reviewed `ui/dist` files, and passed HTTPS home plus 390 px first-action
+      smoke checks.
+- [ ] SPA deep-link, headers/CSP, and 320/tablet/desktop checks are externally
+      completed before public-release certification.
 - [ ] English and Spanish screenshots show the synthetic truth labels and the
       corrected `Create my simulated pass` / `Crear mi pase simulado` CTA.
 - [ ] Browser storage, bundle, logs, and requests contain no raw MRZ/NFC,
@@ -206,13 +208,12 @@ ballot choices.
 
 ## Priority for the remaining submission window
 
-1. Keep the E2E selector fix green and rerun the targeted Chromium file; then
-   run the repository quality gates from the same tree.
-2. Repackage and reverify the synthetic static artifact, or submit the local
-   demo with its exact command and disclose that the hosted URL is stale.
-3. Polish only high-signal jury copy and navigation states; do not spend the
-   deadline disguising unavailable Preview or NFC capabilities.
-4. If external NIGHT, DUST, verifier, Passport, or hardware evidence arrives,
+1. Keep the now-green release CI and current hosted synthetic artifact intact.
+2. Spend remaining engineering time only on the first real Preview vertical
+   slice: fully synced positive DUST, exact deployment inputs, contracts,
+   credential issuance, one vote, and indexer reconciliation.
+3. Keep Preview and NFC claims visibly separate from the synthetic jury demo.
+4. If external DUST, verifier, Passport, or hardware evidence arrives,
    add it as a new exact-SHA evidence record. Never relabel the historical
    `abdd0a2` transcript.
 

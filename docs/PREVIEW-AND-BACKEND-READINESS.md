@@ -144,15 +144,15 @@ Worth stating, because it is where the work already went:
 - **The deployment topology is designed and reviewed** — Compose model, Caddy
   routing, private networks, the Rarimo DELETE derivative and its patch,
   preflight, rollback and packaging tooling.
-- **A static demo artifact exists**, but the hosted bundle predates the current
-  journey rebuild. The last recorded hosted-browser pass must be rerun after
-  repackaging before the URL is presented as current evidence.
+- **The current static jury demo is deployed and verified.** Its exact archive
+  digest, privacy scan, 79-file `ui/dist` match, HTTPS render, and first mobile
+  interaction are recorded. It remains synthetic UI evidence only.
 
 ## Submission readiness, by level
 
 | Level | State | What is missing |
 | --- | --- | --- |
-| **Demo / narrative** | **Runnable locally.** The synthetic journey and honest labelling are source-backed; the hosted URL needs repackaging/reverification. | Current artifact digest, hosted deep-link/header/privacy checks, and release-run CI links. |
+| **Demo / narrative** | **Runnable locally and hosted.** The current synthetic journey, honest labels, archive digest, HTTPS render, first mobile interaction, and release-run CI are evidenced. | Complete the remaining deep-link, header/CSP, and responsive-width release checks before calling it a certified public release. |
 | **Contracts** | **Ready to deploy.** Compiled, key-bearing, simulator-tested. | A funded wallet and one deploy run. |
 | **Preview end-to-end** | **Blocked.** | Steps 1–4 above. Realistically half a day once NIGHT arrives. |
 | **Hosted backend** | **Blocked.** | The VPS stack: domains, secrets, image digests. See the VPS checklist. |
@@ -160,10 +160,10 @@ Worth stating, because it is where the work already went:
 
 ## The honest summary for a submission
 
-The demo is runnable locally and the contracts compile. A legacy static URL
-exists but is not current release evidence until repackaged and reverified. The
-Preview path is written and tested but **has never run against Preview**, and
-the NFC credential path has never run against hardware.
+The demo is runnable locally and the current synthetic artifact is live and
+externally smoke-tested. The Preview path is written and tested but **has never
+run against Preview**, and the NFC credential path has never run against
+hardware.
 
 If the submission needs a live Preview transaction, the critical path starts
 with Preview NIGHT and is otherwise a few commands. If it needs a real
