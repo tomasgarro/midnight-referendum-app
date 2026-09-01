@@ -11,7 +11,7 @@ export interface IdentitySession {
 
 export type DiscoveryScope =
   | { readonly kind: 'world' }
-  | { readonly kind: 'country'; readonly code: 'FR' | 'AR' };
+  | { readonly kind: 'country'; readonly code: string };
 
 export interface CredentialSummaryItem {
   readonly id: string;

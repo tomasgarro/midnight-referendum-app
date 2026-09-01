@@ -6,6 +6,10 @@ Scope: extends `pattern-spec.md`, does not replace it. Round 1 walked Vivino / V
 
 Screenshots studied are cached under the session scratchpad, not committed. AppLlama media carries a provenance watermark top-left; it is not part of any pattern described here and must never be reproduced.
 
+## Implementation status — 1 September 2026
+
+The review stream applied the decision-relevant findings below: a floating four-tab capsule with a separate raised Scan action; a searchable country sheet that leads with published consultations and searches the complete catalogue; visible credential expiry and assurance with one contextual action; and written recovery guidance for QR/link, camera, NFC, and Rarimo failures. The checklist and “actively wrong” notes that follow describe the pre-stream baseline and remain useful as review evidence; the shared UI checkout is the current source of truth.
+
 ---
 
 ## Board check (task 1)
@@ -142,7 +146,7 @@ From `list_ui_elements` (38 families) and `get_element_screens` on `sheets-modal
 
 ## Implementable changes
 
-Each item names the file and the reference. None of these were applied — `ui/` is being edited by another agent.
+Each item names the file and the reference. The implementation status above records the items completed in the current UI stream; remaining checklist items are intentionally out of scope for the jury pass unless they change correctness or comprehension.
 
 ### Shell / tab bar — `ui/src/views/Chrome.tsx`, `ui/src/views/chrome.css`
 

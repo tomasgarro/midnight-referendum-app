@@ -47,7 +47,7 @@ post-Preview work.
 
 | Stage | Initiative | Intended outcome | Exit evidence | Status |
 | --- | --- | --- | --- | --- |
-| Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Synthetic journey path present; live Passport evidence pending |
+| Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Synthetic journey path present; live Passport profile/session evidence recorded; credential and Preview action pending |
 | Now | Provider-neutral domain ports | Rarimo and future Passport-native providers remain replaceable | Session, credential, and action conformance checks; no provider transports in use cases | Source path present; verification pending |
 | Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Hostinger static artifact, isolated VPS plan | Configuration present; release checks pending |
 | Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while each referendum pins an initial root and accepts only attested later roots | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Source path present; the preserved `abdd0a2` run is historical frozen-model evidence |

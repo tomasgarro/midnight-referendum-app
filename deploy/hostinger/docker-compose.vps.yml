@@ -31,7 +31,10 @@ services:
       cico:
         condition: service_healthy
       relayer:
-        condition: service_started
+        # The edge proxy must not publish the sponsored-wallet route while
+        # the relayer is still syncing or unfunded. /ready is the relayer's
+        # positive v2+DUST gate, not merely a process liveness check.
+        condition: service_healthy
       rarimo-gateway:
         condition: service_started
     networks:
@@ -110,7 +113,7 @@ services:
       relayer-proof:
         condition: service_started
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8790/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8790/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 60

@@ -4,6 +4,7 @@ export * from './fixture-credential-adapter.js';
 export * from './midnight-civic-action-adapter.js';
 export * from './midnight-v2.js';
 export * from './midnight-v2-executors.js';
+export * from './midnight-v2-provider-runtime.js';
 export * from './midnight-v2-providers.js';
 export * from './midnight-v2-relayer-providers.js';
 export * from './ports.js';

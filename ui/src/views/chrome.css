@@ -144,27 +144,34 @@
   background: var(--surface-sunken);
 }
 
-/* ---- tab bar ---- */
-/* The bar and the action are siblings: the action overlaps the bar visually
-   without being one of its items. */
+/* ---- floating navigation capsule ---- */
+/* The capsule and the action are siblings: Scan overlaps the capsule visually
+   without being one of its destinations. This is the scanner-app grammar from
+   the AppLlama round-two references, adapted to a web shell. */
 .chrome-bar {
   position: relative;
+  padding: 30px var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: var(--ground);
 }
 .chrome-nav {
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
-  background: var(--ground);
-  border-top: 1px solid var(--line);
+  width: min(100%, 380px);
+  margin: 0 auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 .chrome-nav__item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-height: 58px;
+  min-height: 52px;
   min-width: 0;
   padding: 6px 1px;
   border: 0;
@@ -172,7 +179,7 @@
   background: transparent;
   color: var(--ink-muted);
   font-family: var(--font-body);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -182,12 +189,12 @@
   min-width: 32px;
   min-height: 27px;
 }
-/* Measured off the reference apps: a 60px circle protruding about a quarter of
-   its height, not half. The ground-coloured ring is what separates it from the
-   bar. It never takes a selected state, because it is not a place. */
+/* Measured off the reference apps: a 60px circle with a restrained lift. The
+   ground-coloured ring is what separates it from the capsule. It never takes a
+   selected state, because it is an action rather than a place. */
 .chrome-verify {
   position: absolute;
-  bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px) + 14px);
+  top: 0;
   left: 50%;
   z-index: 21;
   display: flex;

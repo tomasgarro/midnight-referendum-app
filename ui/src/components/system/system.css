@@ -438,6 +438,14 @@
   animation: sys-rise var(--dur-sheet) var(--ease-out);
   font-family: var(--font-body);
 }
+.sys-sheet__handle {
+  display: block;
+  width: 40px;
+  height: 5px;
+  margin: -4px auto var(--space-3);
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+}
 .sys-sheet__head {
   display: flex;
   align-items: flex-start;

@@ -40,11 +40,7 @@ import {
   type ThemePreference,
   watchSystemTheme,
 } from '@/integration/theme';
-import {
-  MidnightProvidersProvider,
-  RELAYER_MODE,
-  useMidnightProviders,
-} from '@/providers/midnight-providers';
+import { MidnightProvidersProvider, useMidnightProviders } from '@/providers/midnight-providers';
 import { WalletProvider } from '@/providers/wallet-context';
 import { ActivityView } from '@/views/ActivityView';
 import {
@@ -159,6 +155,10 @@ function CivicApp() {
   const {
     referendumV2Providers,
     referendumV2ActionContext,
+    executionMode,
+    setExecutionMode,
+    sponsoredAvailable,
+    sponsoredError,
     isReady,
     error: providersError,
   } = useMidnightProviders();
@@ -272,7 +272,7 @@ function CivicApp() {
     walletConnected: walletStatus === 'connected',
     providersReady: isReady && (!passportV2Runtime.config || referendumV2Providers !== null),
     providersError: providersError ?? passportV2Runtime.error,
-    relayerMode: RELAYER_MODE,
+    relayerMode: executionMode === 'sponsored-wallet',
     v2RuntimeConfigured: CHAIN_RUNTIME_ENABLED,
     credentialVerified: credential?.kind === 'verified-credential',
   });
@@ -579,6 +579,10 @@ function CivicApp() {
                 setTab('activity');
               }}
               walletStatus={walletStatus}
+              executionMode={executionMode}
+              onExecutionModeChange={setExecutionMode}
+              sponsoredAvailable={sponsoredAvailable}
+              sponsoredError={sponsoredError}
               previewError={previewError}
               receipt={receipt}
               dustBalance={dustBalance}

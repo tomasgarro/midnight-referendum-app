@@ -54,6 +54,10 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
 		X-Frame-Options "DENY"
+		X-Robots-Tag "noindex, nofollow"
+	}
+	request_body {
+		max_size 2MB
 	}
 	@proof_params {
 		method GET

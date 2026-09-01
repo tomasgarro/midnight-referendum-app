@@ -94,7 +94,7 @@ no-issuer variant.
   now hidden rather than reporting a permanent "no conectada" for something the
   reader was never offered (finding F-07).
 
-### Passport eligibility start ("Crear mi credencial")
+### Passport eligibility start ("Crear mi pase simulado" / "Create my simulated pass")
 
 - **Where** Passport journey, eligibility screen.
 - **User believes** They are getting the credential that lets them vote.

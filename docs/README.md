@@ -1,29 +1,41 @@
 # Documentation index
 
-This index separates current product decisions from historical implementation
-notes and evidence. Current documentation describes the open-enrollment,
-Passport-session, temporary-Rarimo, voting-first product. Historical records
-are preserved for auditability and must not be read as evidence for the current
-branch or a Midnight Preview release.
+This index separates the current product story from operational targets and
+historical evidence. The current product is an open-enrollment,
+Passport-session, temporary-Rarimo, voting-first civic consultation with an
+explicit synthetic fallback. Historical records remain available for
+auditability, but they are not evidence for the current branch or a Midnight
+Preview release.
 
-## Start here
+## Jury submission — start here
 
 | Document | Use it for | Status |
 | --- | --- | --- |
+| [`SUBMISSION.md`](SUBMISSION.md) | One-minute story, runnable demo path, evidence matrix, diagrams, claims, and final checklist | Current jury brief |
 | [`../README.md`](../README.md) | Product boundary, current status, synthetic fallback, and quick start | Current |
 | [`CURRENT-RELEASE-READINESS.md`](CURRENT-RELEASE-READINESS.md) | Release boundary, pending gates, and evidence policy | Current |
-| [`USER-ACTION-MATRIX.md`](USER-ACTION-MATRIX.md) | What every CTA actually does, its dependency, and whether its copy is honest | Current |
-| [`UX-FINDINGS-20260831.md`](UX-FINDINGS-20260831.md) | Prioritized findings from the 31 August journey audit, fixed and open | Current |
-| [`PREVIEW-AND-BACKEND-READINESS.md`](PREVIEW-AND-BACKEND-READINESS.md) | What exists on Preview today, the critical path to a live transaction, and submission readiness by level | Current |
-| [`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md) | Every value and decision still missing before the VPS stack can start | Current |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Service ownership and privacy boundaries | Current |
-| [`DEPLOYMENT.md`](DEPLOYMENT.md) | Hostinger static/VPS target topology and operations | Current target |
-| [`ENVIRONMENT-ACCEPTANCE.md`](ENVIRONMENT-ACCEPTANCE.md) | Demo, local, and Preview acceptance criteria | Current target |
+| [`PREVIEW-AND-BACKEND-READINESS.md`](PREVIEW-AND-BACKEND-READINESS.md) | Preview/backend facts and the blocked end-to-end path | Current |
+| [`evidence/passport-live/2026-08-31-first-real-session.md`](evidence/passport-live/2026-08-31-first-real-session.md) | The observed real Passport profile/session handshake | Evidence, scoped |
+| [`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/) | Exact historical local lifecycle, manifest, and transcript | Historical only |
+
+## Product, UX, and evidence
+
+- [`USER-ACTION-MATRIX.md`](USER-ACTION-MATRIX.md) — what every CTA actually
+  does, its dependency, and whether its copy is honest.
+- [`UX-FINDINGS-20260831.md`](UX-FINDINGS-20260831.md) — prioritized findings
+  from the 31 August journey audit, fixed and open.
+- [`BRIEF-PASSPORT-AND-NFC.md`](BRIEF-PASSPORT-AND-NFC.md) — forward-looking
+  Passport and NFC brief; read its hardware and network limitations.
+- [`RARIMO-REFERENCE-UX.md`](RARIMO-REFERENCE-UX.md) — review of the supplied
+  RariMe/Freedom Tool recordings and the release decisions derived from them.
+- [`WAVE-1-SUBMISSION-CHECKLIST.md`](WAVE-1-SUBMISSION-CHECKLIST.md) — release
+  worksheet; do not fill its evidence fields from historical records.
 
 ## Architecture decisions
 
 | Document | Decision | Status |
 | --- | --- | --- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Service ownership and privacy boundaries | Current |
 | [`adr/ADR-001-passport-first-boundaries.md`](adr/ADR-001-passport-first-boundaries.md) | Passport session/profile is not voting authority | Current |
 | [`adr/ADR-002-credential-registry-v1.md`](adr/ADR-002-credential-registry-v1.md) | Claim-bound credential registry | Current, read with ADR-007 |
 | [`adr/ADR-003-proof-relayer-and-receipts.md`](adr/ADR-003-proof-relayer-and-receipts.md) | Proving, relay, and canonical receipts | Current |
@@ -32,24 +44,31 @@ branch or a Midnight Preview release.
 | [`adr/ADR-007-open-enrollment-and-evidence-roles.md`](adr/ADR-007-open-enrollment-and-evidence-roles.md) | Open enrollment and explicit Passport/Rarimo roles | Current; supersedes ADR-006 |
 | [`adr/ADR-006-credential-epoch-lifecycle.md`](adr/ADR-006-credential-epoch-lifecycle.md) | Frozen-before-deploy epoch model | Historical/superseded; preserved |
 
-## Planning and operational references
+## Delivery and operations
 
-- [`ROADMAP.md`](ROADMAP.md) — product outcomes and cryptographic release gates.
+- [`ROADMAP.md`](ROADMAP.md) — product outcomes and cryptographic release
+  gates.
 - [`BUILDATHON-ROADMAP.md`](BUILDATHON-ROADMAP.md) — dated program cadence;
   dates remain targets until independently revalidated.
 - [`FIRST-PUBLIC-DEPLOYMENT.md`](FIRST-PUBLIC-DEPLOYMENT.md) — Hostinger
-  static-site release runbook with synthetic fallback.
+  static-site runbook with a synthetic fallback; it is not deployment proof.
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — Hostinger static/VPS target topology and
+  operational boundaries.
 - [`COMPATIBILITY-MATRIX.md`](COMPATIBILITY-MATRIX.md) — pinned local toolchain
   and service versions.
+- [`ENVIRONMENT-ACCEPTANCE.md`](ENVIRONMENT-ACCEPTANCE.md) — demo, local, and
+  Preview acceptance criteria.
 - [`ROOT-ATTESTATION-AUDIT.md`](ROOT-ATTESTATION-AUDIT.md) — audit procedure
   for roots admitted during open enrollment.
-- [`MASCOT-AND-AVATARS.md`](MASCOT-AND-AVATARS.md) — current mascot asset guide
-  plus a clearly separate future-avatar proposal; unrelated to credential or
-  voting authority.
-- [`RARIMO-REFERENCE-UX.md`](RARIMO-REFERENCE-UX.md) — review of the supplied
-  RariMe/Freedom Tool recordings and the release decisions derived from them.
+- [`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md) —
+  values and decisions still missing before the VPS stack can start.
+- [`MASCOT-AND-AVATARS.md`](MASCOT-AND-AVATARS.md) — mascot asset guide and
+  separate future-avatar proposal; unrelated to credential or voting
+  authority.
 - [`BUILDATHON-RESOURCES.md`](BUILDATHON-RESOURCES.md) — external reference
   links supplied by the kickoff deck.
+- [`AGENT_CONTEXT.md`](AGENT_CONTEXT.md) — working context and boundaries;
+  not a release record.
 
 ## Historical records and evidence
 
@@ -64,14 +83,17 @@ branch or a Midnight Preview release.
   earlier architecture handoff, historical context only.
 - [`SESSION-HANDOFF.md`](SESSION-HANDOFF.md) — dated session notes, historical
   context only; do not use its branch table as current status.
+- [`SESSION-HANDOFF-2026-08-31.md`](SESSION-HANDOFF-2026-08-31.md) — dated
+  handoff with the observed Passport session; current status is superseded by
+  this index, `SUBMISSION.md`, and current readiness pages.
 - [`UX-REBUILD-HANDOFF.md`](UX-REBUILD-HANDOFF.md) — dated UX work log,
   historical context only.
 - [`ZKIR-AUDIT.md`](ZKIR-AUDIT.md) — dated source/ZKIR inspection, historical
   review evidence rather than a current independent audit.
 - [`VERCEL-SETUP.md`](VERCEL-SETUP.md) — retained Vercel setup notes,
   historical/alternative-host reference; Hostinger is the current target.
-- [`artifacts/overnight-ui/`](../artifacts/overnight-ui/) — archived overnight
-  screenshots, retained but not current release evidence.
+- [`../artifacts/overnight-ui/`](../artifacts/overnight-ui/) — archived
+  overnight screenshots, retained but not current release evidence.
 
 ## Evidence rules
 

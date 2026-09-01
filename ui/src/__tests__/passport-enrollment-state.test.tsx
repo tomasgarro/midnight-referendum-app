@@ -67,5 +67,7 @@ describe('opaque Passport enrollment state', () => {
     // notice advertised a video the component never had.
     await user.click(screen.getByText(/Qué pasa en el teléfono/i));
     expect(screen.getByText(/Escaneá el QR/i)).toBeTruthy();
+    expect(screen.getByText(/lectura NFC se detiene/i)).toBeTruthy();
+    expect(screen.getByText(/Rarimo informa que el intento venció/i)).toBeTruthy();
   });
 });

@@ -33,6 +33,8 @@
     "relayer:undeployed": "npm run dev:undeployed --workspace midnight-referendum-relayer",
     "relayer:address": "npm run address --workspace midnight-referendum-relayer",
     "relayer:address:undeployed": "npm run address:undeployed --workspace midnight-referendum-relayer",
+    "relayer:status": "npm run status --workspace midnight-referendum-relayer",
+    "relayer:status:undeployed": "npm run status:undeployed --workspace midnight-referendum-relayer",
     "relayer:dust": "npm run dust --workspace midnight-referendum-relayer",
     "relayer:dust:undeployed": "npm run dust:undeployed --workspace midnight-referendum-relayer",
     "relayer:fund:undeployed": "npm run fund:undeployed --workspace midnight-referendum-relayer",

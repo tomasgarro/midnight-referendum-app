@@ -12,17 +12,18 @@ election, a production service, or a claim of human uniqueness.
 
 The table below describes this checkout as of 31 August 2026. It is a source
 and product status summary, not a release approval or a Preview deployment
-attestation.
+attestation. For the jury-facing narrative and evidence checklist, start with
+[`docs/SUBMISSION.md`](docs/SUBMISSION.md).
 
 | Surface | Status | Honest interpretation |
 | --- | --- | --- |
 | Synthetic demo | **Runnable** | The complete journey is simulated and must remain labelled as simulated. |
 | Enrollment model | **Open in the current source** | A registry can admit credentials while a consultation is in its enrollment window; the referendum can accept separately attested later roots. |
-| Passport | **Profile/session boundary only** | Passport consent and display fields are separate from eligibility and voting authority. No Passport credential, wallet, recovery, or origin approval is claimed here. |
+| Passport | **Profile/session boundary only** | A real profile/session handshake is evidenced, while consent and display fields remain separate from eligibility and voting authority. No Passport credential, wallet, recovery, or Preview address is claimed. |
 | Rarimo | **Temporary evidence adapter** | Rarimo is intended to provide temporary NFC-based eligibility evidence behind the CICO issuer boundary. Physical-device verification and a hosted verifier are not evidenced here. |
 | Voting | **Primary product action** | The product prioritizes understanding and participating in a consultation; wallet, recovery, biometric, and ETH features are optional post-Preview Profile/Vault work. |
 | Historical Undeployed v2 run | **Preserved, historical** | The committed artifact at [`docs/evidence/undeployed-v2/abdd0a2/`](docs/evidence/undeployed-v2/abdd0a2/) is a SHA-specific local run of the older frozen-enrollment model. It is not evidence for this branch head or a Preview deployment. |
-| Preview / public release | **Not released** | No hosted URL, Preview transaction, Passport approval, physical NFC transcript, or release SHA is asserted. |
+| Preview / public release | **Not released** | A static demo URL exists, but its bundle predates the current journey rebuild. No Preview transaction, current public release SHA, physical NFC transcript, or Passport credential is asserted. |
 
 The deployment target is a Hostinger static web surface plus isolated,
 stateful Hostinger VPS services for any future issuer and relayer. When those

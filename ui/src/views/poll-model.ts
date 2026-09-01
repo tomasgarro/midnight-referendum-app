@@ -576,10 +576,15 @@ export function isCountryPoll(poll: Poll): boolean {
   return poll.runtimeScope ? poll.runtimeScope === 'country' : COUNTRY_POLL_IDS.has(poll.id);
 }
 
+/** Return the displayable ISO alpha-2 scope for a country consultation. */
+export function pollCountryCode(poll: Poll): string | null {
+  const value = poll.runtimeCountryCode ?? COUNTRY_POLL_COUNTRIES.get(poll.id);
+  const normalized = value?.trim().toUpperCase();
+  return normalized || null;
+}
+
 export function isCountryPollForCountry(poll: Poll, countryCode: string): boolean {
-  return poll.runtimeCountryCode
-    ? poll.runtimeCountryCode === countryCode
-    : COUNTRY_POLL_COUNTRIES.get(poll.id) === countryCode;
+  return pollCountryCode(poll) === countryCode.trim().toUpperCase();
 }
 
 /**

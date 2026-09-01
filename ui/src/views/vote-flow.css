@@ -112,6 +112,65 @@
   margin-top: var(--space-4);
 }
 
+.flow__execution-modes {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 0;
+}
+.flow__execution-modes > legend {
+  margin-bottom: var(--space-2);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.flow__execution-mode {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  cursor: pointer;
+}
+.flow__execution-mode:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.flow__execution-mode input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+.flow__execution-mode span {
+  display: grid;
+  gap: 2px;
+}
+.flow__execution-mode strong {
+  font-size: 15px;
+}
+.flow__execution-mode small,
+.flow__execution-error {
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.flow__execution-mode--disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+.flow__execution-error {
+  margin: 0;
+}
+
 /* ---- processing ---- */
 /* Indeterminate on purpose: the proof/balance/submit pipeline reports no
    percentage, and a bar that fills anyway is a lie the user can time. */

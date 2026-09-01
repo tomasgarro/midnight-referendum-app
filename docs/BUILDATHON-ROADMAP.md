@@ -66,9 +66,9 @@ Program references: [Midnight Buildathon overview](https://midnight.network/hack
 
 | Capability | Evidence today | Status |
 | --- | --- | --- |
-| Passport-first journey | Deterministic consent-to-receipt unit and browser journeys | Synthetic journey path present; live Passport evidence pending |
+| Passport-first journey | Deterministic consent-to-receipt unit and browser journeys | Synthetic journey path present; live Passport profile/session evidence recorded, with credential and Preview action still gated |
 | Provider-neutral boundaries | Session, credential and civic-action ports with conformance checks | Source path present; verification pending |
-| Passport bridge | Exact origin/source, request ID and nonce binding; embedded and popup paths | Source path present; origin approval pending |
+| Passport bridge | Exact origin/source, request ID and nonce binding; embedded and popup paths | Source path present; a real popup profile/session handshake is recorded; no Preview address or credential is evidenced |
 | Credential policy | Issuer-bound reusable leaf, open enrollment with attested roots, global/country/adult/assurance predicates | Source path present; the preserved `abdd0a2` run is historical frozen-model evidence, not current-branch evidence |
 | Rarimo boundary | Verified-status gate, request/holder binding, minimal claims, replay state and cleanup | In progress; provider and physical-device evidence pending |
 | CICO issuer | Fixture-backed local issuer path, canonical root checks and epoch coordinator | Historical local run exercised the fixture path; real provider/Preview issuer remains gated |

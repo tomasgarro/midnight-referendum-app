@@ -11,6 +11,8 @@
     "dev:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/server.js",
     "address": "tsc --build && node --env-file-if-exists=.env dist/address.js",
     "address:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/address.js",
+    "status": "tsc --build && node --env-file-if-exists=.env dist/status.js",
+    "status:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/status.js",
     "dust": "tsc --build && node --env-file-if-exists=.env dist/register-dust.js",
     "dust:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/register-dust.js",
     "fund:undeployed": "tsc --build && node --env-file-if-exists=.env.undeployed dist/fund-undeployed.js",

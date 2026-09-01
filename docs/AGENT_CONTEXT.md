@@ -11,7 +11,8 @@ Build a Midnight Passport-first, passport-backed, non-binding civic consultation
 ## Source of truth
 
 - Repository: the reviewed checkout containing this document
-- Implementation branch: `feat/passport-preview-night`
+- Implementation branch: record the checked-out branch in the release record;
+  this working-context file is not pinned to a release branch.
 - Baseline: no release SHA is assigned; inspect the current worktree before
   making evidence claims
 - Runtime: Linux/WSL, Node `22.22.0` from `.nvmrc`
@@ -47,7 +48,9 @@ Still external or release-record gated:
 - a real credential issuer run against the provider and canonical Preview
   registry (the local run uses the fixture issuer);
 - a fresh Preview transaction transcript;
-- independent Passport origin approval and account/network validation;
+- a fresh Passport account/network/capability validation for any changed
+  release origin (the observed popup profile/session flow did not require an
+  origin allowlist);
 - Preview/pilot sponsored-relay, DUST concurrency/idempotency, restart/recovery,
   and operations evidence beyond the verified local run.
 

@@ -19,10 +19,9 @@ test('completes Passport onboarding, then creates a choice-free simulated receip
   await journey.issueSyntheticCredential();
   await expect(journey.credentialHeading).toBeVisible();
   await journey.openDashboard();
-  await expect(page.getByRole('tab', { name: /World|Mundo/ })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(
+    page.getByRole('button', { name: /Browse by place.*Global|Explorar por lugar.*Global/i }),
+  ).toBeVisible();
   await journey.openConsultationAndVote();
   await journey.submitSimulatedReceipt();
 
@@ -43,7 +42,11 @@ test('ends credential onboarding before scope, ballot, proving, or receipts', as
     0,
   );
   await journey.openDashboard();
-  await expect(page.getByRole('heading', { name: 'Consultas para vos' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: /Consultas para vos|Decisiones que podés explorar|Consultations for you|Decisions you can explore/i,
+    }),
+  ).toBeVisible();
 });
 
 test('keeps the bilingual journey accessible and unclipped at all jury widths', async ({
@@ -188,13 +191,21 @@ test('wallet approval appears only at the live-action boundary and groups duplic
   await page.getByRole('button', { name: /Continue/i }).click();
   await page.getByRole('button', { name: /Use demo Passport/i }).click();
   await page.getByRole('button', { name: /Continue/i }).click();
-  await page.getByRole('button', { name: /Create my credential/i }).click();
-  await page.getByRole('button', { name: /See the consultations/i }).click();
+  await page
+    .getByRole('button', { name: /Create my simulated pass|Crear mi pase simulado/i })
+    .click();
+  await page.getByRole('button', { name: /See the consultations|Ver las consultas/i }).click();
   const openCard = page
     .locator('li', { has: page.locator('.poll') })
-    .filter({ has: page.getByRole('button', { name: /^(Vote now|Votá ahora)$/i }) })
+    .filter({
+      has: page.getByRole('button', {
+        name: /^(Vote now|Votá ahora|Participate|Participar)$/i,
+      }),
+    })
     .first();
-  await openCard.getByRole('button', { name: /Read proposal|Leer propuesta/i }).click();
+  await openCard
+    .getByRole('button', { name: /Read proposal|View consultation|Leer propuesta|Ver consulta/i })
+    .click();
   await page.getByRole('button', { name: /^(Vote now|Votá ahora)$/i }).click();
   await page.getByRole('button', { name: /^Sí/ }).click();
   await page.getByRole('button', { name: /Revisar mi voto/i }).click();
@@ -310,6 +321,8 @@ test('completes the Passport popup handshake with a real browser WindowProxy', a
   await expect(page.getByText('popup.passport')).toBeVisible();
   await page.getByRole('button', { name: /Continue/i }).click();
   await expect(page.getByRole('heading', { name: 'Vote from wherever you are' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Create my credential/i })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /Create my simulated pass|Crear mi pase simulado/i }),
+  ).toBeVisible();
   await popup.close();
 });

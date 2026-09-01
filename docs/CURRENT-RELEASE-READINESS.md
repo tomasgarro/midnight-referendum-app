@@ -30,7 +30,7 @@ uses the older frozen-before-deploy model and is not current release evidence.
 
 | Capability | Current release position | Evidence needed before a live claim |
 | --- | --- | --- |
-| Passport | Session, consent, and optional display profile only. Profile fields never authorize eligibility or a vote. | Approved HTTPS origin, real session transcript, and independent privacy review. |
+| Passport | Session, consent, and optional display profile only. A real profile/session handshake is evidenced; profile fields never authorize eligibility or a vote. | Fresh approved-origin/network transcript if the deployment changes, plus independent privacy review. |
 | Rarimo | Temporary NFC evidence adapter behind `cico-service`; only minimal issuer-bound claims cross the boundary. | Pinned self-hosted verifier, authenticated callback, physical-device NFC transcript, deletion/retention inspection, and replay tests. |
 | Eligibility | Synthetic fallback is available and labelled. A real credential requires a trusted provider result and issuer receipt. | Fresh Preview issuance transcript tied to the exact release SHA and registry. |
 | Voting | Primary product action. The browser owns choice, voter secret, opening, and witness; confirmed receipts come from the indexer. | Fresh Preview cast/reveal/finalize transcript, relay authorization review, and independent indexer reconciliation. |
@@ -41,10 +41,10 @@ uses the older frozen-before-deploy model and is not current release evidence.
 
 | Gate | Current state | Release rule |
 | --- | --- | --- |
-| Static web artifact | A reviewed synthetic bundle is deployed and verified over HTTPS at `https://lightskyblue-emu-103266.hostingersite.com/`. The bundle predates the 31 August journey rebuild and must be repackaged before it is cited as current. | Publish only the reviewed artifact with an exact SHA, HTTPS, deep-link smoke test, and privacy/network check. |
+| Static web artifact | **Current synthetic jury demo deployed 1 September 2026** at `https://lightskyblue-emu-103266.hostingersite.com/`. Archive SHA-256: `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`; all 79 files match `ui/dist`; HTTPS render and first-action smoke checks passed without browser errors. | Publish only the reviewed artifact with an exact SHA, HTTPS, interaction smoke test, and privacy/network check. |
 | Host topology | Target is Hostinger static web plus isolated Hostinger VPS stateful services. | Static hosting never receives service secrets; issuer, verifier, database, and relayer remain isolated on stateful infrastructure. |
 | Synthetic fallback | Intended and required when live dependencies are absent. | Fallback is explicit and cannot emit live credential, vote, or canonical-receipt wording. |
-| Passport session | Source boundary exists; origin approval and live session are unverified. | Request only approved profile/session capabilities; reject wrong origin, network, nonce, or schema. |
+| Passport session | A live profile/session handshake is evidenced at [`evidence/passport-live/2026-08-31-first-real-session.md`](evidence/passport-live/2026-08-31-first-real-session.md). The observed flow required the person's consent sheet, not origin allowlisting; it returned no Preview address or credential. | Request only the approved profile/session capabilities; reject wrong origin, network, nonce, or schema, and rerun for any changed release origin. |
 | Rarimo/NFC | Adapter boundary exists; physical evidence and hosted verifier are unverified. | Never describe fixtures or source adapters as genuine NFC verification. |
 | Preview contracts | No current Preview deployment or receipt is asserted. | Require a fresh manifest/transcript for the exact release SHA and network. |
 | Stateful action relay | Source path exists; hosted operations and Preview evidence are unverified. | Require authenticated, idempotent, allowlisted actions and indexer confirmation before calling a receipt confirmed. |
@@ -92,27 +92,29 @@ would be visible to a participant in a pilot:
 | No duplicate-vote reminder | Nothing warns that this credential already voted on a consultation; the chain rejects it, but only after proof generation. | F-15 |
 | Physical NFC never tested | The entire NFC path is unobserved on hardware. This remains the single largest unverified claim. | Matrix §1 |
 
-## Local release-candidate artifact
+## Deployed synthetic jury artifact
 
 The current synthetic fallback was built with `VITE_APP_MODE=demo` and packaged
 with `index.html` at the ZIP root:
 
-- local path: `deploy/hostinger/artifacts/passport-preview-demo-20260831.zip`;
-- SHA-256: `6ab8066ef7e71e6b0609c01aa5776d78163a42f11a72ca851a7b07879d3b7677`;
+- local path: `deploy/hostinger/artifacts/ui_jury-demo.zip`;
+- SHA-256: `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`;
 - privacy scan: `npm run verify:showcase` passed;
-- UI tests at the time of packaging: 25 files and 169 tests passed (the
-  current tree is 26 files and 179 tests);
+- archive comparison: all 79 files match the reviewed `ui/dist`;
+- hosted verification: HTTPS 200, expected rendered jury copy, SPA fallback,
+  and first interactions at 320/390/tablet/desktop passed without horizontal
+  overflow, page errors, or console errors;
+- response headers: the host supplies only
+  `Content-Security-Policy: upgrade-insecure-requests`; HSTS, `nosniff`, frame,
+  referrer, and permissions policies are not yet present;
 - build caveats: the main JavaScript bundle remains about 5.1 MB and the
   ledger WASM about 10.1 MB; the Midnight indexer dependency also emits an
   `isomorphic-ws` browser-export warning during Vite build.
 
-This archive predates the 31 August journey rebuild. It is still the artifact
-behind the live demo URL, and it is superseded as a release candidate: repackage
-and re-scan before quoting a hash as current evidence.
-
-This hash binds the local ZIP only. It becomes public deployment evidence only
-after upload, HTTPS verification, route fallback checks, external smoke tests,
-and source-SHA recording.
+This is the artifact currently served at
+`https://lightskyblue-emu-103266.hostingersite.com/`. The evidence proves the
+synthetic UI artifact, route fallback, and responsive first interactions.
+Response-header hardening remains a separate release gate.
 
 For the deployment gate list, see
 [`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md),

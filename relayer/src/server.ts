@@ -5,6 +5,7 @@ import {
   ShieldedEncryptionPublicKey,
 } from '@midnight-ntwrk/wallet-sdk-address-format';
 import { loadConfig, type RelayerConfig } from './config.js';
+import { evaluateRelayerReadiness } from './readiness.js';
 import { handleV2Route } from './v2-http.js';
 import { MidnightIndexerReceiptResolver } from './v2-indexer.js';
 import { createConfiguredV2Store } from './v2-runtime.js';
@@ -268,6 +269,34 @@ export async function startServer(): Promise<void> {
               Object.entries(state.unshielded.balances).map(([k, v]) => [k, v.toString()]),
             ),
             dustBalance: state.dust.balance(dustAt).toString(),
+            dustEvaluationTime: dustAt.toISOString(),
+          });
+          return;
+        }
+
+        if (request.method === 'GET' && url.pathname === '/ready') {
+          const state = latest;
+          const dustAtValue = url.searchParams.get('dustAt');
+          const dustAt = dustAtValue === null ? new Date() : new Date(dustAtValue);
+          const now = Date.now();
+          if (
+            Number.isNaN(dustAt.getTime()) ||
+            dustAt.getTime() > now ||
+            now - dustAt.getTime() > 15 * 60 * 1_000
+          ) {
+            send(response, 400, { error: 'invalid_dust_evaluation_time' });
+            return;
+          }
+          const readiness = evaluateRelayerReadiness({
+            state: state
+              ? { isSynced: state.isSynced, dustBalance: state.dust.balance(dustAt) }
+              : null,
+            v2Enabled: Boolean(v2Service),
+          });
+          send(response, readiness.ready ? 200 : 503, {
+            ...readiness,
+            networkId: config.networkId,
+            dustBalance: state?.dust.balance(dustAt).toString() ?? '0',
             dustEvaluationTime: dustAt.toISOString(),
           });
           return;

@@ -1,8 +1,23 @@
-import { ArrowRight, GlobeHemisphereWest, MapPin, ShieldCheck } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
-import { Button, Card, Display, EmptyState, Eyebrow } from '@/components/system';
+import {
+  ArrowRight,
+  CaretDown,
+  GlobeHemisphereWest,
+  MapPin,
+  ShieldCheck,
+} from '@phosphor-icons/react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Card,
+  CountryPicker,
+  Display,
+  EmptyState,
+  Eyebrow,
+  Sheet,
+} from '@/components/system';
 import { CountryFlag } from '@/components/system/CountryFlag';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
+import { countryName, findAssignedCountry } from '@/integration/country-catalog';
 import type { CicoLocale } from '@/integration/locale';
 import { getPollAvailability } from '@/integration/poll-lifecycle';
 import type { DiscoveryScope } from '@/integration/product-boundaries';
@@ -11,6 +26,7 @@ import {
   isCountryPollForCountry,
   localizePoll,
   type Poll,
+  pollCountryCode,
 } from '@/views/poll-model';
 import { ResultsPanel } from '@/views/ResultsPanel';
 import './votes-view.css';
@@ -21,11 +37,18 @@ const COPY = {
     title: 'Decisiones que podés explorar',
     lead: 'Explorar un país no declara tu nacionalidad. La elegibilidad se verifica solo cuando querés participar.',
     world: 'Global',
-    france: 'Francia',
-    argentina: 'Argentina',
+    scopeButton: 'Explorar por lugar',
+    scopeDialogTitle: 'Elegí un lugar',
     scopeLabel: 'Alcance de las consultas',
     globalScope: 'Consultas globales',
     countryScope: 'Consultas en',
+    globalDescription: 'Abiertas a personas con una credencial elegible, sin país específico.',
+    availableCountries: 'Consultas disponibles',
+    countrySearch: 'Buscar cualquier país',
+    countryList: 'Países disponibles',
+    countrySuggested: 'Países con consultas publicadas',
+    countryEmpty: 'No encontramos ese país. Probá con otro nombre o su código.',
+    closeScope: 'Cerrar selector de lugar',
     browsing: 'Estás explorando',
     notEligibility: 'Esto no acredita elegibilidad.',
     open: 'Abierta',
@@ -37,18 +60,25 @@ const COPY = {
     simulated: 'Experiencia pública simulada',
     fromContract: 'Estado público leído desde Midnight',
     empty: 'No hay consultas publicadas en este alcance todavía.',
-    verifiedFor: 'Elegibilidad lista para',
+    passOnFile: 'Pase registrado para',
   },
   en: {
     eyebrow: 'Discover',
     title: 'Decisions you can explore',
     lead: 'Browsing a country does not declare your nationality. Eligibility is checked only when you choose to participate.',
     world: 'Global',
-    france: 'France',
-    argentina: 'Argentina',
+    scopeButton: 'Browse by place',
+    scopeDialogTitle: 'Choose a place',
     scopeLabel: 'Consultation scope',
     globalScope: 'Global consultations',
     countryScope: 'Consultations in',
+    globalDescription: 'Open to people with an eligible credential, without a specific country.',
+    availableCountries: 'Consultations available',
+    countrySearch: 'Search any country',
+    countryList: 'Available countries',
+    countrySuggested: 'Countries with published consultations',
+    countryEmpty: 'No country matches that search. Try another name or code.',
+    closeScope: 'Close place selector',
     browsing: 'You are exploring',
     notEligibility: 'This does not prove eligibility.',
     open: 'Open',
@@ -60,7 +90,7 @@ const COPY = {
     simulated: 'Simulated public experience',
     fromContract: 'Public state read from Midnight',
     empty: 'No consultations are published in this scope yet.',
-    verifiedFor: 'Eligibility ready for',
+    passOnFile: 'Pass on file for',
   },
 } as const;
 
@@ -74,19 +104,6 @@ export interface VotesViewProps {
   readonly locale: CicoLocale;
 }
 
-const SCOPES: ReadonlyArray<{ scope: DiscoveryScope; label: 'world' | 'france' | 'argentina' }> = [
-  { scope: { kind: 'world' }, label: 'world' },
-  { scope: { kind: 'country', code: 'FR' }, label: 'france' },
-  { scope: { kind: 'country', code: 'AR' }, label: 'argentina' },
-];
-
-function sameScope(left: DiscoveryScope, right: DiscoveryScope): boolean {
-  return (
-    left.kind === right.kind &&
-    (left.kind === 'world' || (right.kind === 'country' && left.code === right.code))
-  );
-}
-
 export function VotesView({
   polls,
   credential,
@@ -98,21 +115,45 @@ export function VotesView({
 }: VotesViewProps) {
   const copy = COPY[locale];
   const [scope, setScope] = useState<DiscoveryScope>({ kind: 'world' });
+  const [scopeSheetOpen, setScopeSheetOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
+  const availableCountryCodes = useMemo(() => {
+    const codes = new Set<string>();
+    for (const poll of polls) {
+      if (!isCountryPoll(poll)) continue;
+      const code = pollCountryCode(poll);
+      if (code && findAssignedCountry(code)) codes.add(code);
+    }
+    return [...codes].sort((left, right) =>
+      countryName(left, locale).localeCompare(countryName(right, locale), locale),
+    );
+  }, [locale, polls]);
+
   const visiblePolls =
     scope.kind === 'world'
       ? polls.filter((poll) => !isCountryPoll(poll))
       : polls.filter((poll) => isCountryPollForCountry(poll, scope.code));
-  const countryLabel =
-    scope.kind === 'country' ? (scope.code === 'FR' ? copy.france : copy.argentina) : copy.world;
-  const eligibleForScope = Boolean(
-    credential && (scope.kind === 'world' || credential.country === scope.code),
+  const countryLabel = scope.kind === 'country' ? countryName(scope.code, locale) : copy.world;
+  const passMatchesCountry = Boolean(
+    credential &&
+      scope.kind === 'country' &&
+      credential.country.trim().toUpperCase() === scope.code.trim().toUpperCase(),
   );
+  const eligibleForScope = Boolean(credential && (scope.kind === 'world' || passMatchesCountry));
+
+  const chooseGlobal = () => {
+    setScope({ kind: 'world' });
+    setScopeSheetOpen(false);
+  };
+  const chooseCountry = (code: string) => {
+    setScope({ kind: 'country', code: code.trim().toUpperCase() });
+    setScopeSheetOpen(false);
+  };
 
   return (
     <main className="votes">
@@ -122,32 +163,29 @@ export function VotesView({
         <p className="votes__lead">{copy.lead}</p>
       </header>
 
-      <div className="votes__scope" role="tablist" aria-label={copy.scopeLabel}>
-        {SCOPES.map((item) => {
-          const active = sameScope(scope, item.scope);
-          return (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={active}
-              className={active ? 'active' : ''}
-              key={item.label}
-              onClick={() => setScope(item.scope)}
-            >
-              {item.scope.kind === 'world' ? (
-                <GlobeHemisphereWest size={17} />
-              ) : (
-                <CountryFlag alpha2={item.scope.code} size="sm" />
-              )}
-              {copy[item.label]}
-            </button>
-          );
-        })}
-      </div>
+      <button
+        type="button"
+        className="votes__scope-trigger"
+        aria-haspopup="dialog"
+        aria-expanded={scopeSheetOpen}
+        onClick={() => setScopeSheetOpen(true)}
+      >
+        <span className="votes__scope-trigger-icon" aria-hidden="true">
+          {scope.kind === 'world' ? (
+            <GlobeHemisphereWest size={19} />
+          ) : (
+            <CountryFlag alpha2={scope.code} size="sm" />
+          )}
+        </span>
+        <span className="votes__scope-trigger-copy">
+          <small>{copy.scopeButton}</small>
+          <strong>{countryLabel}</strong>
+        </span>
+        <CaretDown size={18} aria-hidden="true" />
+      </button>
 
-      {/* The scope control above is the only way to change scope. There used to
-          be a second segmented control beside it and a third set of pins on a
-          decorative grid below, all doing the same job. */}
+      {/* Browsing scope is a filter, not a page tab. The full catalogue stays
+          searchable in the sheet while published countries lead the list. */}
       <p className="votes__scope-note">
         <MapPin size={15} aria-hidden="true" />
         <span>
@@ -163,9 +201,9 @@ export function VotesView({
             </p>
             <h2 id="discover-results-title">{countryLabel}</h2>
           </div>
-          {eligibleForScope ? (
+          {passMatchesCountry ? (
             <span className="votes__eligible">
-              <ShieldCheck size={15} weight="fill" /> {copy.verifiedFor} {countryLabel}
+              <ShieldCheck size={15} weight="fill" /> {copy.passOnFile} {countryLabel}
             </span>
           ) : null}
         </div>
@@ -220,6 +258,42 @@ export function VotesView({
       {scope.kind === 'world' ? (
         <ResultsPanel contractAddress={publicContractAddress} locale={locale} />
       ) : null}
+
+      <Sheet
+        open={scopeSheetOpen}
+        title={copy.scopeDialogTitle}
+        closeLabel={copy.closeScope}
+        onClose={() => setScopeSheetOpen(false)}
+      >
+        <div className="votes__scope-sheet">
+          <button
+            type="button"
+            className={`votes__global-option ${scope.kind === 'world' ? 'active' : ''}`.trim()}
+            aria-pressed={scope.kind === 'world'}
+            onClick={chooseGlobal}
+          >
+            <GlobeHemisphereWest size={20} aria-hidden="true" />
+            <span>
+              <strong>{copy.world}</strong>
+              <small>{copy.globalDescription}</small>
+            </span>
+          </button>
+          {availableCountryCodes.length ? (
+            <p className="votes__scope-sheet-label">{copy.availableCountries}</p>
+          ) : null}
+          <CountryPicker
+            value={scope.kind === 'country' ? scope.code : ''}
+            onChange={chooseCountry}
+            locale={locale}
+            searchLabel={copy.scopeLabel}
+            searchPlaceholder={copy.countrySearch}
+            listLabel={copy.countryList}
+            suggested={availableCountryCodes}
+            suggestedLabel={copy.countrySuggested}
+            emptyLabel={copy.countryEmpty}
+          />
+        </div>
+      </Sheet>
     </main>
   );
 }
