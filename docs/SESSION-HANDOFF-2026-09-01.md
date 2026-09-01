@@ -17,6 +17,12 @@ wallet holds one NIGHT coin, already registered for DUST generation, and 9.7
 DUST. Every timeout in the repository was shorter than the indexer replay, so a
 partial sync reported zero and was read as an empty wallet.
 
+The deployment still did not land. It ran, reached its first submission, and
+was rejected with error 170 because the relayer and the deploy script were
+sharing that single DUST coin. A dedicated operator wallet is now configured and
+needs one faucet request — §5 has the address. **Nothing is deployed to
+Preview**, and no document in this repository says otherwise.
+
 Beyond that, the Verify action became a real document journey, light is the
 default tone again, French joined the product, and Activity now answers the
 questions people actually arrive with.
@@ -29,7 +35,7 @@ questions people actually arrive with.
 | Base at session start | `ed1c17d` |
 | New commits | 5 (`619cba0`, `e687037`, `d59e3d6`, `de21cf5`, `47ba45d`) |
 | PR | [#23](https://github.com/tomasgarro/midnight-referendum-app/pull/23), open |
-| Preview deployment | **In progress at the end of the session.** See §5 |
+| Preview deployment | **Attempted, failed on error 170. Nothing on chain.** See §5 |
 | Hostinger / VPS | Untouched. No hosted resource was mutated |
 
 ## 3. The wallet fact, so nobody re-derives it
@@ -116,19 +122,40 @@ protocol change and a redeploy, not a UI change.
 
 ## 5. Preview deployment — the exact state
 
-**Launched, not finished.** At the end of the session `npm run deploy:preview`
-was mid-operator-sync. Its outcome is not evidenced here.
+**Ran, and failed at its first submission.** The node rejected it with
+`Invalid Transaction: Custom error: 170` (`InvalidDustSpendProof`). **Nothing
+reached the chain** — the manifest holds no address and an empty transcript, so
+there is still no Preview deployment claim.
 
-Everything blocking it is cleared:
+The cause is not a code defect. The deploy needs two wallets alive at once: the
+relayer service, which balances and submits, and the script's own operator
+wallet. Both were pointed at the one seed proven to be funded, and that wallet
+holds **one DUST coin**. Two processes cannot share it: the relayer balanced
+against a coin state the operator had already moved.
+
+**`V2_OPERATOR_FEE_SEED_HEX` now points at a dedicated operator wallet**, freshly
+generated so the two can never contend again. It needs funding — this is the one
+action that unblocks the deployment:
+
+```
+mn_addr_preview1z80zenqvedqjg8veyz474gufl33f5qx70deuzzyvjwaekf6m0j4sr5jnww
+```
+
+Send Preview NIGHT from the faucet, register it for DUST, then re-run
+`npm run deploy:preview`. Budget ~27 minutes of cold sync per process.
+
+The relayer's own wallet is now in the stale state error 170 leaves behind:
+restart the relayer before the next attempt rather than waiting.
+
+Everything else is cleared:
 
 - Proof server healthy on `:6300` (container `referendum-proof-server`).
 - Relayer synced, `readyToSubmit: true`, 9.7 DUST.
 - `.env.v2.preview` has all 17 required keys. The 11 that were missing are
   locally generated hex/ids/dates — no external credential was ever needed.
-- `V2_OPERATOR_FEE_SEED_HEX` **now points at the relayer seed**, because the
-  original operator seed's funding was unknown and the relayer's was proven.
-  Consequence: two processes share one DUST coin. If error 170 appears,
-  restart the relayer and retry rather than waiting.
+- `V2_OPERATOR_FEE_SEED_HEX` points at a dedicated, **currently unfunded**
+  wallet (address above). It was briefly set to the relayer seed, which is what
+  caused the failure; do not point it back.
 
 Three snags cost a run each, all fixed:
 
@@ -141,19 +168,21 @@ Three snags cost a run each, all fixed:
    `deploy/passport-v2/preview.manifest.json` — if it has no addresses and an
    empty transcript, nothing is on chain and it is safe to delete.
 
-**Next session, first thing:** check
-`deploy/passport-v2/preview.manifest.json`. If `status` is `complete`, fill in
+**Next session, first thing:** fund the operator address above, restart the
+relayer, and re-run. Then fill in
 [`evidence/preview-2026-09-01/README.md`](evidence/preview-2026-09-01/README.md)
-from its addresses, transaction ids, and tally, then update the two places that
-still say nothing is deployed:
-`PREVIEW-AND-BACKEND-READINESS.md:10` and `SUBMISSION.md:220`. If it is not
-complete, re-run; the run is idempotent and resumes from its transcript.
+from the manifest's addresses, transaction ids, and tally, and update the two
+places that still say nothing is deployed:
+`PREVIEW-AND-BACKEND-READINESS.md:10` and `SUBMISSION.md:220`. Delete a stale
+`in-progress` manifest first if one is present — if it carries no address and an
+empty transcript, nothing is on chain.
 
 ## 6. Open, in priority order
 
-1. **Finish or re-run the Preview deployment** and record the evidence. Until
-   the manifest and the explorer both confirm it, nothing may be described as a
-   live Preview deployment.
+1. **Fund the operator wallet and re-run the Preview deployment**, then record
+   the evidence. This is the single highest-value item and it is now one faucet
+   request away. Until the manifest and the explorer both confirm it, nothing
+   may be described as a live Preview deployment.
 2. **A second finalized referendum.** The deploy script drives the whole
    lifecycle (`castVote` → `closeVote` → `revealVote` → `finalizeVote`) and
    honours `V2_WAIT_FOR_SCHEDULE`. A second run on a ~10-minute schedule with a

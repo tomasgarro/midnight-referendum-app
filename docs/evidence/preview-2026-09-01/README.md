@@ -7,12 +7,14 @@ predicting its outcome.
 
 ## Status
 
-> **In progress.** The wallet gate cleared and the deployment was launched. The
-> contract addresses, transaction identifiers, and tally in the tables below are
-> filled in from `deploy/passport-v2/preview.manifest.json` once the run
-> completes. Until every cell is populated from that manifest, this project has
-> **no Preview deployment claim**, and the hosted UI stays labelled as a
-> synthetic demo.
+> **Not deployed.** The wallet gate cleared and the deployment ran to its first
+> submission, which the node rejected with `Invalid Transaction: Custom error:
+> 170` (`InvalidDustSpendProof`). Nothing reached the chain: the manifest holds
+> no contract address and an empty transcript. **This project still has no
+> Preview deployment claim**, and the hosted UI stays labelled a synthetic demo.
+>
+> The cause is understood and is not a code defect — see *Why it failed* below.
+> One funding action unblocks it.
 
 ## The wallet gate, and what it cost
 
@@ -62,6 +64,32 @@ contend and return error 170, and waiting does not clear the stale reservation �
 the relayer has to be restarted. Every submission in this deployment is
 therefore serialised, and any multi-user demonstration needs either more coins
 or a queue in front of it.
+
+## Why it failed, and what unblocks it
+
+The deploy needs two wallets alive at once: the relayer service, which balances
+and submits, and the script's own operator wallet. Both were pointed at the same
+seed, because that was the wallet proven to be funded — and that wallet holds
+**one DUST coin**.
+
+Two independent processes cannot share one coin. The relayer balanced a
+transaction (`dustSpends=1`) against a coin state the operator process had
+already moved, and the node rejected the spend proof. This is the same error 170
+recorded against this project before; it does not clear by waiting, and only a
+relayer restart re-derives the coins.
+
+`V2_OPERATOR_FEE_SEED_HEX` now points at a **dedicated operator wallet**, freshly
+generated for this purpose, so the two processes can never contend again. It
+needs NIGHT:
+
+```
+mn_addr_preview1z80zenqvedqjg8veyz474gufl33f5qx70deuzzyvjwaekf6m0j4sr5jnww
+```
+
+Fund it from the [Preview faucet](https://midnight-tmnight-preview.nethermind.dev/),
+then register the coin for DUST generation (`npm run relayer:dust` with that
+seed) and re-run `npm run deploy:preview`. Budget roughly 27 minutes of cold
+sync per process before either reports a balance.
 
 ## Contracts
 
