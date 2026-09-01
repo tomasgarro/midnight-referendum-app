@@ -36,7 +36,7 @@ being represented as complete.
 | Compiled contracts | **Present** — `referendum-v2`, `credential-registry-v1` and `referendum` all have `contract/`, `keys/` and `zkir/` |
 | Local proof server (`:6300`) | **Not running** |
 | CICO service environment | **No `.env`** — only `.env.example` |
-| Static demo | **Legacy artifact exists** at `https://lightskyblue-emu-103266.hostingersite.com`; its bundle predates the current journey rebuild and must be repackaged/reverified before being cited as current |
+| Static demo | **Current synthetic jury demo deployed and externally verified** at `https://lightskyblue-emu-103266.hostingersite.com`; this is UI evidence, not a Preview contract or NFC claim |
 
 ## The dependency chain, in order
 

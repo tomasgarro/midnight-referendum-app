@@ -11,11 +11,11 @@ still missing without opening five template files.
 state. Secrets belong in `*.local` files with mode 0600 on the VPS, or in an
 operator secret store.
 
-## Status as of 31 August 2026
+## Status as of 1 September 2026
 
 | Area | State |
 | --- | --- |
-| Static demo | **Live.** `https://lightskyblue-emu-103266.hostingersite.com/` serves the reviewed synthetic bundle over HTTPS. |
+| Static demo | **Live and current.** `https://lightskyblue-emu-103266.hostingersite.com/` serves the reviewed synthetic bundle with archive SHA-256 `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`. |
 | VPS stack | **Not started.** No Midnight Compose project exists on the VPS. |
 | Blocking category | Credentials, domains and a physical NFC test — not code. |
 

@@ -53,12 +53,15 @@ choose a country → `Create my simulated pass` / `Crear mi pase simulado` →
 The simulated badge/disclosure is part of the product contract. A simulated
 receipt is local demonstration state, not a canonical chain receipt.
 
-An older static demo URL exists at
-[`lightskyblue-emu-103266.hostingersite.com`](https://lightskyblue-emu-103266.hostingersite.com/),
-but the current readiness record says that bundle predates the journey rebuild.
-It must be repackaged, privacy-scanned, and reverified against an exact source
-SHA before being cited as the current submission artifact. This brief makes no
-claim that the URL is a current Preview or NFC deployment.
+The current synthetic jury demo is live at
+[`lightskyblue-emu-103266.hostingersite.com`](https://lightskyblue-emu-103266.hostingersite.com/).
+The deployed archive was privacy-scanned, its 79 files match the reviewed
+`ui/dist`, and its SHA-256 is
+`99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`.
+HTTPS rendering and the first mobile interaction were externally verified on
+1 September 2026 without browser errors. This is current **synthetic UI**
+evidence; it is not a claim of a Preview contract deployment, real NFC proof,
+Rarimo verification, or canonical on-chain receipt.
 
 ## Evidence matrix
 
