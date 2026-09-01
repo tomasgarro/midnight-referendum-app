@@ -14,27 +14,31 @@ interface CredentialJourneyTutorialProps {
  * clip exists now (see PassportScanTutorial), so the disclosure carries the
  * walkthrough and the written steps together.
  *
- * The six steps stay either way: they are what a reader with the sound off,
- * a slow connection, or a screen reader needs, and they say things the footage
- * cannot -- that a manual entry is not a credential on its own, and that this
- * page is only waiting for a result.
+ * The written steps stay either way: they are what a reader with the sound off,
+ * a slow connection, or a screen reader needs. They also name the recoverable
+ * failure modes the footage cannot: a blocked camera, a stalled NFC read, and
+ * an expired or rejected provider attempt.
  */
 export function CredentialJourneyTutorial({ locale = 'es' }: CredentialJourneyTutorialProps) {
   const en = locale === 'en';
-  // Three of the original six steps are now the walkthrough's own captions --
-  // the camera framing, the case, the chip. What survives here is what the
-  // footage cannot say.
+  // The walkthrough shows the physical gestures. This transcript names what to
+  // do when the provider cannot complete one of them, so a failure is never a
+  // dead end or an invitation to enter identity data manually.
   const steps = en
     ? [
         'Scan the one-time QR with a compatible NFC phone, or open the link on that phone.',
-        'If camera access is denied, use only the provider fallback — never a third-party reader.',
-        'A manual entry is not a credential by itself; the provider check must still complete successfully.',
+        'If the QR or link will not open, copy the backup link to the NFC phone and keep this page open.',
+        'If camera access is denied, allow it in the provider app or use only its documented fallback — never a third-party reader.',
+        'If the NFC read stalls, remove a thick or metal case, close the passport, place the phone on the chip, and hold it still until the provider finishes.',
+        'If Rarimo reports an expired, denied, or failed attempt, create a new link. Manual entry is not a credential by itself.',
         'Return here while this page checks the one-time attempt and receives only the minimal credential result.',
       ]
     : [
         'Escaneá el QR de un solo uso con un teléfono NFC compatible o abrí el enlace en ese teléfono.',
-        'Si la cámara está bloqueada, usá solo la alternativa del proveedor — nunca un lector de terceros.',
-        'Una carga manual no es una credencial por sí sola; el chequeo del proveedor debe finalizar correctamente.',
+        'Si el QR o el enlace no abre, copiá el enlace de respaldo al teléfono NFC y dejá esta página abierta.',
+        'Si la cámara está bloqueada, habilitala en la app del proveedor o usá solo su alternativa documentada — nunca un lector de terceros.',
+        'Si la lectura NFC se detiene, sacá una funda gruesa o metálica, cerrá el pasaporte, apoyá el teléfono sobre el chip y mantenelo quieto hasta que termine.',
+        'Si Rarimo informa que el intento venció, fue rechazado o falló, generá un enlace nuevo. Una carga manual no es una credencial por sí sola.',
         'Volvé acá mientras esta página consulta el intento único y recibe solo el resultado mínimo de la credencial.',
       ];
 

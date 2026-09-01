@@ -6,6 +6,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const compose = await readFile(path.join(root, 'docker-compose.vps.yml'), 'utf8');
 const edge = await readFile(path.join(root, 'Caddyfile.example'), 'utf8');
 const internal = await readFile(path.join(root, 'rarimo', 'Caddyfile.example'), 'utf8');
+const rarimoPatch = await readFile(
+  path.join(root, 'rarimo', 'patches', 'v0.3.12-cico-delete-204.patch'),
+  'utf8',
+);
 const examples = await Promise.all(
   ['.env.public.example', '.env.cico.example', '.env.relayer.example', '.env.rarimo.example'].map(
     (name) => readFile(path.join(root, name), 'utf8'),
@@ -38,9 +42,18 @@ assert((compose.match(/ports:/g) ?? []).length === 1, 'only edge-proxy may have 
 assert(compose.includes('internal: true'), 'private Docker networks must be internal');
 const cicoBlock = serviceBlock('cico');
 const verifierBlock = serviceBlock('rarimo-verificator');
+const edgeBlock = serviceBlock('edge-proxy');
 assert(
   cicoBlock.includes('- rarimo-cico') && verifierBlock.includes('- rarimo-cico'),
   'CICO and the private verifier must share the rarimo-cico network',
+);
+assert(
+  /relayer:[\s\S]*condition: service_healthy/u.test(edgeBlock),
+  'edge proxy must wait for the relayer sponsored-path readiness gate',
+);
+assert(
+  compose.includes("fetch('http://127.0.0.1:8790/ready')"),
+  'relayer healthcheck must use the positive readiness endpoint',
 );
 assert(!compose.includes('/dev/tcp/'), 'proof images have no POSIX shell; probe them externally');
 for (const volume of [
@@ -84,8 +97,19 @@ assert(
   edge.includes('/integrations/verificator-svc/public/callback/*'),
   'public callback route is missing',
 );
+assert(edge.includes('max_size 2MB'), 'public Rarimo callback body limit is missing');
+assert(internal.includes('max_size 2MB'), 'internal Rarimo callback body limit is missing');
 assert(!edge.includes('/private/'), 'public edge config must not contain a Rarimo private route');
 assert(!internal.includes('/private/'), 'internal Rarimo gateway must not publish a private route');
+assert(
+  rarimoPatch.includes('ctx.AuthClient(r).Enabled && !auth.Authenticates'),
+  'Rarimo derivative patch must retain the enabled-auth admin gate',
+);
+assert(
+  rarimoPatch.includes('TestDeleteUserReturns204WhenAuthDisabled') &&
+    rarimoPatch.includes('TestDeleteUserStillRequiresAdminWhenAuthEnabled'),
+  'Rarimo derivative patch must include both cleanup and auth regression tests',
+);
 for (const example of examples) {
   assert(
     !/\b(?:RELAYER_SEED|CICO_ISSUER_WALLET_SEED)\s*=\s*[0-9a-f]{64}\b/iu.test(example),

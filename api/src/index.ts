@@ -120,8 +120,9 @@ async function relayerJson<T>(url: string, body?: unknown): Promise<T> {
 }
 
 /**
- * Wallet-less provider set: the browser proves locally and a sponsored relayer
- * pays the fee and submits.
+ * Compatibility-only legacy wallet-less provider set for Node operators.
+ * Browser callers must use the Passport-v2 sponsored-wallet composition, which
+ * delegates proving to Lace and exposes only the atomic /v2 action boundary.
  *
  * `castVote` is authorised by Merkle membership and the nullifier, never by
  * the submitter, so the relayer funds the transaction without gaining any say
@@ -131,6 +132,11 @@ async function relayerJson<T>(url: string, body?: unknown): Promise<T> {
 export async function createRelayerProviders(
   options: RelayerProviderOptions,
 ): Promise<AppProviders> {
+  if (typeof window !== 'undefined') {
+    throw new TypeError(
+      'The legacy relayer provider is unavailable in a browser; use Passport-v2 sponsored-wallet providers',
+    );
+  }
   setNetworkId(options.networkId as Parameters<typeof setNetworkId>[0]);
 
   const base = options.relayerUrl.replace(/\/$/, '');
@@ -145,7 +151,9 @@ export async function createRelayerProviders(
     typeof window === 'undefined'
       ? inMemoryPrivateStateProvider<typeof PRIVATE_STATE_ID, PrivateState>()
       : browserPrivateStateProvider<typeof PRIVATE_STATE_ID, PrivateState>();
-  const browserOrigin = typeof window === 'undefined' ? '' : window.location.origin;
+  // The legacy provider is explicitly Node-only; the browser branch above
+  // makes this a constant and prevents an accidental browser URL fallback.
+  const browserOrigin = '';
   const zkConfigProvider =
     options.zkConfigProvider ??
     new FetchZkConfigProvider<ImpureCircuitKeys>(
@@ -195,6 +203,11 @@ export async function createProviders(
   api: ConnectedAPI,
   options: ProviderOptions = {},
 ): Promise<AppProviders> {
+  if (typeof window !== 'undefined' && options.proofServerUri) {
+    throw new TypeError(
+      'HTTP proof providers are unavailable in a browser; use Lace wallet proving',
+    );
+  }
   const config = await api.getConfiguration();
   setNetworkId(config.networkId);
 

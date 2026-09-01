@@ -30,7 +30,7 @@ uses the older frozen-before-deploy model and is not current release evidence.
 
 | Capability | Current release position | Evidence needed before a live claim |
 | --- | --- | --- |
-| Passport | Session, consent, and optional display profile only. Profile fields never authorize eligibility or a vote. | Approved HTTPS origin, real session transcript, and independent privacy review. |
+| Passport | Session, consent, and optional display profile only. A real profile/session handshake is evidenced; profile fields never authorize eligibility or a vote. | Fresh approved-origin/network transcript if the deployment changes, plus independent privacy review. |
 | Rarimo | Temporary NFC evidence adapter behind `cico-service`; only minimal issuer-bound claims cross the boundary. | Pinned self-hosted verifier, authenticated callback, physical-device NFC transcript, deletion/retention inspection, and replay tests. |
 | Eligibility | Synthetic fallback is available and labelled. A real credential requires a trusted provider result and issuer receipt. | Fresh Preview issuance transcript tied to the exact release SHA and registry. |
 | Voting | Primary product action. The browser owns choice, voter secret, opening, and witness; confirmed receipts come from the indexer. | Fresh Preview cast/reveal/finalize transcript, relay authorization review, and independent indexer reconciliation. |
@@ -44,7 +44,7 @@ uses the older frozen-before-deploy model and is not current release evidence.
 | Static web artifact | A reviewed synthetic bundle is deployed and verified over HTTPS at `https://lightskyblue-emu-103266.hostingersite.com/`. The bundle predates the 31 August journey rebuild and must be repackaged before it is cited as current. | Publish only the reviewed artifact with an exact SHA, HTTPS, deep-link smoke test, and privacy/network check. |
 | Host topology | Target is Hostinger static web plus isolated Hostinger VPS stateful services. | Static hosting never receives service secrets; issuer, verifier, database, and relayer remain isolated on stateful infrastructure. |
 | Synthetic fallback | Intended and required when live dependencies are absent. | Fallback is explicit and cannot emit live credential, vote, or canonical-receipt wording. |
-| Passport session | Source boundary exists; origin approval and live session are unverified. | Request only approved profile/session capabilities; reject wrong origin, network, nonce, or schema. |
+| Passport session | A live profile/session handshake is evidenced at [`evidence/passport-live/2026-08-31-first-real-session.md`](evidence/passport-live/2026-08-31-first-real-session.md). The observed flow required the person's consent sheet, not origin allowlisting; it returned no Preview address or credential. | Request only the approved profile/session capabilities; reject wrong origin, network, nonce, or schema, and rerun for any changed release origin. |
 | Rarimo/NFC | Adapter boundary exists; physical evidence and hosted verifier are unverified. | Never describe fixtures or source adapters as genuine NFC verification. |
 | Preview contracts | No current Preview deployment or receipt is asserted. | Require a fresh manifest/transcript for the exact release SHA and network. |
 | Stateful action relay | Source path exists; hosted operations and Preview evidence are unverified. | Require authenticated, idempotent, allowlisted actions and indexer confirmation before calling a receipt confirmed. |

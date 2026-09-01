@@ -28,7 +28,7 @@ holds 0 DUST**, and DUST is what pays for every transaction.
 | Compiled contracts | **Present** — `referendum-v2`, `credential-registry-v1` and `referendum` all have `contract/`, `keys/` and `zkir/` |
 | Local proof server (`:6300`) | **Not running** |
 | CICO service environment | **No `.env`** — only `.env.example` |
-| Static demo | **Live and verified** at `https://lightskyblue-emu-103266.hostingersite.com` |
+| Static demo | **Legacy artifact exists** at `https://lightskyblue-emu-103266.hostingersite.com`; its bundle predates the current journey rebuild and must be repackaged/reverified before being cited as current |
 
 ## The dependency chain, in order
 
@@ -118,22 +118,24 @@ Worth stating, because it is where the work already went:
 
 - **The contracts compile and their ZK keys exist.** No Compact work is
   outstanding for a Preview deploy.
-- **The application code paths are complete** for enrollment, credential
+- **The application code paths are present** for enrollment, credential
   issuance, action authorisation, vote submission and receipt reconciliation,
-  with 179 UI tests and the contract simulator suites passing.
+  with unit/simulator and browser coverage; the exact release-run counts must
+  be recorded with the release SHA.
 - **Fail-closed routing works.** An enabled-but-incomplete v2 runtime cannot
   fall through to the legacy executor.
 - **The deployment topology is designed and reviewed** — Compose model, Caddy
   routing, private networks, the Rarimo DELETE derivative and its patch,
   preflight, rollback and packaging tooling.
-- **The static demo is deployed and verified**, and the full citizen journey
-  passes against the live URL in a headless browser.
+- **A static demo artifact exists**, but the hosted bundle predates the current
+  journey rebuild. The last recorded hosted-browser pass must be rerun after
+  repackaging before the URL is presented as current evidence.
 
 ## Submission readiness, by level
 
 | Level | State | What is missing |
 | --- | --- | --- |
-| **Demo / narrative** | **Ready.** Live URL, full journey, honest labelling throughout. | Nothing. |
+| **Demo / narrative** | **Runnable locally.** The synthetic journey and honest labelling are source-backed; the hosted URL needs repackaging/reverification. | Current artifact digest, hosted deep-link/header/privacy checks, and release-run CI links. |
 | **Contracts** | **Ready to deploy.** Compiled, key-bearing, simulator-tested. | A funded wallet and one deploy run. |
 | **Preview end-to-end** | **Blocked.** | Steps 1–4 above. Realistically half a day once NIGHT arrives. |
 | **Hosted backend** | **Blocked.** | The VPS stack: domains, secrets, image digests. See the VPS checklist. |
@@ -141,9 +143,10 @@ Worth stating, because it is where the work already went:
 
 ## The honest summary for a submission
 
-The demo is real, deployed, and does what it says. The contracts are real and
-compile. The Preview path is written and tested but **has never run against
-Preview**, and the NFC credential path has never run against hardware.
+The demo is runnable locally and the contracts compile. A legacy static URL
+exists but is not current release evidence until repackaged and reverified. The
+Preview path is written and tested but **has never run against Preview**, and
+the NFC credential path has never run against hardware.
 
 If the submission needs a live Preview transaction, the critical path starts
 with Preview NIGHT and is otherwise a few commands. If it needs a real

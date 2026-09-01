@@ -1,9 +1,9 @@
 # First public deployment: voting-first synthetic showcase
 
-Status: target release runbook. No public deployment is asserted by this
-document or the current checkout. The target is a Hostinger static web surface
-for the browser and isolated Hostinger VPS services for any later stateful
-issuer, verifier, database, and relayer.
+Status: target release runbook. A legacy static demo URL exists, but this
+document does not certify it as the current public artifact. The target is a
+Hostinger static web surface for the browser and isolated Hostinger VPS
+services for any later stateful issuer, verifier, database, and relayer.
 
 ## Release boundary
 
@@ -29,7 +29,7 @@ Rarimo/verificator proof or callback routes.
 | Surface | First public showcase | Later private/invited stage |
 | --- | --- | --- |
 | UI | Hostinger static web at `<SHOWCASE_UI_ORIGIN>` | Same static surface may enable approved Preview ports. |
-| Passport | Profile/session consent only, after origin approval | Future Passport-native evidence capability, if separately approved. |
+| Passport | Profile/session consent only, after the person's consent sheet and exact capability/network checks | Future Passport-native evidence capability, if separately approved. |
 | CICO/Rarimo | Synthetic/unavailable | Private CICO façade and pinned verifier on isolated VPS infrastructure. |
 | Citizen proving | Not required for synthetic flow | Participant-local loopback proof server or explicitly approved provider. |
 | Voting | Simulated and labelled | Stateful, authenticated v2 action relay only after Preview evidence. |

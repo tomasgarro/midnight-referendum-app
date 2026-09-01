@@ -115,6 +115,7 @@ export function Sheet({
         ref={panelRef}
         tabIndex={-1}
       >
+        <span className="sys-sheet__handle" aria-hidden="true" />
         <div className="sys-sheet__head">
           <h2 className="sys-sheet__title" id={titleId}>
             {title}

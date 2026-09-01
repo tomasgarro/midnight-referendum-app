@@ -28,6 +28,10 @@ export type ReferendumV2CircuitKeys =
   | 'finalizeVote';
 
 export interface ReferendumV2WalletProviderOptions {
+  /**
+   * Node-only development fallback. Browser callers must use the Lace
+   * proving provider returned by ConnectedAPI.getProvingProvider().
+   */
   readonly proofServerUri?: string;
   readonly zkConfigBaseUrl?: string;
 }
@@ -43,6 +47,11 @@ export async function createReferendumV2WalletProviders(
 ): Promise<ReferendumV2Providers> {
   const hasBrowserWindow = typeof window !== 'undefined';
   const explicitZkConfigBaseUrl = options.zkConfigBaseUrl?.trim();
+  if (hasBrowserWindow && options.proofServerUri) {
+    throw new TypeError(
+      'HTTP proof providers are unavailable in a browser; use Lace wallet proving',
+    );
+  }
   if (!hasBrowserWindow && !explicitZkConfigBaseUrl) {
     throw new Error('createReferendumV2WalletProviders requires zkConfigBaseUrl outside a browser');
   }

@@ -23,6 +23,11 @@ async function completeDemoCredential(user: ReturnType<typeof userEvent.setup>, 
   );
 }
 
+async function chooseCountry(user: ReturnType<typeof userEvent.setup>, country: RegExp | string) {
+  await user.click(screen.getByRole('button', { name: /Explorar por lugar|Browse by place/i }));
+  await user.click(screen.getByRole('radio', { name: country }));
+}
+
 /** The five-position bar renders only once onboarding is behind the reader. */
 function skipOnboarding() {
   window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
@@ -77,7 +82,7 @@ describe('App', () => {
     const user = userEvent.setup();
     await completeDemoCredential(user);
     expect(screen.getByRole('heading', { name: /Decisiones que podés explorar/i })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: /Global/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('button', { name: /Explorar por lugar.*Global/i })).toBeTruthy();
     expect(screen.queryByText(/Passport v2|Paso 9|Elegí tu respuesta/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
   });
@@ -134,17 +139,17 @@ describe('App', () => {
 
     // The demo issues a French pass. Argentina is browsable all the same, and
     // browsing it must not present the reader as eligible there.
-    await user.click(screen.getByRole('tab', { name: 'Argentina' }));
+    await chooseCountry(user, 'Argentina');
     expect(screen.getByText(/Esto no acredita elegibilidad/i)).toBeTruthy();
-    expect(screen.queryByText(/Elegibilidad lista para/i)).toBeNull();
+    expect(screen.queryByText(/Pase registrado para/i)).toBeNull();
     // Every open Argentine consultation offers the way in, and none offers a vote.
     expect(screen.getAllByRole('button', { name: /Añadir elegibilidad/i }).length).toBeGreaterThan(
       0,
     );
     expect(screen.queryByRole('button', { name: /^Participar/i })).toBeNull();
 
-    await user.click(screen.getByRole('tab', { name: 'Francia' }));
-    expect(screen.getByText(/Elegibilidad lista para/i)).toBeTruthy();
+    await chooseCountry(user, /Francia|France/i);
+    expect(screen.getByText(/Pase registrado para/i)).toBeTruthy();
   });
 
   it('offers only the two countries with a complete pilot journey', async () => {
@@ -210,7 +215,7 @@ describe('App', () => {
     // Argentina is the scope with several open consultations, so it is where
     // two distinct receipts can be produced.
     await completeDemoCredential(user, /Argentina/i);
-    await user.click(screen.getByRole('tab', { name: 'Argentina' }));
+    await chooseCountry(user, 'Argentina');
 
     const castVote = async (index: number, answer: RegExp) => {
       const open = screen.getAllByRole('button', { name: /Participar/i });
@@ -222,7 +227,7 @@ describe('App', () => {
       await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
       await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
       await user.click(screen.getByRole('button', { name: 'Descubrir' }));
-      await user.click(screen.getByRole('tab', { name: 'Argentina' }));
+      await chooseCountry(user, 'Argentina');
     };
 
     await castVote(0, /^Sí/);
@@ -316,7 +321,12 @@ describe('App', () => {
       await screen.findByRole('heading', { name: /Decisiones que podés explorar/i }),
     ).toBeTruthy();
     // Nothing was verified and no session exists, yet consultations render.
-    expect(screen.queryByText(/Elegibilidad lista para/i)).toBeNull();
-    expect(screen.getAllByRole('tab', { name: /Global|Francia|Argentina/ }).length).toBe(3);
+    expect(screen.queryByText(/Pase registrado para/i)).toBeNull();
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /Explorar por lugar|Browse by place/i }));
+    expect(screen.getByRole('button', { name: /^Global/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Francia|France/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Argentina/i })).toBeTruthy();
   });
 });

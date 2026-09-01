@@ -67,10 +67,11 @@ address/identity surface waits.
 
 ### What to build while that is open
 
-1. **Session durability.** The session currently lives in memory. Reconnect,
-   expiry, and rejection paths exist in `passport-session-port.ts` but have
-   never been exercised against the live Passport — only against fixtures. Test
-   each against the real thing and record what actually happens.
+1. **Session durability.** The session currently lives in memory. A successful
+   live profile/session handshake is recorded, but reconnect, expiry, and
+   rejection paths in `passport-session-port.ts` have only been exercised
+   against fixtures. Test each against the real thing and record what actually
+   happens.
 2. **The redirect flow.** The deployed Passport also implements
    `org.midnight.passport.callback/v1` — a signed redirect (`passportCallback`,
    `passportFields`, `passportState` → `passportResponse`, signed

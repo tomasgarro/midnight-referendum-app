@@ -17,7 +17,7 @@ material, raw provider data, document images, or ballot choices.
 
 | Field | Value |
 | --- | --- |
-| Review checkout / branch | `feat/passport-preview-night` |
+| Review checkout / branch | Record the actual checked-out branch at release time |
 | Release SHA | not assigned |
 | Evidence source SHA | `abdd0a2203fbef909f70f6ddc06681ac1327f457` (tree `9d1319aa3540a0943f760631ec3ac9c9e5b40b36`) |
 | Manifest digest | `d2cb84585d41f76dace23fed49c780e451cc4883efc7b7b5314a9e6d2544e21d` |

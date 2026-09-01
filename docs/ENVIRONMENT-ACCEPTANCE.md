@@ -13,7 +13,7 @@ credential, vote, or canonical receipt through copy alone.
 
 | Capability | `demo` | `undeployed` | `preview` |
 | --- | --- | --- | --- |
-| Passport session | Deterministic fixture, labelled simulated | Official Passport profile/session only when an approved origin and live session are configured; otherwise unavailable | Official Passport profile/session on the approved HTTPS origin |
+| Passport session | Deterministic fixture, labelled simulated | Official Passport profile/session only when a live session is configured; the observed popup flow uses the person's consent sheet rather than an origin allowlist | Official Passport profile/session only after the release origin, network, nonce, and capability checks are evidenced |
 | Passport profile | Synthetic display fixture | Consented display fields only; never eligibility or vote authority | Consented display fields only; never eligibility or vote authority |
 | Civic credential | Synthetic adapter and fixture, visibly labelled | Configured local issuer and provider path; fixtures remain disclosed | Real configured issuer and verified evidence; synthetic fixtures cannot pass |
 | Enrollment | Simulated | Open while the published enrollment window is active; later roots require attestation | Open while the published enrollment window is active; later roots require attestation |

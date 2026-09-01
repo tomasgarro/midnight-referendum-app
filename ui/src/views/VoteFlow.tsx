@@ -1,4 +1,5 @@
 import { Check, X } from '@phosphor-icons/react';
+import type { ExecutionMode } from 'midnight-referendum-api';
 import {
   Button,
   Callout,
@@ -14,7 +15,6 @@ import {
 } from '@/components/system';
 import { WalletWidget } from '@/components/wallet-widget';
 import type { CicoLocale } from '@/integration/locale';
-import { RELAYER_MODE } from '@/providers/midnight-providers';
 import { CHAIN_RUNTIME_ENABLED, type FlowStage, networkLabel } from '@/views/app-runtime';
 import { CopyReceiptButton } from '@/views/CopyReceiptButton';
 import { type Choice, localizePoll, type Poll, type VoteReceipt } from '@/views/poll-model';
@@ -74,6 +74,12 @@ const COPY = {
     signer: 'Firma',
     relayer: 'relay atómico, sin ver tu elección',
     signerDemo: 'nada sale de este dispositivo',
+    feePayer: 'Quién cubre las tarifas',
+    directMode: 'Mi wallet',
+    directModeBody: 'Lace crea la prueba, agrega DUST y envía la transacción.',
+    sponsoredMode: 'Patrocinado',
+    sponsoredModeBody: 'Lace crea la prueba; el relay aporta DUST y envía.',
+    sponsoredUnavailable: 'El envío patrocinado todavía no está disponible.',
     wallet: 'Wallet',
     walletConnected: 'conectada',
     walletPending: 'pendiente',
@@ -132,6 +138,12 @@ const COPY = {
     signer: 'Signed by',
     relayer: 'atomic relay, never sees your choice',
     signerDemo: 'nothing leaves this device',
+    feePayer: 'Who covers network fees',
+    directMode: 'My wallet',
+    directModeBody: 'Lace proves, adds DUST, and submits the transaction.',
+    sponsoredMode: 'Sponsored',
+    sponsoredModeBody: 'Lace proves; the relay supplies DUST and submits.',
+    sponsoredUnavailable: 'Sponsored submission is not available yet.',
     wallet: 'Wallet',
     walletConnected: 'connected',
     walletPending: 'pending',
@@ -188,6 +200,10 @@ export interface VoteFlowProps {
   readonly onConfirm: () => void;
   readonly onViewReceipt: () => void;
   readonly walletStatus: string;
+  readonly executionMode: ExecutionMode;
+  readonly onExecutionModeChange: (mode: ExecutionMode) => void;
+  readonly sponsoredAvailable: boolean;
+  readonly sponsoredError?: string | null;
   readonly previewError: string | null;
   readonly receipt: VoteReceipt | null;
   readonly dustBalance?: bigint | null;
@@ -204,6 +220,10 @@ export function VoteFlow({
   onConfirm,
   onViewReceipt,
   walletStatus,
+  executionMode,
+  onExecutionModeChange,
+  sponsoredAvailable,
+  sponsoredError = null,
   previewError,
   receipt,
   dustBalance = null,
@@ -212,6 +232,7 @@ export function VoteFlow({
   const copy = COPY[locale];
   const displayPoll = localizePoll(poll, locale);
   const live = CHAIN_RUNTIME_ENABLED;
+  const relayerMode = executionMode === 'sponsored-wallet';
   const choiceLabel = (value: Choice) =>
     value === 'YES' ? copy.yes : value === 'NO' ? copy.no : copy.abstain;
   const screenIndex = Math.max(VOTE_SCREENS.indexOf(stage === 'review' ? 'choose' : stage), 0);
@@ -239,9 +260,7 @@ export function VoteFlow({
     return (
       <Screen header={header(false)}>
         <Display>{copy.processingTitle}</Display>
-        <p className="flow__body">
-          {RELAYER_MODE ? copy.processingRelayer : copy.processingWallet}
-        </p>
+        <p className="flow__body">{relayerMode ? copy.processingRelayer : copy.processingWallet}</p>
         {/* Indeterminate: the pipeline reports no percentage, so the bar must
             not imply one. What it can honestly report is how long this
             normally takes, which is the difference between waiting and
@@ -365,6 +384,47 @@ export function VoteFlow({
           </>
         }
       >
+        {live ? (
+          <fieldset className="flow__execution-modes">
+            <legend>{copy.feePayer}</legend>
+            <label className="flow__execution-mode">
+              <input
+                type="radio"
+                name="execution-mode"
+                value="direct-wallet"
+                checked={!relayerMode}
+                onChange={() => onExecutionModeChange('direct-wallet')}
+              />
+              <span>
+                <strong>{copy.directMode}</strong>
+                <small>{copy.directModeBody}</small>
+              </span>
+            </label>
+            <label
+              className={`flow__execution-mode ${
+                sponsoredAvailable ? '' : 'flow__execution-mode--disabled'
+              }`.trim()}
+            >
+              <input
+                type="radio"
+                name="execution-mode"
+                value="sponsored-wallet"
+                checked={relayerMode}
+                disabled={!sponsoredAvailable}
+                onChange={() => onExecutionModeChange('sponsored-wallet')}
+              />
+              <span>
+                <strong>{copy.sponsoredMode}</strong>
+                <small>{copy.sponsoredModeBody}</small>
+              </span>
+            </label>
+            {!sponsoredAvailable && sponsoredError ? (
+              <p className="flow__execution-error" role="status">
+                {copy.sponsoredUnavailable}
+              </p>
+            ) : null}
+          </fieldset>
+        ) : null}
         <StatGroup label={copy.yourVote}>
           <StatRow label={copy.consultation} value={displayPoll.title} />
           <StatRow label={copy.answer} value={choice ? choiceLabel(choice) : '—'} />
@@ -378,7 +438,7 @@ export function VoteFlow({
                 The demo says what actually happens instead. */}
             {!live ? (
               <StatRow label={copy.signer} value={copy.signerDemo} />
-            ) : RELAYER_MODE ? (
+            ) : relayerMode ? (
               <StatRow label={copy.signer} value={copy.relayer} />
             ) : (
               <>
@@ -398,7 +458,7 @@ export function VoteFlow({
             )}
           </StatGroup>
         </div>
-        {live && !RELAYER_MODE ? <WalletWidget /> : null}
+        {live && !relayerMode ? <WalletWidget /> : null}
         {previewError ? (
           <div className="flow__sheet-group">
             <Callout

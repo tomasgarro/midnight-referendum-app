@@ -23,7 +23,9 @@ export interface CountryPickerProps {
   readonly emptyLabel: string;
 }
 
-const MAX_VISIBLE = 12;
+// Keep the sheet readable on a phone while searching the entire catalogue;
+// an empty query remains limited to the caller's suggested countries.
+const MAX_VISIBLE = 24;
 
 /**
  * One control, with flags.
@@ -96,11 +98,11 @@ export function CountryPicker({
       ) : null}
       {trimmed ? null : <p className="sys-country__hint">{suggestedLabel}</p>}
       {rows.length ? (
-        <ul className="sys-country__list" aria-label={listLabel}>
+        <div className="sys-country__list" role="radiogroup" aria-label={listLabel}>
           {rows.map((country) => {
             const selected = country.alpha2 === value;
             return (
-              <li key={country.alpha2}>
+              <div key={country.alpha2}>
                 <label className="sys-country__row" data-selected={selected}>
                   <input
                     type="radio"
@@ -120,10 +122,10 @@ export function CountryPicker({
                     {selected ? <Check size={13} weight="bold" /> : null}
                   </span>
                 </label>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       ) : (
         <p className="sys-country__empty">{emptyLabel}</p>
       )}

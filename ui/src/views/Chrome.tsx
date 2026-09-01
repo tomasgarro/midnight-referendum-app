@@ -15,7 +15,7 @@ import './chrome.css';
 
 /**
  * The app shell: a header that names the product and its identity, and the
- * three-tab bar.
+ * four-tab capsule and a separate scan action.
  *
  * These were the last surfaces on the legacy sky-blue palette. With the views
  * rebuilt on indigo, every screen was showing two accent hues at once -- the
@@ -131,14 +131,14 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
         ))}
       </nav>
       {/*
-        Verify sits outside the nav, and carries no visible label.
+        Verify sits outside the nav, and carries no visible text label.
 
         It was the third of five buttons inside the same <nav>, which told a
         screen reader there were five navigation items while only four could
         ever be current. And a labelled raised circle reads as a fifth
         destination styled loudly -- the exact meaning this shell removed.
-        Every reference app studied leaves the centre action unlabelled and
-        outside the tab group; the name lives in aria-label and the tooltip.
+        Every reference app studied leaves the centre action outside the tab
+        group; the name lives in aria-label and the tooltip.
       */}
       <button
         type="button"

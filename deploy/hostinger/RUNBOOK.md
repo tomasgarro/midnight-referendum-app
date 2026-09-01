@@ -80,6 +80,19 @@ operator SSH only. Deny direct inbound access to 8790, 8791, 6300, 5432,
 8000, and 8080; the Compose model does not publish those ports, but the host
 firewall remains a required second boundary.
 
+After applying the host policy, run the read-only gate from the deployment
+directory. It changes no firewall state and fails if UFW is inactive, incoming
+traffic is not denied by default, SSH is open from Anywhere, or a private
+service port is explicitly allowed:
+
+```bash
+bash scripts/check-firewall.sh
+```
+
+If the host uses nftables instead of UFW, perform the equivalent read-only
+checks against the nftables policy and record the result with the release
+inputs before opening DNS.
+
 Resolve and record immutable image digests for Caddy, Postgres, the Midnight
 proof server, the two Node release images, and the reviewed Rarimo derivative.
 Floating tags are not acceptable in `.env.public.local`.

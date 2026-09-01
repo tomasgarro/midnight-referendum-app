@@ -1,4 +1,4 @@
-import { ArrowClockwise, IdentificationCard, Plus, ShieldCheck } from '@phosphor-icons/react';
+import { CalendarCheck, IdentificationCard, Plus, ShieldCheck } from '@phosphor-icons/react';
 import { Button, Card, Display, EmptyState, Eyebrow } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName } from '@/integration/country-catalog';
@@ -14,12 +14,12 @@ const COPY = {
     eligibility: 'Elegibilidad ciudadana',
     issuer: 'Emitido por',
     age: 'Requisito de edad',
-    use: 'Uso',
-    useValue: 'Desbloquear consultas elegibles',
     simulated: 'Simulado para esta demo',
     verified: 'Verificado',
     add: 'Añadir elegibilidad',
-    renew: 'Renovar o reemplazar',
+    addAnother: 'Añadir otro pase',
+    validUntil: 'Válida hasta',
+    assurance: 'Nivel de comprobación',
     emptyTitle: 'Todavía no tenés un pase',
     empty: 'Verificá un pasaporte físico compatible para crear tu primer pase de elegibilidad.',
   },
@@ -31,16 +31,42 @@ const COPY = {
     eligibility: 'Citizen eligibility',
     issuer: 'Issued by',
     age: 'Age requirement',
-    use: 'Use',
-    useValue: 'Unlock eligible consultations',
     simulated: 'Simulated for this demo',
     verified: 'Verified',
     add: 'Add eligibility',
-    renew: 'Renew or replace',
+    addAnother: 'Add another pass',
+    validUntil: 'Valid until',
+    assurance: 'Verification level',
     emptyTitle: 'No pass yet',
     empty: 'Verify a compatible physical passport to create your first eligibility pass.',
   },
 } as const;
+
+function formatExpiry(value: string, locale: CicoLocale): string {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return value;
+  return new Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-US', {
+    dateStyle: 'medium',
+  }).format(timestamp);
+}
+
+function formatAssurance(value: string, locale: CicoLocale): string {
+  const labels = {
+    es: {
+      fixture: 'Simulado',
+      document: 'Documento',
+      'document-nfc': 'Documento + NFC',
+      'passport-native': 'Passport nativo',
+    },
+    en: {
+      fixture: 'Simulated',
+      document: 'Document',
+      'document-nfc': 'Document + NFC',
+      'passport-native': 'Native Passport',
+    },
+  } as const;
+  return labels[locale][value as keyof (typeof labels)[typeof locale]] ?? value;
+}
 
 export interface CredentialsViewProps {
   readonly credentials: readonly DemoCredentialSummary[];
@@ -75,6 +101,13 @@ export function CredentialsView({ credentials, onVerify, locale }: CredentialsVi
             <h2>{countryName(active.country, locale)}</h2>
           </div>
           <dl className="credential-pass__facts">
+            <div className="credential-pass__fact--validity">
+              <dt>
+                <CalendarCheck size={18} aria-hidden="true" />
+                {copy.validUntil}
+              </dt>
+              <dd>{formatExpiry(active.validUntil, locale)}</dd>
+            </div>
             <div>
               <dt>{copy.issuer}</dt>
               <dd>{active.issuer}</dd>
@@ -84,15 +117,15 @@ export function CredentialsView({ credentials, onVerify, locale }: CredentialsVi
               <dd>{active.ageClass}</dd>
             </div>
             <div>
-              <dt>{copy.use}</dt>
-              <dd>{copy.useValue}</dd>
+              <dt>{copy.assurance}</dt>
+              <dd>{formatAssurance(active.assurance, locale)}</dd>
             </div>
           </dl>
           <p className="credential-pass__origin">
             {active.kind === 'synthetic-demo-credential' ? copy.simulated : copy.verified}
           </p>
-          <Button variant="secondary" block onClick={onVerify}>
-            <ArrowClockwise size={17} /> {copy.renew}
+          <Button block onClick={onVerify}>
+            <Plus size={17} /> {copy.addAnother}
           </Button>
         </Card>
       ) : (
@@ -107,12 +140,6 @@ export function CredentialsView({ credentials, onVerify, locale }: CredentialsVi
           }
         />
       )}
-
-      {active ? (
-        <Button block onClick={onVerify}>
-          <Plus size={17} /> {copy.add}
-        </Button>
-      ) : null}
     </main>
   );
 }

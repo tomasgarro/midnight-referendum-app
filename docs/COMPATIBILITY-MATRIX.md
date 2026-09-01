@@ -30,7 +30,7 @@ matrix](https://github.com/midnightntwrk/midnight-sdk/blob/main/COMPATIBILITY.md
 | On-chain runtime | `3.0.0` | Direct root pin; must resolve to one shared WASM module |
 | Midnight.js | `4.1.1` family | All `midnight-js-*` packages stay lockstep |
 | DApp Connector API | `4.0.1` | Root/UI dependency; discovery accepts only valid semver on the v4 line, validates the connected network, sanitizes wallet metadata, and presents a choice when multiple compatible connectors are injected |
-| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | Target integration through `PassportSessionPort`; origin approval and a live session remain unverified |
+| Midnight Passport | Official PWA protocol at `midnightpassport.com`; SDK remains planning/spec | A real profile/session handshake is evidenced in [`evidence/passport-live/2026-08-31-first-real-session.md`](evidence/passport-live/2026-08-31-first-real-session.md); no Preview address or credential is returned |
 | Compact toolchain | CLI/compiler `0.31.1`, language `0.23` | Generated assets must be rebuilt with this line |
 | Node.js | `22.22.0` | `.nvmrc` source of truth; run in Linux/WSL2 |
 
@@ -80,7 +80,9 @@ proving, so it must not be replaced by a public or third-party endpoint.
    origin. A returned official account must be labelled with its actual network
    and never presented as deployed on the local Undeployed chain. If Passport
    is unavailable, the capability is unavailable; it does not fall back to a
-   synthetic account. No such session is asserted by this matrix.
+   synthetic account. The observed profile/session transcript is scoped to
+   that capability and does not establish a credential, wallet, or Preview
+   deployment.
 
 ## Passport integration boundary
 

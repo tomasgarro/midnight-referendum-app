@@ -1,12 +1,14 @@
+import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import type { FinalizedTransaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
-import type {
-  MidnightProvider,
-  WalletProvider,
-  ZKConfigProvider,
+import {
+  createProofProvider,
+  type MidnightProvider,
+  type WalletProvider,
+  type ZKConfigProvider,
 } from '@midnight-ntwrk/midnight-js-types';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
 import { catchError, retry, throwError } from 'rxjs';
@@ -127,7 +129,10 @@ export class InMemoryWalletlessPendingActionStore implements WalletlessPendingAc
 
 export interface ReferendumV2WalletlessProviderOptions {
   readonly relayUrl: string;
-  readonly proofServerUri: string;
+  /** Node/operator fallback. Browser proving must come from Lace instead. */
+  readonly proofServerUri?: string;
+  /** Connected Lace API used for browser-side proving in sponsored mode. */
+  readonly api?: ConnectedAPI;
   readonly networkId: 'undeployed' | 'preview';
   readonly indexerUri: string;
   readonly indexerWsUri: string;
@@ -149,16 +154,31 @@ export interface ReferendumV2WalletlessRuntime {
 }
 
 /**
- * Builds the primary seedless v2 provider set. Midnight.js constructs and
- * proves locally, then this provider forwards only the serialized proven,
+ * Builds the primary seedless v2 provider set. Browser callers delegate
+ * proving to Lace, then this provider forwards only the serialized proven,
  * unbound transaction to the atomic relay. Balancing and submission never
- * become two browser-visible operations.
+ * become two browser-visible operations. Node operator scripts may use the
+ * explicit proof-server fallback for local/hosted service execution.
  */
 export async function createReferendumV2WalletlessProviders(
   options: ReferendumV2WalletlessProviderOptions,
 ): Promise<ReferendumV2WalletlessRuntime> {
+  const hasBrowserWindow = typeof window !== 'undefined';
+  if (hasBrowserWindow && !options.api) {
+    throw new TypeError('Sponsored browser providers require a connected Lace API for proving');
+  }
+  if (options.api && options.proofServerUri) {
+    throw new TypeError(
+      'proofServerUri cannot be combined with a Lace API; browser proving must stay in the wallet',
+    );
+  }
   assertLocalOrSecureUrl(options.relayUrl, 'relay');
-  assertLocalOrSecureUrl(options.proofServerUri, 'proof server');
+  if (!options.api) {
+    if (!options.proofServerUri) {
+      throw new TypeError('proofServerUri is required for Node sponsored providers');
+    }
+    assertLocalOrSecureUrl(options.proofServerUri, 'proof server');
+  }
   setNetworkId(options.networkId);
 
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -193,7 +213,7 @@ export async function createReferendumV2WalletlessProviders(
           typeof REFERENDUM_V2_PRIVATE_STATE_ID,
           ReferendumV2PrivateState
         >();
-  const browserOrigin = typeof window === 'undefined' ? '' : window.location.origin;
+  const browserOrigin = hasBrowserWindow ? window.location.origin : '';
   const zkConfigBaseUrl = options.zkConfigBaseUrl ?? `${browserOrigin}/managed/referendum-v2`;
   if (options.zkConfigProvider) {
     // Explicitly injected providers are only intended for Node-side runners
@@ -212,10 +232,14 @@ export async function createReferendumV2WalletlessProviders(
   const zkConfigProvider =
     options.zkConfigProvider ??
     new FetchZkConfigProvider<ReferendumV2CircuitKeys>(zkConfigBaseUrl, fetchImpl);
-  const proofProvider = httpClientProofProvider<ReferendumV2CircuitKeys>(
-    options.proofServerUri,
-    zkConfigProvider,
-  );
+  const proofProvider = options.api
+    ? createProofProvider(
+        await options.api.getProvingProvider(zkConfigProvider.asKeyMaterialProvider()),
+      )
+    : httpClientProofProvider<ReferendumV2CircuitKeys>(
+        options.proofServerUri as string,
+        zkConfigProvider,
+      );
   const pendingStore = options.pendingStore ?? new InMemoryWalletlessPendingActionStore();
   const pollIntervalMs = boundedDelay(options.pollIntervalMs ?? 500, 'pollIntervalMs');
   const submissionTimeoutMs = boundedDelay(

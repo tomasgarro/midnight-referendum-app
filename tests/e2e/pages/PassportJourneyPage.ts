@@ -15,7 +15,7 @@ export class PassportJourneyPage {
       name: /Prove you can vote|Demostrá que podés votar/i,
     });
     this.credentialHeading = page.getByRole('heading', {
-      name: /Your credential is ready|Tu credencial está lista/i,
+      name: /Your (?:credential|eligibility pass) is ready|Tu (?:credencial está lista|pase de elegibilidad está listo)/i,
     });
     this.receiptHeading = page.getByRole('heading', {
       name: /Thank you for participating|Gracias por participar/i,
@@ -27,10 +27,11 @@ export class PassportJourneyPage {
   async open(): Promise<void> {
     await this.page.goto('/');
     await this.page.evaluate(() => window.sessionStorage.clear());
-    await this.page.reload();
-    await this.page.evaluate(async () => {
-      await document.fonts.ready;
-    });
+    await this.page.reload({ waitUntil: 'domcontentloaded' });
+    // Vite can finish the document navigation while the app is still
+    // replacing the document. waitForFunction retries across that navigation
+    // boundary, unlike an immediate evaluate(document.fonts.ready).
+    await this.page.waitForFunction(() => document.fonts.status === 'loaded');
     await this.journeyHeading.waitFor();
   }
 
@@ -45,7 +46,7 @@ export class PassportJourneyPage {
     // The test-country choice moved onto the eligibility screen, so this is
     // one click rather than two.
     await this.page
-      .getByRole('button', { name: /Create my credential|Crear mi credencial/i })
+      .getByRole('button', { name: /Create my simulated pass|Crear mi pase simulado/i })
       .click();
     await this.credentialHeading.waitFor();
   }
@@ -55,7 +56,9 @@ export class PassportJourneyPage {
       .getByRole('button', { name: /See the consultations|Ver las consultas/i })
       .click();
     await this.page
-      .getByRole('heading', { name: /Consultations for you|Consultas para vos/i })
+      .getByRole('heading', {
+        name: /Consultations for you|Decisions you can explore|Consultas para vos|Decisiones que podés explorar/i,
+      })
       .waitFor();
   }
 
@@ -68,16 +71,24 @@ export class PassportJourneyPage {
     // journey has been the one red check on every PR since.
     const openCard = this.page
       .locator('li', { has: this.page.locator('.poll') })
-      .filter({ has: this.page.getByRole('button', { name: /^(Vote now|Votá ahora)$/i }) })
+      .filter({
+        has: this.page.getByRole('button', {
+          name: /^(Vote now|Votá ahora|Participate|Participar)$/i,
+        }),
+      })
       .first();
     const pollTitle = (await openCard.locator('.poll__title').textContent())?.trim();
     if (!pollTitle) throw new Error('Expected at least one open consultation in the demo catalog');
 
     // Reach the ballot the long way, through the dossier, because that is the
     // path a reader who wants to know what they are voting on actually takes.
-    await openCard.getByRole('button', { name: /Read proposal|Leer propuesta/i }).click();
+    await openCard
+      .getByRole('button', { name: /Read proposal|View consultation|Leer propuesta|Ver consulta/i })
+      .click();
     await this.page.getByRole('heading', { name: pollTitle, exact: true }).waitFor();
-    await this.page.getByRole('button', { name: /^(Vote now|Votá ahora)$/i }).click();
+    await this.page
+      .getByRole('button', { name: /^(Vote now|Votá ahora|Participate|Participar)$/i })
+      .click();
 
     // The choice screen is titled by the consultation's own question.
     await this.page.locator('.flow__question').waitFor();

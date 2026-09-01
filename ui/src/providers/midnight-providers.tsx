@@ -1,10 +1,12 @@
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import type {
   AppProviders,
+  ExecutionMode,
   ReferendumV2Providers,
+  ReferendumV2SponsoredProviderRuntime,
   WalletlessActionExecutionContext,
 } from 'midnight-referendum-api';
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { resolveAppMode } from '@/integration/app-mode';
 
@@ -16,6 +18,10 @@ interface MidnightProvidersContextValue {
   publicReadError: string | null;
   referendumV2Providers: ReferendumV2Providers | null;
   referendumV2ActionContext: WalletlessActionExecutionContext | null;
+  executionMode: ExecutionMode;
+  setExecutionMode: (mode: ExecutionMode) => void;
+  sponsoredAvailable: boolean;
+  sponsoredError: string | null;
   isReady: boolean;
   error: string | null;
 }
@@ -32,9 +38,8 @@ const INDEXER_URL =
 const INDEXER_WS_URL =
   import.meta.env.VITE_MIDNIGHT_INDEXER_WS_URL?.trim() ||
   (APP_MODE === 'preview' ? 'wss://indexer.preview.midnight.network/api/v4/graphql/ws' : '');
-
-/** Generic remote proving is not a citizen capability. */
-export const RELAYER_MODE = false;
+const RELAYER_URL = import.meta.env.VITE_RELAYER_URL?.trim() || '';
+const CICO_API_URL = import.meta.env.VITE_PASSPORT_V2_API_URL?.trim() || '';
 
 export function MidnightProvidersProvider({ children }: { children: ReactNode }) {
   const { connectedApi, status } = useWallet();
@@ -43,12 +48,20 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
     AppProviders['publicDataProvider'] | null
   >(null);
   const [publicReadError, setPublicReadError] = useState<string | null>(null);
-  const [referendumV2Providers, setReferendumV2Providers] = useState<ReferendumV2Providers | null>(
-    null,
-  );
-  const [referendumV2ActionContext, setReferendumV2ActionContext] =
-    useState<WalletlessActionExecutionContext | null>(null);
+  const [directProviders, setDirectProviders] = useState<ReferendumV2Providers | null>(null);
+  const [sponsoredRuntime, setSponsoredRuntime] =
+    useState<ReferendumV2SponsoredProviderRuntime | null>(null);
+  const [executionMode, setExecutionModeState] = useState<ExecutionMode>('direct-wallet');
+  const [sponsoredError, setSponsoredError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const setExecutionMode = useCallback(
+    (mode: ExecutionMode) => {
+      if (mode === 'sponsored-wallet' && !sponsoredRuntime) return;
+      setExecutionModeState(mode);
+    },
+    [sponsoredRuntime],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -60,8 +73,10 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
       setProviders(null);
       setPublicDataProvider(null);
       setPublicReadError(null);
-      setReferendumV2Providers(null);
-      setReferendumV2ActionContext(null);
+      setDirectProviders(null);
+      setSponsoredRuntime(null);
+      setExecutionModeState('direct-wallet');
+      setSponsoredError(null);
       setError(null);
       return;
     }
@@ -83,31 +98,78 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
 
     if (status !== 'connected' || !connectedApi) {
       setProviders(null);
-      setReferendumV2Providers(null);
-      setReferendumV2ActionContext(null);
+      setDirectProviders(null);
+      setSponsoredRuntime(null);
+      setExecutionModeState('direct-wallet');
+      setSponsoredError(null);
       setError(null);
       return;
     }
 
     import('midnight-referendum-api')
-      .then(({ createProviders, createReferendumV2WalletProviders }) =>
-        Promise.all([
-          createProviders(connectedApi),
-          createReferendumV2WalletProviders(connectedApi),
-        ]),
+      .then(
+        async ({
+          createProviders,
+          createReferendumV2ProviderRuntime,
+          HttpWalletlessActionCapabilityIssuer,
+        }) => {
+          const [legacy, direct] = await Promise.all([
+            createProviders(connectedApi),
+            createReferendumV2ProviderRuntime({ mode: 'direct-wallet', api: connectedApi }),
+          ]);
+          if (!cancelled) {
+            setProviders(legacy);
+            setDirectProviders(direct.providers);
+            setError(null);
+          }
+
+          if (!RELAYER_URL || !CICO_API_URL || !INDEXER_URL || !INDEXER_WS_URL) {
+            if (!cancelled) {
+              setSponsoredRuntime(null);
+              setSponsoredError(null);
+            }
+            return;
+          }
+
+          try {
+            const sponsored = await createReferendumV2ProviderRuntime({
+              mode: 'sponsored-wallet',
+              api: connectedApi,
+              options: {
+                relayUrl: RELAYER_URL,
+                networkId: IS_UNDEPLOYED ? 'undeployed' : 'preview',
+                indexerUri: INDEXER_URL,
+                indexerWsUri: INDEXER_WS_URL,
+                capabilityIssuer: new HttpWalletlessActionCapabilityIssuer({
+                  baseUrl: CICO_API_URL,
+                }),
+              },
+            });
+            if (sponsored.mode !== 'sponsored-wallet') {
+              throw new Error('Sponsored provider composition returned the wrong execution mode');
+            }
+            if (!cancelled) {
+              setSponsoredRuntime(sponsored);
+              setSponsoredError(null);
+            }
+          } catch (sponsoredFailure) {
+            if (!cancelled) {
+              setSponsoredRuntime(null);
+              setExecutionModeState('direct-wallet');
+              setSponsoredError(
+                sponsoredFailure instanceof Error
+                  ? sponsoredFailure.message
+                  : 'Sponsored voting is unavailable',
+              );
+            }
+          }
+        },
       )
-      .then(([legacy, referendumV2]) => {
-        if (!cancelled) {
-          setProviders(legacy);
-          setReferendumV2Providers(referendumV2);
-          setReferendumV2ActionContext(null);
-          setError(null);
-        }
-      })
       .catch((err) => {
         if (!cancelled) {
-          setReferendumV2Providers(null);
-          setReferendumV2ActionContext(null);
+          setDirectProviders(null);
+          setSponsoredRuntime(null);
+          setExecutionModeState('direct-wallet');
           setError(err instanceof Error ? err.message : 'Failed to create providers');
         }
       });
@@ -116,6 +178,10 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
       cancelled = true;
     };
   }, [connectedApi, status]);
+
+  const sponsoredSelected = executionMode === 'sponsored-wallet' && sponsoredRuntime !== null;
+  const referendumV2Providers = sponsoredSelected ? sponsoredRuntime.providers : directProviders;
+  const referendumV2ActionContext = sponsoredSelected ? sponsoredRuntime.actionContext : null;
 
   return (
     <MidnightProvidersContext.Provider
@@ -126,6 +192,10 @@ export function MidnightProvidersProvider({ children }: { children: ReactNode })
         publicReadError,
         referendumV2Providers,
         referendumV2ActionContext,
+        executionMode,
+        setExecutionMode,
+        sponsoredAvailable: sponsoredRuntime !== null,
+        sponsoredError,
         isReady: referendumV2Providers !== null,
         error,
       }}

@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createReferendumV2WalletlessProviders,
   InMemoryWalletlessPendingActionStore,
@@ -21,6 +22,63 @@ function response(status: number, body: unknown): Response {
 }
 
 describe('v2 walletless providers', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('requires Lace proving in the browser and never contacts an HTTP proof server', async () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://app.test' },
+      navigator: { userAgent: 'vitest' },
+    });
+    const requests: string[] = [];
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      requests.push(url);
+      if (url.endsWith('/keys')) {
+        return response(200, { coinPublicKey: 'coin-key', encryptionPublicKey: 'encryption-key' });
+      }
+      throw new Error(`unexpected URL ${url}`);
+    }) as typeof fetch;
+    const api = {
+      getProvingProvider: vi.fn(async () => ({}) as never),
+    } as unknown as ConnectedAPI;
+
+    await createReferendumV2WalletlessProviders({
+      relayUrl: 'https://relay.test',
+      networkId: 'preview',
+      indexerUri: 'https://indexer.test/api/v4/graphql',
+      indexerWsUri: 'wss://indexer.test/api/v4/graphql/ws',
+      capabilityIssuer: { issue: vi.fn(async () => 'capability') },
+      zkConfigBaseUrl: 'https://app.test/managed/referendum-v2',
+      fetchImpl,
+      api,
+    });
+
+    expect(api.getProvingProvider).toHaveBeenCalledOnce();
+    expect(requests).toEqual(['https://relay.test/keys']);
+  });
+
+  it('fails closed when a browser caller has no connected Lace API', async () => {
+    vi.stubGlobal('window', {
+      location: { origin: 'https://app.test' },
+      navigator: { userAgent: 'vitest' },
+    });
+
+    await expect(
+      createReferendumV2WalletlessProviders({
+        relayUrl: 'https://relay.test',
+        proofServerUri: 'https://proof.test',
+        networkId: 'preview',
+        indexerUri: 'https://indexer.test/api/v4/graphql',
+        indexerWsUri: 'wss://indexer.test/api/v4/graphql/ws',
+        capabilityIssuer: { issue: vi.fn(async () => 'capability') },
+        zkConfigBaseUrl: 'https://app.test/managed/referendum-v2',
+        fetchImpl: vi.fn() as typeof fetch,
+      }),
+    ).rejects.toThrow(/require a connected Lace API for proving/iu);
+  });
+
   it('uses the relay request digest shared by the capability and atomic action', async () => {
     const issued: Parameters<WalletlessActionCapabilityIssuer['issue']>[0][] = [];
     let posted: Record<string, unknown> | null = null;

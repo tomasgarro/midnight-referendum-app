@@ -28,4 +28,17 @@ describe('referendum v2 wallet provider configuration', () => {
     ).rejects.toThrow(/must be an absolute HTTP\(S\) URL outside a browser/iu);
     expect(api.getConfiguration).not.toHaveBeenCalled();
   });
+
+  it('rejects an HTTP proof provider in the browser', async () => {
+    vi.stubGlobal('window', { location: { origin: 'https://app.test' } });
+    const api = { getConfiguration: vi.fn() } as unknown as ConnectedAPI;
+
+    await expect(
+      createReferendumV2WalletProviders(api, {
+        proofServerUri: 'https://proof.test',
+        zkConfigBaseUrl: 'https://app.test/managed/referendum-v2',
+      }),
+    ).rejects.toThrow(/HTTP proof providers are unavailable in a browser/iu);
+    expect(api.getConfiguration).not.toHaveBeenCalled();
+  });
 });
