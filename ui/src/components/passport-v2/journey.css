@@ -22,6 +22,9 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  width: 100%;
+  max-width: 34rem;
+  margin-inline: auto;
   padding: var(--space-5) 0 var(--space-8);
 }
 .journey-screen .capybara-mascot {
@@ -65,14 +68,6 @@
 }
 .journey-screen__actions .passport-action-button {
   margin-top: 0;
-}
-.unified-onboarding .journey-screen .passport-action-button.quiet,
-.preview-journey .journey-screen .passport-action-button.quiet {
-  min-height: 44px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--accent);
-  font-weight: 700;
 }
 .journey-field {
   margin-top: var(--space-5);
@@ -126,23 +121,23 @@
 .journey-demo-banner {
   display: grid;
   gap: var(--space-1);
-  margin-top: var(--space-5);
-  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--warning);
-  border-radius: var(--r-input);
-  background: var(--warning-wash);
+  border-left: 2px solid var(--warning);
+  border-radius: var(--r-card);
+  background: var(--surface-sunken);
 }
 .journey-demo-banner strong {
-  color: var(--warning);
+  color: var(--ink-muted);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.07em;
 }
 .journey-demo-banner small {
-  color: #7f3f0c;
+  color: var(--ink-muted);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 /* Credential summary as rows, not one tinted slab.
@@ -236,6 +231,9 @@
 /* The Preview journey shares the demo journey's screen grammar. */
 /* Same as the demo journey: the screen is the page, not a card on a page. */
 .preview-journey .passport-journey-card.unified-card {
+  width: 100%;
+  max-width: 34rem;
+  margin-inline: auto;
   padding: var(--space-5) 0 var(--space-8);
   border: 0;
   border-radius: 0;
@@ -340,4 +338,111 @@
   color: var(--ink-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* ---- Verify funnel polish ----
+   These overrides stay at the end of the component stylesheet so the shared
+   base rules remain readable and the visual hierarchy is explicit. */
+.unified-onboarding .journey-screen.journey-welcome {
+  align-items: center;
+  min-height: min(640px, calc(100dvh - 120px));
+  padding-top: clamp(var(--space-5), 8vh, var(--space-10));
+  text-align: center;
+}
+.journey-welcome .capybara-mascot {
+  margin-bottom: var(--space-5);
+}
+.journey-welcome .journey-screen__title {
+  max-width: none;
+  font-size: clamp(42px, 13vw, 64px);
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+.journey-welcome__subtitle {
+  margin: var(--space-3) 0 0;
+  color: var(--ink);
+  font-size: clamp(17px, 4.4vw, 20px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.journey-welcome .journey-screen__actions {
+  width: min(100%, 21rem);
+}
+.unified-onboarding .journey-screen .passport-action-button,
+.preview-journey .passport-journey-card .passport-action-button {
+  min-height: 56px;
+  border-radius: var(--r-pill);
+  font-size: 15px;
+}
+.unified-onboarding .journey-screen .passport-action-button.secondary,
+.preview-journey .passport-journey-card .passport-action-button.secondary,
+.preview-journey .passport-journey-card .passport-action-button.quiet {
+  min-height: 46px;
+  font-size: 13px;
+}
+.unified-onboarding .journey-screen .passport-action-button.quiet,
+.preview-journey .passport-journey-card .passport-action-button.quiet {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+}
+.unified-onboarding .journey-screen.journey-welcome .passport-action-button.quiet {
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Consent is a pair of answers, not a warning wall. The accent remains in the
+   icons and labels while the surfaces stay quiet enough for the CTA to lead. */
+.unified-onboarding .journey-screen .unified-consent-grid,
+.preview-journey .passport-journey-card .unified-consent-grid {
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.unified-onboarding .journey-screen .unified-consent-grid > div,
+.preview-journey .passport-journey-card .unified-consent-grid > div {
+  min-width: 0;
+  min-height: 88px;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+.unified-onboarding .journey-screen .unified-consent-grid > div:first-child,
+.preview-journey .passport-journey-card .unified-consent-grid > div:first-child {
+  border-top: 2px solid var(--accent);
+}
+.unified-onboarding .journey-screen .unified-consent-grid > div:last-child,
+.preview-journey .passport-journey-card .unified-consent-grid > div:last-child {
+  border-top: 2px solid var(--warning);
+}
+.unified-onboarding .journey-screen .unified-consent-grid dt,
+.preview-journey .passport-journey-card .unified-consent-grid dt {
+  font-size: 10px;
+}
+.unified-onboarding .journey-screen .unified-consent-grid dd,
+.preview-journey .passport-journey-card .unified-consent-grid dd {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.unified-onboarding .journey-screen .unified-consent-grid dd svg,
+.preview-journey .passport-journey-card .unified-consent-grid dd svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+.unified-onboarding .journey-screen .unified-consent-grid > div:last-child dd svg,
+.preview-journey .passport-journey-card .unified-consent-grid > div:last-child dd svg {
+  color: var(--warning);
+}
+
+@media (min-width: 480px) {
+  .unified-onboarding .journey-screen .unified-consent-grid,
+  .preview-journey .passport-journey-card .unified-consent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

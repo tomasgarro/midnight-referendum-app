@@ -51,14 +51,14 @@ describe('Passport-first public showcase', () => {
     expect(await screen.findByText('alice.night')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
     await user.click(screen.getByRole('button', { name: /Create my simulated pass/i }));
-    expect(
-      screen.getByRole('heading', { name: 'The credential is not connected yet' }),
-    ).toBeTruthy();
-    // The guarantee is unchanged: a live journey never presents a synthetic
-    // credential. Only the wording of the thing it must not show has changed.
-    expect(screen.queryByText(/Synthetic credential/i)).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Explore the consultations/i }));
-    expect(onCredentialReady).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Your eligibility pass is ready' })).toBeTruthy();
+    // Showcase may use live Passport consent and a clearly labelled synthetic
+    // eligibility pass; it must never make that pass look provider-verified.
+    expect(screen.getByText('Simulated pass')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /See the consultations/i }));
+    expect(onCredentialReady).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'synthetic-demo-credential', country: 'FR' }),
+    );
   });
 
   it('offers a retryable live Passport failure without bypassing the session gate', async () => {
@@ -80,12 +80,11 @@ describe('Passport-first public showcase', () => {
     render(<PassportJourney mode="showcase" passportPort={passportPort()} onClose={vi.fn()} />);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'es');
 
-    expect(
-      screen.getByRole('heading', { name: 'Demostrá que podés votar. Sin demostrar quién sos.' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
     expect(screen.getByText('Passport en vivo')).toBeTruthy();
     expect(window.localStorage.getItem('cico-locale')).toBe('es');
-    // One progress indicator, announced rather than drawn as four pills.
-    expect(screen.getByRole('progressbar', { name: 'Paso 1 de 6' })).toBeTruthy();
+    // Welcome is a landing surface; the continuous rail begins once the
+    // reader enters the one-way verification sequence.
+    expect(screen.queryByRole('progressbar')).toBeNull();
   });
 });

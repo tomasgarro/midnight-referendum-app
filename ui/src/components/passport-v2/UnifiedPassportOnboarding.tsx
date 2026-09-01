@@ -112,11 +112,10 @@ const copy = {
     why: '¿Por qué se necesita esto?',
 
     // 1 · welcome
-    welcomeTitle: 'Demostrá que podés votar. Sin demostrar quién sos.',
-    welcomeBody:
-      'Midnight Passport abre tu cuenta. Un pasaporte físico puede comprobar elegibilidad. El resultado es un pase pequeño para participar. En esta demo, todo el recorrido es simulado y no se envía un voto real.',
+    welcomeTitle: 'midnight.vote',
+    welcomeSubtitle: 'Una nueva forma de votar',
     start: 'Comenzar',
-    explore: 'Explorar sin conectar',
+    signIn: '¿Ya tenés Passport? Conectate',
 
     // 2 · privacy
     privacyTitle: 'Qué protege tu voto',
@@ -165,9 +164,8 @@ const copy = {
     eligibilityTitle: 'Creá tu pase de elegibilidad',
     eligibilityBody:
       'El pase representa país y mayoría de edad. Es distinto de tu cuenta Passport y de tu pasaporte físico.',
-    demoBanner: 'DEMO · SIN LECTURA NFC NI PRUEBA REAL',
-    demoBannerBody:
-      'Este entorno no lee ningún documento ni genera una prueba real. Elegí Francia o Argentina y te damos un pase simulado para recorrer la experiencia.',
+    demoBanner: 'DEMO · SIN LECTURA NI PRUEBA REAL',
+    demoBannerBody: 'Elegí Francia o Argentina para probar el recorrido con un pase simulado.',
     evidenceWhy: '¿Cómo funciona con un documento real?',
     evidenceSteps: [
       ['Pedido preparado', 'Se crea un vínculo temporal y de un solo uso con este navegador.'],
@@ -199,12 +197,6 @@ const copy = {
     dashboard: 'Ver las consultas',
     privacy: 'Este pase simulado no contiene un documento ni una elección.',
 
-    // showcase dead-end
-    unavailableTitle: 'La credencial todavía no está conectada',
-    unavailableBody:
-      'Este entorno puede mostrar la sesión Passport, pero no tiene un proveedor de evidencia configurado. Podés explorar sin que inventemos una nacionalidad.',
-    unavailableAction: 'Explorar las consultas',
-
     error: 'No se pudo conectar Passport. Revisá el consentimiento e intentá otra vez.',
     holderBindingVerified:
       'Holder binding verificado para esta sesión. No mostramos sus bytes ni lo tratamos como un dato de elegibilidad.',
@@ -213,6 +205,7 @@ const copy = {
     mascotWaving: 'Carpincho saludando',
     mascotReading: 'Carpincho leyendo un libro',
     mascotThinking: 'Carpincho pensando',
+    mascotPassport: 'Carpincho sosteniendo un pasaporte',
     mascotAchievement: 'Carpincho con una pequeña bandera en una colina',
   },
   en: {
@@ -227,11 +220,10 @@ const copy = {
     originSynthetic: 'Simulated pass',
     why: 'Why is this needed?',
 
-    welcomeTitle: 'Prove you can vote. Without proving who you are.',
-    welcomeBody:
-      'Midnight Passport opens your account. A physical passport can prove eligibility. The result is a small pass for participation. In this demo the whole journey is simulated and no real vote is sent.',
+    welcomeTitle: 'midnight.vote',
+    welcomeSubtitle: 'A new way of voting',
     start: 'Get started',
-    explore: 'Explore without connecting',
+    signIn: 'Already have Passport? Connect',
 
     privacyTitle: 'What protects your vote',
     privacyItems: [
@@ -276,9 +268,8 @@ const copy = {
     eligibilityTitle: 'Create your eligibility pass',
     eligibilityBody:
       'The pass represents country and adult status. It is separate from your Passport account and your physical passport.',
-    demoBanner: 'DEMO · NO NFC READ OR REAL PROOF',
-    demoBannerBody:
-      'This environment reads no document and generates no real proof. Pick France or Argentina and we will issue a simulated pass so you can walk the experience.',
+    demoBanner: 'DEMO · NO DOCUMENT READ OR REAL PROOF',
+    demoBannerBody: 'Choose France or Argentina to try the journey with a simulated pass.',
     evidenceWhy: 'How does this work with a real document?',
     evidenceSteps: [
       ['Request prepared', 'A temporary, single-use link is created with this browser.'],
@@ -309,11 +300,6 @@ const copy = {
     dashboard: 'See the consultations',
     privacy: 'This simulated pass contains no document or voting choice.',
 
-    unavailableTitle: 'The credential is not connected yet',
-    unavailableBody:
-      'This environment can show a Passport session, but it has no evidence provider configured. You can explore without us inventing a nationality.',
-    unavailableAction: 'Explore the consultations',
-
     error: 'Passport could not connect. Check consent and try again.',
     holderBindingVerified:
       'Holder binding verified for this session. We do not display its bytes or treat it as an eligibility claim.',
@@ -322,6 +308,7 @@ const copy = {
     mascotWaving: 'Capybara waving hello',
     mascotReading: 'Capybara reading a book',
     mascotThinking: 'Capybara thinking',
+    mascotPassport: 'Capybara holding a passport',
     mascotAchievement: 'Capybara holding a small flag on a hill',
   },
   fr: {
@@ -336,11 +323,10 @@ const copy = {
     originSynthetic: 'Laissez-passer simulé',
     why: 'Pourquoi est-ce nécessaire ?',
 
-    welcomeTitle: 'Prouvez que vous pouvez voter. Sans prouver qui vous êtes.',
-    welcomeBody:
-      "Midnight Passport ouvre votre compte. Un passeport physique peut prouver votre éligibilité. Le résultat est un petit laissez-passer de participation. Dans cette démo, tout le parcours est simulé et aucun vote réel n'est envoyé.",
+    welcomeTitle: 'midnight.vote',
+    welcomeSubtitle: 'Une nouvelle façon de voter',
     start: 'Commencer',
-    explore: 'Explorer sans se connecter',
+    signIn: 'Vous avez déjà Passport ? Connectez-vous',
 
     privacyTitle: 'Ce qui protège votre vote',
     privacyItems: [
@@ -385,9 +371,9 @@ const copy = {
     eligibilityTitle: "Créez votre laissez-passer d'éligibilité",
     eligibilityBody:
       'Le laissez-passer représente le pays et la majorité. Il est distinct de votre compte Passport et de votre passeport physique.',
-    demoBanner: 'DÉMO · AUCUNE LECTURE NFC NI PREUVE RÉELLE',
+    demoBanner: 'DÉMO · AUCUNE LECTURE NI PREUVE RÉELLE',
     demoBannerBody:
-      "Cet environnement ne lit aucun document et ne génère aucune preuve réelle. Choisissez la France ou l'Argentine et nous délivrerons un laissez-passer simulé pour parcourir l'expérience.",
+      "Choisissez la France ou l'Argentine pour tester le parcours avec un laissez-passer simulé.",
     evidenceWhy: 'Comment cela fonctionne-t-il avec un vrai document ?',
     evidenceSteps: [
       ['Demande préparée', 'Un lien temporaire à usage unique est créé avec ce navigateur.'],
@@ -419,11 +405,6 @@ const copy = {
     dashboard: 'Voir les consultations',
     privacy: 'Ce laissez-passer simulé ne contient aucun document ni choix de vote.',
 
-    unavailableTitle: "Le justificatif n'est pas encore connecté",
-    unavailableBody:
-      "Cet environnement peut afficher une session Passport, mais aucun fournisseur de preuve n'est configuré. Vous pouvez explorer sans que nous inventions une nationalité.",
-    unavailableAction: 'Explorer les consultations',
-
     error: 'Passport n’a pas pu se connecter. Vérifiez le consentement et réessayez.',
     holderBindingVerified:
       "Le lien avec le porteur est vérifié pour cette session. Nous n'affichons pas ses octets et ne le traitons pas comme une revendication d'éligibilité.",
@@ -432,6 +413,7 @@ const copy = {
     mascotWaving: 'Capybara qui fait coucou',
     mascotReading: 'Capybara qui lit un livre',
     mascotThinking: 'Capybara qui réfléchit',
+    mascotPassport: 'Capybara tenant un passeport',
     mascotAchievement: 'Capybara tenant un petit drapeau sur une colline',
   },
 } as const;
@@ -472,12 +454,18 @@ export function UnifiedPassportOnboarding({
   const [error, setError] = useState<string | null>(null);
   const [demoCountry, setDemoCountry] = useState(DEFAULT_DEMO_COUNTRY);
   const [documentJourney, setDocumentJourney] = useState(false);
+  const [usedPassportShortcut, setUsedPassportShortcut] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const initialRender = useRef(false);
   const t = copy[locale];
   // Back never walks out of the entry point: opening at the document step
   // must not offer a route into a consent screen this visit never showed.
-  const previousStage = stage === initialStage ? undefined : PREVIOUS_STAGE[stage];
+  const previousStage =
+    stage === initialStage
+      ? undefined
+      : usedPassportShortcut && stage === 'passport'
+        ? 'welcome'
+        : PREVIOUS_STAGE[stage];
   const selectedCountry = useMemo(() => findAssignedCountry(demoCountry), [demoCountry]);
 
   /**
@@ -551,7 +539,7 @@ export function UnifiedPassportOnboarding({
   };
 
   const finish = () => {
-    if (mode !== 'showcase' && selectedCountry) {
+    if (selectedCountry) {
       onCredentialReady?.(createDemoCredential(selectedCountry.alpha2));
     }
     onClose();
@@ -571,6 +559,7 @@ export function UnifiedPassportOnboarding({
         {...(previousStage ? { onBack: () => setStage(previousStage) } : {})}
         backLabel={t.previousStep}
         badge={mode === 'showcase' ? t.liveEnvironment : t.demoEnvironment}
+        showProgress={stage !== 'welcome'}
         current={screenIndex + 1}
         total={SCREEN_ORDER.length}
         stageLabel={t.stages[stageIndex] ?? t.stages[0]}
@@ -578,14 +567,15 @@ export function UnifiedPassportOnboarding({
       />
 
       {stage === 'welcome' ? (
-        <section className="journey-screen" aria-labelledby="onboarding-welcome-title">
-          {/* The hero globe is gone. It said nothing the headline did not, and
-              it competed with the mascot for the same job two elements apart. */}
+        <section
+          className="journey-screen journey-welcome"
+          aria-labelledby="onboarding-welcome-title"
+        >
           <CapybaraMascot variant="waving" alt={t.mascotWaving} size={190} priority />
           <h1 className="journey-screen__title" id="onboarding-welcome-title" ref={headingRef}>
             {t.welcomeTitle}
           </h1>
-          <p className="journey-screen__body">{t.welcomeBody}</p>
+          <p className="journey-welcome__subtitle">{t.welcomeSubtitle}</p>
           <div className="journey-screen__actions">
             <button
               className="passport-action-button primary"
@@ -594,11 +584,16 @@ export function UnifiedPassportOnboarding({
             >
               {t.start} <ArrowRight size={19} />
             </button>
-            {dismissible ? (
-              <button className="passport-action-button quiet" onClick={onClose} type="button">
-                {t.explore}
-              </button>
-            ) : null}
+            <button
+              className="passport-action-button quiet"
+              onClick={() => {
+                setUsedPassportShortcut(true);
+                setStage('passport');
+              }}
+              type="button"
+            >
+              {t.signIn}
+            </button>
           </div>
         </section>
       ) : null}
@@ -743,7 +738,7 @@ export function UnifiedPassportOnboarding({
             />
           ) : (
             <>
-              <CapybaraMascot variant="thinking" alt={t.mascotThinking} size={140} />
+              <CapybaraMascot variant="passport" alt={t.mascotPassport} size={140} />
               <h1 className="journey-screen__title" id="onboarding-evidence-title" ref={headingRef}>
                 {t.eligibilityTitle}
               </h1>
@@ -762,23 +757,21 @@ export function UnifiedPassportOnboarding({
               <WhyDetails summary={t.evidenceWhy}>
                 <PassportScanTutorial locale={locale} />
               </WhyDetails>
-              {mode === 'showcase' ? null : (
-                <div className="journey-field">
-                  <CountryPicker
-                    value={demoCountry}
-                    onChange={setDemoCountry}
-                    locale={locale}
-                    searchLabel={t.countryLabel}
-                    searchPlaceholder={t.countrySearch}
-                    listLabel={t.countryList}
-                    suggested={SUGGESTED_COUNTRIES}
-                    allowed={SUGGESTED_COUNTRIES}
-                    searchable={false}
-                    suggestedLabel={t.countrySuggested}
-                    emptyLabel={t.countryEmpty}
-                  />
-                </div>
-              )}
+              <div className="journey-field">
+                <CountryPicker
+                  value={demoCountry}
+                  onChange={setDemoCountry}
+                  locale={locale}
+                  searchLabel={t.countryLabel}
+                  searchPlaceholder={t.countrySearch}
+                  listLabel={t.countryList}
+                  suggested={SUGGESTED_COUNTRIES}
+                  allowed={SUGGESTED_COUNTRIES}
+                  searchable={false}
+                  suggestedLabel={t.countrySuggested}
+                  emptyLabel={t.countryEmpty}
+                />
+              </div>
               <div className="journey-screen__actions">
                 {/* Reading the real document page is the primary path now. The
                     simulated pass stays, clearly named, because demo has no
@@ -792,7 +785,7 @@ export function UnifiedPassportOnboarding({
                 </button>
                 <button
                   className="passport-action-button secondary"
-                  disabled={mode !== 'showcase' && !selectedCountry}
+                  disabled={!selectedCountry}
                   onClick={() => setStage('credential-success')}
                   type="button"
                 >
@@ -806,69 +799,50 @@ export function UnifiedPassportOnboarding({
 
       {stage === 'credential-success' ? (
         <section className="journey-screen" aria-labelledby="onboarding-success-title">
-          {mode === 'showcase' ? (
-            <>
-              <div className="credential-success-icon unavailable" aria-hidden="true">
-                <Info size={42} />
-              </div>
-              <h1 className="journey-screen__title" id="onboarding-success-title" ref={headingRef}>
-                {t.unavailableTitle}
-              </h1>
-              <p className="journey-screen__body">{t.unavailableBody}</p>
-              <div className="journey-screen__actions">
-                <button className="passport-action-button primary" onClick={finish} type="button">
-                  {t.unavailableAction} <ArrowRight size={19} />
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* One hero, not two. The mark used to stack above the mascot,
-                  so the screen opened with 250px of celebration before the
-                  sentence that says what happened. It is a badge on the
-                  mascot now, which is also where the eye already is. */}
-              <div className="journey-success-hero">
-                <CapybaraMascot variant="achievement" alt={t.mascotAchievement} size={168} />
-                <SuccessMark label={t.successMark} size="sm" />
-              </div>
-              <h1 className="journey-screen__title" id="onboarding-success-title" ref={headingRef}>
-                {t.successTitle}
-              </h1>
-              <p className="journey-screen__body">{t.successBody}</p>
-              <dl className="credential-summary-rows">
-                <div>
-                  <dt>{t.origin}</dt>
-                  <dd>{t.originSynthetic}</dd>
-                </div>
-                <div>
-                  <dt>{t.country}</dt>
-                  <dd>
-                    <span className="credential-country">
-                      <CountryFlag alpha2={demoCountry} size="sm" />
-                      {countryName(demoCountry, localizedLocale)}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>{t.age}</dt>
-                  <dd>18+</dd>
-                </div>
-                <div>
-                  <dt>{t.issuer}</dt>
-                  <dd>{t.issuerValue}</dd>
-                </div>
-              </dl>
-              <div className="passport-notice success">
-                <CheckCircle size={18} />
-                <p>{t.privacy}</p>
-              </div>
-              <div className="journey-screen__actions">
-                <button className="passport-action-button primary" onClick={finish} type="button">
-                  {t.dashboard} <ArrowRight size={19} />
-                </button>
-              </div>
-            </>
-          )}
+          {/* One hero, not two. The mark used to stack above the mascot,
+              so the screen opened with 250px of celebration before the
+              sentence that says what happened. It is a badge on the
+              mascot now, which is also where the eye already is. */}
+          <div className="journey-success-hero">
+            <CapybaraMascot variant="achievement" alt={t.mascotAchievement} size={168} />
+            <SuccessMark label={t.successMark} size="sm" />
+          </div>
+          <h1 className="journey-screen__title" id="onboarding-success-title" ref={headingRef}>
+            {t.successTitle}
+          </h1>
+          <p className="journey-screen__body">{t.successBody}</p>
+          <dl className="credential-summary-rows">
+            <div>
+              <dt>{t.origin}</dt>
+              <dd>{t.originSynthetic}</dd>
+            </div>
+            <div>
+              <dt>{t.country}</dt>
+              <dd>
+                <span className="credential-country">
+                  <CountryFlag alpha2={demoCountry} size="sm" />
+                  {countryName(demoCountry, localizedLocale)}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>{t.age}</dt>
+              <dd>18+</dd>
+            </div>
+            <div>
+              <dt>{t.issuer}</dt>
+              <dd>{t.issuerValue}</dd>
+            </div>
+          </dl>
+          <div className="passport-notice success">
+            <CheckCircle size={18} />
+            <p>{t.privacy}</p>
+          </div>
+          <div className="journey-screen__actions">
+            <button className="passport-action-button primary" onClick={finish} type="button">
+              {t.dashboard} <ArrowRight size={19} />
+            </button>
+          </div>
         </section>
       ) : null}
     </main>

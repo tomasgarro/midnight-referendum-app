@@ -9,10 +9,10 @@ export class PassportJourneyPage {
 
   constructor(private readonly page: Page) {
     this.openJourneyButton = page.getByRole('button', {
-      name: /Comenzar|Get started/i,
+      name: /Comenzar|Get started|Commencer/i,
     });
     this.journeyHeading = page.getByRole('heading', {
-      name: /Prove you can vote|Demostrá que podés votar/i,
+      name: 'midnight.vote',
     });
     this.credentialHeading = page.getByRole('heading', {
       name: /Your (?:credential|eligibility pass) is ready|Tu (?:credencial está lista|pase de elegibilidad está listo)/i,

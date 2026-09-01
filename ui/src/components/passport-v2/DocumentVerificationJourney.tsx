@@ -26,6 +26,7 @@ import {
   createMrzRecognizer,
   isMrzRecognitionAvailable,
 } from '@/integration/mrz-recognition';
+import { PassportScanTutorial } from './PassportScanTutorial';
 import { VERIFICATION_JOURNEY_COPY } from './verification-journey-copy';
 import './verification-journey.css';
 
@@ -331,12 +332,11 @@ export function DocumentVerificationJourney({
             {copy.videoTitle}
           </h2>
           <p className="verify-journey__body">{copy.videoBody}</p>
-          {/* The reference plays a recorded walkthrough here. Ours is not shot
-              yet, and a stock clip would misrepresent our own flow, so the slot
-              states what belongs in it. */}
-          <div className="verify-journey__video-slot" role="img" aria-label={copy.videoPlaceholder}>
-            <Camera size={38} />
-            <span>{copy.videoPlaceholder}</span>
+          {/* Reuse the existing provider walkthrough. It is silent, captions
+              are localized below it, and it stays inside the same bounded
+              framing so the provider's own controls never become ours. */}
+          <div className="verify-journey__video-slot">
+            <PassportScanTutorial locale={locale} />
           </div>
           <div className="verify-journey__actions">
             <button

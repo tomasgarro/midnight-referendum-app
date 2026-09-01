@@ -64,6 +64,7 @@ import {
   toRuntimePolls,
   type VoteReceipt,
 } from '@/views/poll-model';
+import { SettingsView } from '@/views/SettingsView';
 import { VoteFlow } from '@/views/VoteFlow';
 import { VotesView } from '@/views/VotesView';
 
@@ -100,6 +101,9 @@ function CivicApp() {
   const [tab, setTab] = useState<Tab>('discover');
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsInitialPanel, setSettingsInitialPanel] = useState<'root' | 'feedback'>('root');
+  const [settingsViewKey, setSettingsViewKey] = useState(0);
   /**
    * Verify is an action, so it opens the document step for someone who already
    * has a Passport session. Only a first run -- or an explicit replay -- walks
@@ -133,6 +137,13 @@ function CivicApp() {
     setLocale(nextLocale);
     persistLocale(nextLocale);
   };
+  const openSettings = (initialPanel: 'root' | 'feedback') => {
+    setFlowStage(null);
+    setPolicyDetailId(null);
+    setSettingsInitialPanel(initialPanel);
+    setSettingsViewKey((key) => key + 1);
+    setSettingsOpen(true);
+  };
   useEffect(() => {
     document.documentElement.lang = locale;
     document.title = DOCUMENT_TITLE[locale];
@@ -146,6 +157,8 @@ function CivicApp() {
   const replayOnboarding = () => {
     setFlowStage(null);
     setPolicyDetailId(null);
+    setSettingsOpen(false);
+    setSettingsInitialPanel('root');
     setJourneyStage('welcome');
     setPassportJourneyOpen(true);
   };
@@ -514,6 +527,8 @@ function CivicApp() {
     ? (polls.find((poll) => poll.id === policyDetailId) ?? null)
     : null;
   const navigate = (nextTab: Tab) => {
+    setSettingsOpen(false);
+    setSettingsInitialPanel('root');
     setTab(nextTab);
     setFlowStage(null);
     setPolicyDetailId(null);
@@ -529,11 +544,13 @@ function CivicApp() {
           danger Callout inside the confirm sheet. */}
       {!passportJourneyOpen ? (
         <AppHeader
-          passportSession={passportSession}
           passportError={passportError}
           onConnectPassport={() => void connectPassport()}
           onDismissPassportError={() => setPassportError(null)}
+          onOpenFeedback={() => openSettings('feedback')}
+          onOpenSettings={() => openSettings('root')}
           locale={locale}
+          onLocaleChange={changeLocale}
         />
       ) : null}
       {passportJourneyOpen ? (
@@ -548,6 +565,20 @@ function CivicApp() {
           onLocaleChange={changeLocale}
           passportPort={passportSessionPort}
           previewPorts={passportJourneyPorts}
+        />
+      ) : settingsOpen ? (
+        <SettingsView
+          key={settingsViewKey}
+          passportSession={passportSession}
+          initialPanel={settingsInitialPanel}
+          locale={locale}
+          onLocaleChange={changeLocale}
+          theme={theme}
+          onThemeChange={changeTheme}
+          onBack={() => setSettingsOpen(false)}
+          onReplayOnboarding={replayOnboarding}
+          onLockAndDisconnect={() => void lockAndDisconnect()}
+          onRemoveLocalData={removeLocalData}
         />
       ) : flowStage ? (
         (() => {
@@ -606,7 +637,7 @@ function CivicApp() {
       ) : (
         currentTabContent
       )}
-      {!passportJourneyOpen && !flowStage && !selectedPolicy ? (
+      {!passportJourneyOpen && !settingsOpen && !flowStage && !selectedPolicy ? (
         <BottomNav
           tab={tab}
           onVerify={openVerification}

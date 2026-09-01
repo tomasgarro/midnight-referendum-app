@@ -123,8 +123,6 @@ export function PassportScanTutorial({ locale = 'es' }: PassportScanTutorialProp
 
   return (
     <div className="scan-tutorial">
-      {/* biome-ignore lint/a11y/useMediaCaption: silent instructional loop; the
-          captions are the ordered list beside it, in the reader's language. */}
       <video
         ref={videoRef}
         className="scan-tutorial__video"

@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 /*
  * WebP at 640px, not PNG at 1024px.
  *
- * All six variants are statically imported, so every build shipped all six
+ * All seven variants are statically imported, so every build shipped all seven
  * whether or not a screen used them: 5.78 MB of 1024-square PNGs for artwork
  * that is never drawn larger than 190 CSS px. At 640 square there is still
  * more than 3x the pixels a 190px slot needs on a 3x display, and the set is
@@ -10,6 +10,7 @@ import type { CSSProperties } from 'react';
  */
 import achievementSrc from '@/assets/mascot/capybara-achievement.webp';
 import climbingSrc from '@/assets/mascot/capybara-climbing.webp';
+import passportSrc from '@/assets/mascot/capybara-passport.webp';
 import readingSrc from '@/assets/mascot/capybara-reading.webp';
 import thinkingSrc from '@/assets/mascot/capybara-thinking.webp';
 import waitingSrc from '@/assets/mascot/capybara-waiting.webp';
@@ -22,6 +23,7 @@ export type CapybaraMascotVariant =
   | 'thinking'
   | 'achievement'
   | 'climbing'
+  | 'passport'
   | 'waiting';
 
 export type CapybaraMascotSize = 'sm' | 'md' | 'lg' | number;
@@ -63,6 +65,12 @@ const MASCOT_ASSETS: Record<CapybaraMascotVariant, MascotAsset> = {
     width: 640,
     height: 640,
     label: 'Capybara climbing a gentle hill',
+  },
+  passport: {
+    src: passportSrc,
+    width: 640,
+    height: 700,
+    label: 'Capybara holding a passport',
   },
   waiting: {
     src: waitingSrc,

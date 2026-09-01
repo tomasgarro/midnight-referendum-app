@@ -86,7 +86,7 @@ Spanish.
 | Screen | What it does | Real or explained |
 | --- | --- | --- |
 | 1-3 · Voting process | Teaches unique-vote, local verification, anonymous credential, and states that identity is not retained | Explanation |
-| 4 · Walkthrough | Skippable video slot | **Placeholder** — labelled as not yet recorded, not a stock clip |
+| 4 · Walkthrough | Skippable provider walkthrough | Existing `passport-scan` clip with localized captions; editing deferred |
 | 5 · Start analysis | Sets expectations: physical passport, about two minutes | Explanation |
 | 6 · Camera permission | Explains why before the browser prompt; distinct recovery for denied, insecure-context, no-device, in-use, unsupported | **Real** |
 | 7 · Photo page | Live rear camera, passport-page-ratio frame, MRZ guide, and check-digit-verified TD3 parsing; manual document number / birth date / expiry as the guaranteed fallback | **Real** |

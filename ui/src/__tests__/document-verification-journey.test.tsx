@@ -62,12 +62,12 @@ describe('DocumentVerificationJourney', () => {
     expect(screen.getByRole('heading', { name: /anonymous vote/i })).toBeTruthy();
   });
 
-  it('offers the video as skippable and does not claim a clip that does not exist', async () => {
+  it('offers the existing provider walkthrough as skippable', async () => {
     const user = userEvent.setup();
     render(
       <DocumentVerificationJourney locale="en" onDocumentRead={vi.fn()} initialStep="video" />,
     );
-    expect(screen.getByLabelText(/not yet recorded/i)).toBeTruthy();
+    expect(screen.getByLabelText(/passport scan walkthrough/i)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /skip/i }));
     expect(screen.getByRole('heading', { name: /passport analysis/i })).toBeTruthy();
   });

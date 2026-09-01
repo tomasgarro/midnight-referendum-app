@@ -28,7 +28,6 @@ export interface VerificationJourneyCopy {
 
   readonly videoTitle: string;
   readonly videoBody: string;
-  readonly videoPlaceholder: string;
 
   readonly analysisTitle: string;
   readonly analysisStart: string;
@@ -106,7 +105,6 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
 
     videoTitle: 'Cómo se ve el proceso',
     videoBody: 'Un recorrido de menos de un minuto. Podés saltarlo y volver cuando quieras.',
-    videoPlaceholder: 'Video del recorrido — pendiente de grabar',
 
     analysisTitle: 'Análisis del pasaporte',
     analysisStart: 'Comenzar el análisis',
@@ -194,7 +192,6 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
 
     videoTitle: 'What the process looks like',
     videoBody: 'Under a minute. You can skip it and come back whenever you like.',
-    videoPlaceholder: 'Walkthrough video — not yet recorded',
 
     analysisTitle: 'Passport analysis',
     analysisStart: 'Start the analysis',
@@ -282,7 +279,6 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
 
     videoTitle: 'À quoi ressemble le processus',
     videoBody: "Moins d'une minute. Vous pouvez passer et y revenir quand vous voulez.",
-    videoPlaceholder: 'Vidéo du parcours — pas encore enregistrée',
 
     analysisTitle: 'Analyse du Passeport',
     analysisStart: "Démarrer l'analyse",

@@ -36,6 +36,7 @@
 }
 
 .chrome-header {
+  position: relative;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -47,55 +48,70 @@
   font-family: var(--font-body);
 }
 
-.chrome-brand__name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--ink);
+.chrome-header__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
 }
-.chrome-brand__note {
-  margin: 0;
-  font-size: 11px;
-  color: var(--ink-muted);
+.chrome-mark {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
-
-.chrome-identity {
-  position: relative;
-  flex: none;
+.chrome-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
 }
-.chrome-chip {
+.chrome-environment {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  max-width: 160px;
-  min-height: 36px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--line-strong);
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
   border-radius: var(--r-pill);
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: 1;
+}
+.chrome-environment__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.chrome-environment--showcase {
+  color: var(--accent);
+}
+.chrome-utility,
+.chrome-settings {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted);
   cursor: pointer;
 }
-.chrome-chip span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.chrome-chip:hover {
+.chrome-utility:hover,
+.chrome-settings:hover {
   background: var(--surface-sunken);
+  color: var(--ink);
 }
-.chrome-chip:focus-visible {
+.chrome-utility:focus-visible,
+.chrome-settings:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-.chrome-chip--on {
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .chrome-popover {
@@ -109,6 +125,10 @@
   border-radius: var(--r-card);
   background: var(--surface);
   box-shadow: var(--shadow-card);
+}
+.chrome-popover--header {
+  top: calc(100% - var(--space-2));
+  right: var(--space-4);
 }
 .chrome-popover__head {
   display: flex;
@@ -150,8 +170,10 @@
    the AppLlama round-two references, adapted to a web shell. */
 .chrome-bar {
   position: relative;
-  padding: 34px var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
-  background: var(--ground);
+  padding: 30px var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--ground) 72%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(118%);
+  backdrop-filter: blur(16px) saturate(118%);
 }
 .chrome-nav {
   z-index: 20;
@@ -161,21 +183,24 @@
   width: min(100%, 380px);
   margin: 0 auto;
   padding: 4px;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: var(--r-pill);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  box-shadow: 0 10px 28px rgba(26, 26, 24, 0.12);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
 }
 .chrome-nav__item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-height: 52px;
+  justify-content: center;
+  gap: 0;
+  min-height: 56px;
   min-width: 0;
-  padding: 6px 1px;
+  padding: 6px;
   border: 0;
-  border-radius: var(--r-input);
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--ink-muted);
   font-family: var(--font-body);
@@ -186,27 +211,22 @@
 .chrome-nav__icon {
   display: grid;
   place-items: center;
-  min-width: 32px;
-  min-height: 27px;
+  width: 40px;
+  height: 40px;
 }
-/* Measured off the reference apps: a 60px disc with a restrained lift. The
-   ground-coloured ring is what separates it from the capsule. It never takes a
-   selected state, because it is an action rather than a place.
-
-   It now carries its name under the disc. Unlabelled, it was the only control
-   in the shell a first-time reader had to press to find out what it did, next
-   to four labelled tabs -- and "Verify" is the one word that explains the
-   product. The name sits outside the disc so the disc keeps reading as an
-   action rather than a fifth destination. */
+/* Measured off the reference apps: a larger disc with a restrained lift. The
+   ground-coloured ring is what separates it from the capsule. It never takes
+   a selected state, because it is an action rather than a place. Its name is
+   retained in the accessible label and tooltip, while the mark carries the
+   visual weight without adding another line of chrome. */
 .chrome-verify {
   position: absolute;
-  top: 0;
+  top: -2px;
   left: 50%;
   z-index: 21;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
   transform: translateX(-50%);
   border: 0;
   background: transparent;
@@ -217,21 +237,19 @@
 .chrome-verify__disc {
   display: grid;
   place-items: center;
-  width: 60px;
-  height: 60px;
-  border: 4px solid var(--ground);
+  width: 72px;
+  height: 72px;
+  border: 5px solid var(--ground);
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: var(--shadow-lift, var(--shadow-card));
+  background: var(--surface);
+  box-shadow: 0 9px 24px rgba(26, 26, 24, 0.16);
 }
-.chrome-verify__name {
-  color: var(--accent);
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  line-height: 1;
+.chrome-verify__logo {
+  display: block;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .chrome-verify:active {
   transform: translateX(-50%) scale(0.96);
@@ -256,6 +274,7 @@
 }
 /* The accent's one appearance in the chrome. */
 .chrome-nav__item--active {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
   color: var(--accent);
 }
 
