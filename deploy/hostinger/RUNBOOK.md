@@ -78,7 +78,10 @@ other secret may be reused.
 Before opening DNS, configure the VPS firewall for TCP 80/443 and restricted
 operator SSH only. Deny direct inbound access to 8790, 8791, 6300, 5432,
 8000, and 8080; the Compose model does not publish those ports, but the host
-firewall remains a required second boundary.
+firewall remains a required second boundary. Before any Preview deployment or relay
+start, run the read-only `npm run relayer:status` command and require
+`synced: true` plus `readyToSubmit: true`; do not infer readiness from a
+registered NIGHT UTXO alone.
 
 After applying the host policy, run the read-only gate from the deployment
 directory. It changes no firewall state and fails if UFW is inactive, incoming
