@@ -152,7 +152,7 @@ Worth stating, because it is where the work already went:
 
 | Level | State | What is missing |
 | --- | --- | --- |
-| **Demo / narrative** | **Runnable locally and hosted.** The current synthetic journey, honest labels, archive digest, HTTPS render, first mobile interaction, and release-run CI are evidenced. | Complete the remaining deep-link, header/CSP, and responsive-width release checks before calling it a certified public release. |
+| **Demo / narrative** | **Runnable locally and hosted.** The current synthetic journey, honest labels, archive digest, HTTPS render, SPA fallback, 320/390/tablet/desktop interaction checks, and release-run CI are evidenced. | Harden and reverify response headers before calling it a certified public release. The host currently supplies only `Content-Security-Policy: upgrade-insecure-requests`. |
 | **Contracts** | **Ready to deploy.** Compiled, key-bearing, simulator-tested. | A funded wallet and one deploy run. |
 | **Preview end-to-end** | **Blocked.** | Steps 1–4 above. Realistically half a day once NIGHT arrives. |
 | **Hosted backend** | **Blocked.** | The VPS stack: domains, secrets, image digests. See the VPS checklist. |

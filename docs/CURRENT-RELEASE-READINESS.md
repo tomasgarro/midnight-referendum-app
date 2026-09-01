@@ -101,16 +101,20 @@ with `index.html` at the ZIP root:
 - SHA-256: `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`;
 - privacy scan: `npm run verify:showcase` passed;
 - archive comparison: all 79 files match the reviewed `ui/dist`;
-- hosted verification: HTTPS 200, expected rendered jury copy, and the first
-  390 px interaction passed without page or console errors;
+- hosted verification: HTTPS 200, expected rendered jury copy, SPA fallback,
+  and first interactions at 320/390/tablet/desktop passed without horizontal
+  overflow, page errors, or console errors;
+- response headers: the host supplies only
+  `Content-Security-Policy: upgrade-insecure-requests`; HSTS, `nosniff`, frame,
+  referrer, and permissions policies are not yet present;
 - build caveats: the main JavaScript bundle remains about 5.1 MB and the
   ledger WASM about 10.1 MB; the Midnight indexer dependency also emits an
   `isomorphic-ws` browser-export warning during Vite build.
 
 This is the artifact currently served at
 `https://lightskyblue-emu-103266.hostingersite.com/`. The evidence proves the
-synthetic UI artifact and its first interaction; full deep-link, response-header
-and responsive-width certification remains a separate release gate.
+synthetic UI artifact, route fallback, and responsive first interactions.
+Response-header hardening remains a separate release gate.
 
 For the deployment gate list, see
 [`../deploy/hostinger/VPS-READINESS-CHECKLIST.md`](../deploy/hostinger/VPS-READINESS-CHECKLIST.md),

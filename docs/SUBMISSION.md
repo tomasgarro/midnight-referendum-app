@@ -58,8 +58,9 @@ The current synthetic jury demo is live at
 The deployed archive was privacy-scanned, its 79 files match the reviewed
 `ui/dist`, and its SHA-256 is
 `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`.
-HTTPS rendering and the first mobile interaction were externally verified on
-1 September 2026 without browser errors. This is current **synthetic UI**
+HTTPS rendering, SPA fallback, and 320/390/tablet/desktop first interactions
+were externally verified on 1 September 2026 without browser errors or
+horizontal overflow. This is current **synthetic UI**
 evidence; it is not a claim of a Preview contract deployment, real NFC proof,
 Rarimo verification, or canonical on-chain receipt.
 
@@ -72,7 +73,7 @@ Rarimo verification, or canonical on-chain receipt.
 | Contract policy and ports | Checked-in Compact contracts, provider-neutral ports, simulator/unit coverage, and a historical local lifecycle | A current Preview deployment, funded action, or current release manifest |
 | Rarimo/NFC | Temporary adapter boundary, minimal-claim design, and source/conformance tests | Hosted verifier, authenticated callback, real proof, or a physical NFC/ePassport run |
 | Historical Undeployed v2 | Exact source SHA, tree, manifest digest, and preserved local transcript at [`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/) | Evidence for this checkout, Preview, Passport approval, or NFC |
-| Static public artifact | Current Hostinger synthetic demo, exact archive SHA, privacy scan, 79-file build match, HTTPS render, first mobile interaction, and green release CI | Full deep-link, header/CSP, and responsive-width public-release certification |
+| Static public artifact | Current Hostinger synthetic demo, exact archive SHA, privacy scan, 79-file build match, HTTPS render, SPA fallback, 320/390/tablet/desktop first interactions, and green release CI | Response-header hardening and re-verification before public-release certification |
 
 ## Privacy and trust boundaries
 
@@ -187,10 +188,12 @@ ballot choices.
 - [ ] `npm ci`, production build, formatting/lint, unit/simulator tests, and
       targeted Chromium journey tests pass from the same checkout.
 - [x] The static artifact has an exact SHA, passed its privacy scan, matches all
-      79 reviewed `ui/dist` files, and passed HTTPS home plus 390 px first-action
-      smoke checks.
-- [ ] SPA deep-link, headers/CSP, and 320/tablet/desktop checks are externally
-      completed before public-release certification.
+      79 reviewed `ui/dist` files, and passed HTTPS home, SPA fallback, and
+      320/390/tablet/desktop first-action smoke checks without browser errors or
+      horizontal overflow.
+- [ ] Response headers are hardened and externally rechecked before
+      public-release certification. The host currently supplies only
+      `Content-Security-Policy: upgrade-insecure-requests`.
 - [ ] English and Spanish screenshots show the synthetic truth labels and the
       corrected `Create my simulated pass` / `Crear mi pase simulado` CTA.
 - [ ] Browser storage, bundle, logs, and requests contain no raw MRZ/NFC,
