@@ -85,6 +85,13 @@ function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary 
   };
 }
 
+/** The tab title follows the chosen language like everything else. */
+const DOCUMENT_TITLE: Record<CicoLocale, string> = {
+  es: 'Referéndum Cívico · Voto verificable',
+  en: 'Civic Referendum · Verifiable vote',
+  fr: 'Référendum Citoyen · Vote vérifiable',
+};
+
 function CivicApp() {
   const initialOnboardingRequired = shouldShowFirstRunOnboarding();
   // Spanish is the product's default; an explicit persisted choice still wins.
@@ -128,10 +135,7 @@ function CivicApp() {
   };
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title =
-      locale === 'es'
-        ? 'Referéndum Cívico · Voto verificable'
-        : 'Civic Referendum · Verifiable vote';
+    document.title = DOCUMENT_TITLE[locale];
   }, [locale]);
   const closeOnboarding = () => {
     window.sessionStorage.setItem(ONBOARDING_SESSION_KEY, '1');

@@ -2,11 +2,72 @@ import { useEffect, useRef, useState } from 'react';
 import scanMp4 from '@/assets/tutorial/passport-scan.mp4';
 import scanWebm from '@/assets/tutorial/passport-scan.webm';
 import posterSrc from '@/assets/tutorial/passport-scan-poster.webp';
+import type { CicoLocale } from '@/integration/locale';
 import './journey.css';
 
 interface PassportScanTutorialProps {
-  readonly locale?: 'es' | 'en';
+  readonly locale?: CicoLocale;
 }
+
+const COPY = {
+  es: {
+    label: 'Recorrido del escaneo del pasaporte',
+    play: 'Reproducir',
+    pause: 'Pausar',
+    note: 'Grabado en la app del proveedor. Tu documento se lee en tu propio teléfono y nunca se envía acá.',
+    steps: [
+      [
+        'Sacá la funda',
+        'Una funda gruesa bloquea el chip. El teléfono tiene que tocar el pasaporte.',
+      ],
+      [
+        'Fotografiá la página',
+        'La página con tu foto, plana, dentro del marco que dibuja el proveedor.',
+      ],
+      [
+        'Apoyalo sobre el chip',
+        'Dejá el teléfono sobre el pasaporte cerrado hasta que termine la lectura.',
+      ],
+    ],
+  },
+  en: {
+    label: 'Passport scan walkthrough',
+    play: 'Play the walkthrough',
+    pause: 'Pause',
+    note: 'Recorded in the provider app. Your document is read on your own phone and is never sent here.',
+    steps: [
+      ['Take the case off', 'A thick case blocks the chip. The phone has to touch the passport.'],
+      [
+        'Photograph the page',
+        'The page with your photo, flat, inside the frame the provider draws.',
+      ],
+      [
+        'Hold it against the chip',
+        'Rest the phone on the closed passport until the read finishes.',
+      ],
+    ],
+  },
+  fr: {
+    label: 'Parcours du scan du passeport',
+    play: 'Lire le parcours',
+    pause: 'Pause',
+    note: "Enregistré dans l'application du fournisseur. Votre document est lu sur votre propre téléphone et n'est jamais envoyé ici.",
+    steps: [
+      [
+        'Retirez la housse',
+        'Une housse épaisse bloque la puce. Le téléphone doit toucher le passeport.',
+      ],
+      [
+        'Photographiez la page',
+        'La page avec votre photo, à plat, dans le cadre dessiné par le fournisseur.',
+      ],
+      [
+        'Posez-le sur la puce',
+        "Laissez le téléphone sur le passeport fermé jusqu'à la fin de la lecture.",
+      ],
+    ],
+  },
+} as const;
 
 /**
  * What the phone step looks like, in nine and a half seconds.
@@ -28,7 +89,7 @@ interface PassportScanTutorialProps {
  * poster frame with a control rather than a loop that cannot be stopped.
  */
 export function PassportScanTutorial({ locale = 'es' }: PassportScanTutorialProps) {
-  const en = locale === 'en';
+  const copy = COPY[locale];
   const videoRef = useRef<HTMLVideoElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -46,32 +107,7 @@ export function PassportScanTutorial({ locale = 'es' }: PassportScanTutorialProp
     return () => query.removeEventListener('change', apply);
   }, []);
 
-  const steps = en
-    ? [
-        ['Take the case off', 'A thick case blocks the chip. The phone has to touch the passport.'],
-        [
-          'Photograph the page',
-          'The page with your photo, flat, inside the frame the provider draws.',
-        ],
-        [
-          'Hold it against the chip',
-          'Rest the phone on the closed passport until the read finishes.',
-        ],
-      ]
-    : [
-        [
-          'Sacá la funda',
-          'Una funda gruesa bloquea el chip. El teléfono tiene que tocar el pasaporte.',
-        ],
-        [
-          'Fotografiá la página',
-          'La página con tu foto, plana, dentro del marco que dibuja el proveedor.',
-        ],
-        [
-          'Apoyalo sobre el chip',
-          'Dejá el teléfono sobre el pasaporte cerrado hasta que termine la lectura.',
-        ],
-      ];
+  const steps = copy.steps;
 
   const toggle = () => {
     const video = videoRef.current;
@@ -98,14 +134,14 @@ export function PassportScanTutorial({ locale = 'es' }: PassportScanTutorialProp
         loop
         preload="metadata"
         autoPlay={!reducedMotion}
-        aria-label={en ? 'Passport scan walkthrough' : 'Recorrido del escaneo del pasaporte'}
+        aria-label={copy.label}
       >
         <source src={scanWebm} type="video/webm" />
         <source src={scanMp4} type="video/mp4" />
       </video>
       {reducedMotion ? (
         <button type="button" className="scan-tutorial__toggle" onClick={toggle}>
-          {playing ? (en ? 'Pause' : 'Pausar') : en ? 'Play the walkthrough' : 'Reproducir'}
+          {playing ? copy.pause : copy.play}
         </button>
       ) : null}
       <ol className="scan-tutorial__steps">
@@ -116,11 +152,7 @@ export function PassportScanTutorial({ locale = 'es' }: PassportScanTutorialProp
           </li>
         ))}
       </ol>
-      <p className="scan-tutorial__note">
-        {en
-          ? 'Recorded in the provider app. Your document is read on your own phone and is never sent here.'
-          : 'Grabado en la app del proveedor. Tu documento se lee en tu propio teléfono y nunca se envía acá.'}
-      </p>
+      <p className="scan-tutorial__note">{copy.note}</p>
     </div>
   );
 }

@@ -46,6 +46,19 @@ export const APP_COPY = {
     },
     network: { undeployed: 'Undeployed local', preview: 'Preview', demo: 'Local demo' },
   },
+  fr: {
+    brand: 'referendum.earth',
+    brandNote: 'Confidentialité assurée par Midnight',
+    language: 'Langue',
+    nav: {
+      discover: 'Découvrir',
+      credentials: 'Justificatifs',
+      verify: 'Vérifier',
+      activity: 'Activité',
+      passport: 'Passport',
+    },
+    network: { undeployed: 'Local non déployé', preview: 'Preview', demo: 'Démo locale' },
+  },
 } as const;
 
 export const APP_MODE = resolveAppMode(import.meta.env.MODE, import.meta.env.VITE_APP_MODE);

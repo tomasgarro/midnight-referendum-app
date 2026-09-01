@@ -40,17 +40,55 @@ const PHASE_COPY = {
     },
     FINALIZED: { label: 'Final result', note: 'Counting is closed and published.' },
   },
+  fr: {
+    COMMIT: {
+      label: 'Vote ouvert',
+      note: "Les votes sont scellés. Il n'y a encore rien à compter.",
+    },
+    REVEAL: {
+      label: 'Dépouillement en cours',
+      note: "Chaque voix est ajoutée à son total sans révéler qui l'a exprimée.",
+    },
+    FINALIZED: { label: 'Résultat final', note: 'Le dépouillement est clos et publié.' },
+  },
 } as const;
 
 /** In demo there is no contract behind this panel, and saying so is the point. */
 const DEMO_NOTE = {
   es: 'Demo local: no hay contrato ni recuento detrás de este panel. En Preview los totales se leen del contrato.',
   en: 'Local demo: there is no contract or tally behind this panel. On Preview the totals are read from the contract.',
+  fr: 'Démo locale : aucun contrat ni décompte derrière ce panneau. Sur Preview, les totaux sont lus depuis le contrat.',
 } as const;
 
 const CHOICE_LABEL = {
   es: { YES: 'Sí', NO: 'No', ABSTAIN: 'Abstención' },
   en: { YES: 'Yes', NO: 'No', ABSTAIN: 'Abstain' },
+  fr: { YES: 'Oui', NO: 'Non', ABSTAIN: 'Abstention' },
+} as const;
+
+/** The frame around the bars: heading, error title, and the two counted lines. */
+const SHELL_COPY = {
+  es: {
+    unreadable: 'Sin lectura del contrato',
+    heading: 'Resultados públicos',
+    eligible: (n: bigint) => (n === 1n ? 'persona habilitada' : 'personas habilitadas'),
+    total: (counted: bigint, issued: bigint) =>
+      `${counted.toString()} de ${issued.toString()} habilitadas · leído del contrato`,
+  },
+  en: {
+    unreadable: 'Contract unreadable',
+    heading: 'Public results',
+    eligible: (n: bigint) => (n === 1n ? 'eligible person' : 'eligible people'),
+    total: (counted: bigint, issued: bigint) =>
+      `${counted.toString()} of ${issued.toString()} eligible · read from contract`,
+  },
+  fr: {
+    unreadable: 'Contrat illisible',
+    heading: 'Résultats publics',
+    eligible: (n: bigint) => (n === 1n ? 'personne éligible' : 'personnes éligibles'),
+    total: (counted: bigint, issued: bigint) =>
+      `${counted.toString()} sur ${issued.toString()} éligibles · lu depuis le contrat`,
+  },
 } as const;
 
 export interface ResultsPanelProps {
@@ -69,17 +107,14 @@ export function ResultsPanel({ contractAddress, title, locale }: ResultsPanelPro
   const { state, error } = usePublicReferendumState(contractAddress);
   const headingId = titleId(contractAddress, title);
   const copy = PHASE_COPY[locale];
+  const shell = SHELL_COPY[locale];
 
   /* An unreadable contract is a warning, not a result. It never renders as a
      zero, for the same reason WaitState renders a dash: a 0% bar claims we
      observed no votes when in fact we observed nothing. */
   if (error) {
     return (
-      <Callout
-        tone="warning"
-        role="status"
-        title={locale === 'es' ? 'Sin lectura del contrato' : 'Contract unreadable'}
-      >
+      <Callout tone="warning" role="status" title={shell.unreadable}>
         {error}
       </Callout>
     );
@@ -93,21 +128,14 @@ export function ResultsPanel({ contractAddress, title, locale }: ResultsPanelPro
       <Card className="results" aria-labelledby={headingId}>
         <Eyebrow>{copy.COMMIT.label}</Eyebrow>
         <h2 className="results__title" id={headingId}>
-          {title ?? (locale === 'es' ? 'Resultados públicos' : 'Public results')}
+          {title ?? shell.heading}
         </h2>
         <p className="results__note">
           {CHAIN_RUNTIME_ENABLED ? copy.COMMIT.note : DEMO_NOTE[locale]}
         </p>
         {eligible === null ? null : (
           <p className="results__eligible">
-            <strong>{eligible.toString()}</strong>{' '}
-            {locale === 'es'
-              ? eligible === 1n
-                ? 'persona habilitada'
-                : 'personas habilitadas'
-              : eligible === 1n
-                ? 'eligible person'
-                : 'eligible people'}
+            <strong>{eligible.toString()}</strong> {shell.eligible(eligible)}
           </p>
         )}
       </Card>
@@ -126,7 +154,7 @@ export function ResultsPanel({ contractAddress, title, locale }: ResultsPanelPro
     <Card className="results" aria-labelledby={headingId}>
       <Eyebrow>{phase.label}</Eyebrow>
       <h2 className="results__title" id={headingId}>
-        {title ?? (locale === 'es' ? 'Resultados públicos' : 'Public results')}
+        {title ?? shell.heading}
       </h2>
       <p className="results__note">{phase.note}</p>
       <div className="results__tally">
@@ -154,11 +182,7 @@ export function ResultsPanel({ contractAddress, title, locale }: ResultsPanelPro
           );
         })}
       </div>
-      <p className="results__total">
-        {locale === 'es'
-          ? `${total.toString()} de ${state.issuedVotes.toString()} habilitadas · leído del contrato`
-          : `${total.toString()} of ${state.issuedVotes.toString()} eligible · read from contract`}
-      </p>
+      <p className="results__total">{shell.total(total, state.issuedVotes)}</p>
     </Card>
   );
 }

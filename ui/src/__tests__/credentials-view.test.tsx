@@ -17,7 +17,8 @@ describe('CredentialsView', () => {
     render(<CredentialsView credentials={[credential]} onVerify={vi.fn()} locale="en" />);
 
     expect(screen.getByText('Valid until')).toBeTruthy();
-    expect(screen.getByText('Sep 30, 2026')).toBeTruthy();
+    // Formatted by the shared date helper, so it follows the chosen language.
+    expect(screen.getByText('30 September 2026')).toBeTruthy();
     expect(screen.getByText('Verification level')).toBeTruthy();
     expect(screen.getByText('Document + NFC')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Add another pass/i })).toHaveLength(1);

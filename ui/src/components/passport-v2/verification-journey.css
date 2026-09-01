@@ -1,0 +1,285 @@
+/* The document verification journey.
+   One screen at a time, a progress rail and a circular advance on the teaching
+   steps, and a camera viewport cut to the passport page ratio. */
+
+.verify-journey {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.verify-journey__screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+.verify-journey__eyebrow {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.verify-journey__art {
+  display: grid;
+  place-items: center;
+  padding: var(--space-5) 0;
+  color: var(--accent);
+}
+.verify-journey__numbered {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+.verify-journey__badge {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 750;
+}
+.verify-journey__title {
+  margin: 0;
+  font-family: var(--font-display, var(--font-body));
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.verify-journey__title:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.verify-journey__body {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+/* The reference sets this block apart in red. Kept distinct, but on the
+   warning token rather than a raw hue, so it survives both themes. */
+.verify-journey__warning {
+  margin: 0;
+  padding: var(--space-3);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--r-input);
+  background: var(--warning-wash, var(--surface-sunken));
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.verify-journey__boundary,
+.verify-journey__note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--r-input);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.verify-journey__boundary svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}
+.verify-journey__boundary strong {
+  color: var(--ink);
+}
+.verify-journey__error {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--warning);
+  font-size: 13px;
+  font-weight: 600;
+}
+.verify-journey__status {
+  margin: 0;
+  min-height: 20px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+/* ---- footer rail on the teaching steps ---- */
+.verify-journey__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-5);
+}
+.verify-journey__progress {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.verify-journey__progress li {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+.verify-journey__progress li[data-done="true"] {
+  background: var(--accent);
+}
+.verify-journey__advance {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+.verify-journey__advance:focus-visible,
+.verify-journey__primary:focus-visible,
+.verify-journey__secondary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ---- actions ---- */
+.verify-journey__actions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-4);
+}
+.verify-journey__primary,
+.verify-journey__secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border-radius: var(--r-input);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.verify-journey__primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.verify-journey__secondary {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* ---- camera ---- */
+.verify-journey__viewport {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-card, 16px);
+  background: #000;
+  /* TD3 passport data page: 125 x 88 mm. */
+  aspect-ratio: 125 / 88;
+}
+.verify-journey__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.verify-journey__frame {
+  position: absolute;
+  inset: 6%;
+  border: 2px dashed rgb(255 255 255 / 70%);
+  border-radius: 10px;
+  pointer-events: none;
+}
+/* The two MRZ lines sit along the bottom of the page; marking where they land
+   is what turns "hold it in the frame" into an aim someone can actually hit. */
+.verify-journey__mrz-guide {
+  position: absolute;
+  right: 4%;
+  bottom: 6%;
+  left: 4%;
+  height: 18%;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+}
+.verify-journey__canvas {
+  display: none;
+}
+.verify-journey__video-slot {
+  display: grid;
+  place-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-card, 16px);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.verify-journey__hints {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ---- manual form ---- */
+.verify-journey__form {
+  display: grid;
+  gap: var(--space-3);
+}
+.verify-journey__form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+.verify-journey__form input {
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+.verify-journey__form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verify-journey__advance,
+  .verify-journey__primary,
+  .verify-journey__secondary {
+    transition: none;
+  }
+}

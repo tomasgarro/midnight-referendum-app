@@ -95,18 +95,19 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Actividad' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Passport$/ })).toBeTruthy();
 
-    // Verify is reachable, but it is not a peer of the tabs: it carries no
-    // visible label, it lives outside the nav, and it never becomes current.
-    // Inside the nav it told a screen reader there were five items of which
-    // only four could ever be the page.
+    // Verify is reachable and now names itself, but it is still not a peer of
+    // the tabs: it lives outside the nav and never becomes current. Inside the
+    // nav it told a screen reader there were five items of which only four
+    // could ever be the page.
     const nav = screen.getByRole('navigation');
     expect(within(nav).getAllByRole('button')).toHaveLength(4);
 
     const verify = screen.getByRole('button', { name: /Verificar · documento físico/ });
     expect(nav.contains(verify)).toBe(false);
     expect(verify.getAttribute('aria-current')).toBeNull();
-    expect(verify.textContent).toBe('');
-    expect(screen.queryByRole('button', { name: /^Verificar$/ })).toBeNull();
+    // The label is visible now. Unlabelled, it was the one control a first-time
+    // reader had to press to discover what it did, beside four labelled tabs.
+    expect(verify.textContent).toBe('Verificar');
   });
 
   /**

@@ -89,6 +89,41 @@ const COPY = {
     removeConfirm: 'Confirm local deletion',
     cancel: 'Cancel',
   },
+  fr: {
+    fallbackName: 'Votre Passport citoyen',
+    stateConnected: 'Midnight Passport connecté',
+    statePending: 'Midnight Passport non connecté',
+    lead: "Votre compte pour cette expérience Preview. L'éligibilité et les reçus vivent dans des sections distinctes.",
+    connect: 'Connecter Midnight Passport',
+    account: 'Compte Midnight Passport',
+    address: 'Adresse Preview',
+    unavailable: "Passport n'a pas renvoyé d'adresse",
+    copyAddress: "Copier l'adresse",
+    network: 'Réseau',
+    passportStatus: 'Statut',
+    connected: 'Connecté',
+    wallet: 'Portefeuille développeur',
+    walletConnected: 'Connecté',
+    preferences: 'Préférences',
+    language: 'Langue',
+    theme: 'Apparence',
+    themeSystem: "Selon l'appareil",
+    themeLight: 'Crème',
+    themeDark: 'Sombre',
+    help: 'Aide et sécurité',
+    review: 'Revoir le fonctionnement',
+    reviewHint: 'Passport, document physique et laissez-passer, étape par étape.',
+    domains: 'Identité .night',
+    domainsHint: "Une fonctionnalité externe de Midnight ; elle ne change pas l'éligibilité.",
+    session: 'Session sur cet appareil',
+    lock: 'Verrouiller et conserver les données',
+    lockHint: 'Termine la session en conservant les laissez-passer et reçus chiffrés localement.',
+    remove: 'Supprimer les données locales',
+    removeHint:
+      'Efface le laissez-passer et les reçus de ce navigateur. Cela ne supprime pas votre compte Passport.',
+    removeConfirm: 'Confirmer la suppression locale',
+    cancel: 'Annuler',
+  },
 } as const;
 
 export interface ProfileViewProps {
@@ -198,6 +233,7 @@ export function ProfileView({
             >
               <option value="es">Español</option>
               <option value="en">English</option>
+              <option value="fr">Français</option>
             </select>
           </div>
           <div className="profile__row">

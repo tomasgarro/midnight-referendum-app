@@ -22,12 +22,14 @@ export interface LanguageToggleProps {
  * iOS/Android picker, and the accessible name for free. The visible pill is a
  * label the select is laid over at zero opacity.
  */
+const SHORT_LABEL: Record<CicoLocale, string> = { es: 'ES', en: 'EN', fr: 'FR' };
+
 export function LanguageToggle({ locale, onChange, label }: LanguageToggleProps) {
   return (
     <span className="sys-lang">
       <Globe size={15} weight="bold" aria-hidden="true" />
       <span className="sys-lang__value" aria-hidden="true">
-        {locale === 'es' ? 'ES' : 'EN'}
+        {SHORT_LABEL[locale]}
       </span>
       <CaretDown size={11} weight="bold" aria-hidden="true" />
       <select
@@ -38,6 +40,7 @@ export function LanguageToggle({ locale, onChange, label }: LanguageToggleProps)
       >
         <option value="es">Español</option>
         <option value="en">English</option>
+        <option value="fr">Français</option>
       </select>
     </span>
   );

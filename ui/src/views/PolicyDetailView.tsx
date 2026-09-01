@@ -104,6 +104,37 @@ const COPY = {
     demoDisclosure:
       'Eligible and participation figures are simulated. The credential proves an eligibility rule without exposing your evidence, and is not an official register. This is not an official referendum and has no legal effect.',
   },
+  fr: {
+    back: 'Retour',
+    open: 'Vote ouvert',
+    closed: 'Vote clos',
+    facts: "En un coup d'oeil",
+    closes: 'Clôture',
+    eligible: 'Éligibles',
+    contractState: 'État du contrat',
+    scope: 'Périmètre',
+    about: "De quoi il s'agit",
+    frame: 'Cadre actuel',
+    perspectives: 'Points de vue',
+    forIt: 'En faveur de la proposition',
+    againstIt: 'Pour la réexaminer ou la limiter',
+    uncertainty: 'Incertitude',
+    options: 'Ce que chaque option exprime',
+    yes: 'Oui',
+    no: 'Non',
+    abstain: 'Abstention',
+    yesBody: 'Vous soutenez la priorité donnée à la proposition dans ces termes.',
+    noBody: 'Vous ne soutenez pas cette priorité dans ces termes.',
+    abstainBody: 'Vous préférez ne pas prendre position de façon binaire.',
+    sources: 'Sources primaires',
+    vote: 'Voter maintenant',
+    prepare: 'Préparer mon justificatif',
+    disclosureTitle: "Ce que ceci est, et ce que ce n'est pas",
+    runtimeDisclosure:
+      "L'identité du contrat et ses résultats publics sont lus depuis Midnight. Le justificatif est vérifié en privé au regard de la politique publiée. Ceci n'est pas un référendum officiel et n'a aucun effet juridique.",
+    demoDisclosure:
+      "Les chiffres d'éligibilité et de participation sont simulés. Le justificatif prouve une règle d'éligibilité sans exposer vos preuves, et ne constitue pas une liste électorale officielle. Ceci n'est pas un référendum officiel et n'a aucun effet juridique.",
+  },
 } as const;
 
 export interface PolicyDetailViewProps {

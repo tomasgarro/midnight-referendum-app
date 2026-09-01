@@ -150,7 +150,7 @@
    the AppLlama round-two references, adapted to a web shell. */
 .chrome-bar {
   position: relative;
-  padding: 30px var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  padding: 34px var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   background: var(--ground);
 }
 .chrome-nav {
@@ -189,27 +189,49 @@
   min-width: 32px;
   min-height: 27px;
 }
-/* Measured off the reference apps: a 60px circle with a restrained lift. The
+/* Measured off the reference apps: a 60px disc with a restrained lift. The
    ground-coloured ring is what separates it from the capsule. It never takes a
-   selected state, because it is an action rather than a place. */
+   selected state, because it is an action rather than a place.
+
+   It now carries its name under the disc. Unlabelled, it was the only control
+   in the shell a first-time reader had to press to find out what it did, next
+   to four labelled tabs -- and "Verify" is the one word that explains the
+   product. The name sits outside the disc so the disc keeps reading as an
+   action rather than a fifth destination. */
 .chrome-verify {
   position: absolute;
   top: 0;
   left: 50%;
   z-index: 21;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 3px;
+  transform: translateX(-50%);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.chrome-verify__disc {
+  display: grid;
+  place-items: center;
   width: 60px;
   height: 60px;
-  transform: translateX(-50%);
   border: 4px solid var(--ground);
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink);
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-  transition: transform var(--dur-press) var(--ease-out);
+  box-shadow: var(--shadow-lift, var(--shadow-card));
+}
+.chrome-verify__name {
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 .chrome-verify:active {
   transform: translateX(-50%) scale(0.96);
@@ -217,6 +239,7 @@
 .chrome-verify:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+  border-radius: var(--r-input);
 }
 /* The duration collapse alone left the press scale firing instantly rather than
    not at all -- it is the one transform in the shell, and the guard missed it. */
