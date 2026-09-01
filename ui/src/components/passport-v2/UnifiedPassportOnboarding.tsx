@@ -12,6 +12,10 @@ import type { OnboardingStage } from '@/integration/civic-state';
 import { countryName, findAssignedCountry } from '@/integration/country-catalog';
 import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
+import {
+  type DocumentReadResult,
+  DocumentVerificationJourney,
+} from './DocumentVerificationJourney';
 import { PassportScanTutorial } from './PassportScanTutorial';
 import './journey.css';
 
@@ -181,6 +185,7 @@ const copy = {
     countryList: 'Países disponibles',
     countrySuggested: 'El piloto comienza con Francia y Argentina.',
     countryEmpty: 'No encontramos ese país. Probá con otro nombre o su código.',
+    verifyDocument: 'Verificar mi pasaporte',
     createCredential: 'Crear mi pase simulado',
 
     // 6 · success
@@ -291,6 +296,7 @@ const copy = {
     countryList: 'Available countries',
     countrySuggested: 'The pilot begins with France and Argentina.',
     countryEmpty: 'No country matched. Try another name or its code.',
+    verifyDocument: 'Verify my passport',
     createCredential: 'Create my simulated pass',
 
     successTitle: 'Your eligibility pass is ready',
@@ -317,6 +323,116 @@ const copy = {
     mascotReading: 'Capybara reading a book',
     mascotThinking: 'Capybara thinking',
     mascotAchievement: 'Capybara holding a small flag on a hill',
+  },
+  fr: {
+    back: "Retour à l'application",
+    language: 'Langue',
+    previousStep: 'Étape précédente',
+    stages: ['Bienvenue', 'Passport', 'Document', 'Laissez-passer'],
+    step: (n: number, total: number) => `Étape ${n} sur ${total}`,
+    demoEnvironment: 'Démo',
+    liveEnvironment: 'Passport réel',
+    origin: 'Origine',
+    originSynthetic: 'Laissez-passer simulé',
+    why: 'Pourquoi est-ce nécessaire ?',
+
+    welcomeTitle: 'Prouvez que vous pouvez voter. Sans prouver qui vous êtes.',
+    welcomeBody:
+      "Midnight Passport ouvre votre compte. Un passeport physique peut prouver votre éligibilité. Le résultat est un petit laissez-passer de participation. Dans cette démo, tout le parcours est simulé et aucun vote réel n'est envoyé.",
+    start: 'Commencer',
+    explore: 'Explorer sans se connecter',
+
+    privacyTitle: 'Ce qui protège votre vote',
+    privacyItems: [
+      [
+        'Midnight Passport',
+        "Votre compte sécurisé pour cette expérience Preview et le nom que vous choisissez d'afficher.",
+      ],
+      [
+        'Passeport physique',
+        "Le document sert à une étape d'éligibilité distincte. Il n'est pas conservé dans Passport.",
+      ],
+      [
+        "Laissez-passer d'éligibilité",
+        "Il ne retient que le résultat minimal dont une consultation a besoin. La démo l'indique toujours comme simulé.",
+      ],
+    ],
+    continue: 'Continuer',
+
+    passportTitle: 'Connectez votre Passport',
+    passportBody:
+      'Passport est votre connexion sécurisée. Cette application ne reçoit que les champs de profil que vous approuvez.',
+    passportWhy:
+      "Passport gère votre identité en dehors de cette application : le prototype ne conserve jamais de mot de passe ni de compte à votre place. La session est ce qui vous reconnaît d'un écran à l'autre ; elle n'autorise aucun paiement, aucune transaction, aucun vote.",
+    requested: 'Demandé',
+    requestedValue: 'Session et profil approuvé',
+    notRequested: 'Non demandé',
+    notRequestedValue: 'Portefeuille, vote, nationalité, âge ou document',
+    connect: 'Continuer avec Passport',
+    connectDemo: 'Utiliser le Passport de démo',
+    connecting: 'En attente de votre consentement…',
+    connected: 'Session approuvée',
+
+    consentTitle: 'Voici ce que Passport a partagé',
+    consentBody:
+      'Le nom affiché identifie votre compte dans cette interface. Il ne devient ni une nationalité, ni un âge, ni une revendication de vote.',
+    approved: 'Approuvé par vous',
+    approvedValue: 'Session Passport et nom affiché',
+    walletTitle: 'Et le portefeuille ?',
+    walletBody:
+      "Un portefeuille n'apparaît que lorsqu'une action réelle sur la chaîne doit être approuvée et payée. Ce parcours de démo n'en a pas besoin et ne vous en demandera pas.",
+
+    eligibilityTitle: "Créez votre laissez-passer d'éligibilité",
+    eligibilityBody:
+      'Le laissez-passer représente le pays et la majorité. Il est distinct de votre compte Passport et de votre passeport physique.',
+    demoBanner: 'DÉMO · AUCUNE LECTURE NFC NI PREUVE RÉELLE',
+    demoBannerBody:
+      "Cet environnement ne lit aucun document et ne génère aucune preuve réelle. Choisissez la France ou l'Argentine et nous délivrerons un laissez-passer simulé pour parcourir l'expérience.",
+    evidenceWhy: 'Comment cela fonctionne-t-il avec un vrai document ?',
+    evidenceSteps: [
+      ['Demande préparée', 'Un lien temporaire à usage unique est créé avec ce navigateur.'],
+      [
+        'Lecture NFC sur votre téléphone',
+        'Vous approchez le téléphone de la puce du passeport. La lecture se fait sur votre appareil.',
+      ],
+      [
+        'Données minimales',
+        "L'émetteur apprend seulement si vous remplissez la règle — pays et classe d'âge — et rien d'autre.",
+      ],
+    ],
+    countryLabel: 'Depuis quel pays participez-vous ?',
+    countrySearch: "Rechercher la France ou l'Argentine",
+    countryList: 'Pays disponibles',
+    countrySuggested: "Le pilote commence par la France et l'Argentine.",
+    countryEmpty: 'Aucun pays ne correspond. Essayez un autre nom ou son code.',
+    verifyDocument: 'Vérifier mon passeport',
+    createCredential: 'Créer mon laissez-passer simulé',
+
+    successTitle: "Votre laissez-passer d'éligibilité est prêt",
+    successBody:
+      'Vous pouvez maintenant voir quelles consultations vous sont ouvertes et voter à titre de test.',
+    successMark: 'Laissez-passer créé',
+    country: 'Pays de test',
+    age: "Classe d'âge",
+    issuer: 'Émetteur',
+    issuerValue: 'CICO démo · test',
+    dashboard: 'Voir les consultations',
+    privacy: 'Ce laissez-passer simulé ne contient aucun document ni choix de vote.',
+
+    unavailableTitle: "Le justificatif n'est pas encore connecté",
+    unavailableBody:
+      "Cet environnement peut afficher une session Passport, mais aucun fournisseur de preuve n'est configuré. Vous pouvez explorer sans que nous inventions une nationalité.",
+    unavailableAction: 'Explorer les consultations',
+
+    error: 'Passport n’a pas pu se connecter. Vérifiez le consentement et réessayez.',
+    holderBindingVerified:
+      "Le lien avec le porteur est vérifié pour cette session. Nous n'affichons pas ses octets et ne le traitons pas comme une revendication d'éligibilité.",
+    holderBindingUnsupported:
+      "Cette version de Passport n'expose pas encore le lien requis pour une éligibilité réelle. La démo garde le compte et le laissez-passer séparés.",
+    mascotWaving: 'Capybara qui fait coucou',
+    mascotReading: 'Capybara qui lit un livre',
+    mascotThinking: 'Capybara qui réfléchit',
+    mascotAchievement: 'Capybara tenant un petit drapeau sur une colline',
   },
 } as const;
 
@@ -355,6 +471,7 @@ export function UnifiedPassportOnboarding({
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [demoCountry, setDemoCountry] = useState(DEFAULT_DEMO_COUNTRY);
+  const [documentJourney, setDocumentJourney] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const initialRender = useRef(false);
   const t = copy[locale];
@@ -362,6 +479,20 @@ export function UnifiedPassportOnboarding({
   // must not offer a route into a consent screen this visit never showed.
   const previousStage = stage === initialStage ? undefined : PREVIOUS_STAGE[stage];
   const selectedCountry = useMemo(() => findAssignedCountry(demoCountry), [demoCountry]);
+
+  /**
+   * A real document read gives a country; a typed one does not, because the
+   * nationality is not in the block people transcribe. Either way the chip is
+   * the authority, so a read without a country falls back to the picker rather
+   * than inventing one.
+   */
+  const handleDocumentRead = (result: DocumentReadResult) => {
+    if (result.country) {
+      const matched = findAssignedCountry(result.country);
+      if (matched) setDemoCountry(matched.alpha2);
+    }
+    setDocumentJourney(false);
+  };
 
   useLayoutEffect(() => {
     if (!initialRender.current) {
@@ -601,52 +732,75 @@ export function UnifiedPassportOnboarding({
 
       {stage === 'eligibility' ? (
         <section className="journey-screen" aria-labelledby="onboarding-evidence-title">
-          <CapybaraMascot variant="thinking" alt={t.mascotThinking} size={140} />
-          <h1 className="journey-screen__title" id="onboarding-evidence-title" ref={headingRef}>
-            {t.eligibilityTitle}
-          </h1>
-          <p className="journey-screen__body">{t.eligibilityBody}</p>
-          {/* The demo label stays visible and stays above the action, because
-              the reader has to know what they are about to get before they
-              tap, not after. */}
-          <div className="journey-demo-banner" role="status">
-            <strong>{t.demoBanner}</strong>
-            <small>{t.demoBannerBody}</small>
-          </div>
-          {/* The walkthrough carries its own three steps, and they are the
-              same three this list used to describe in the abstract. Two
-              numbered lists of three, one above the other, inside one
-              disclosure, is the repetition this pass exists to remove. */}
-          <WhyDetails summary={t.evidenceWhy}>
-            <PassportScanTutorial locale={localizedLocale} />
-          </WhyDetails>
-          {mode === 'showcase' ? null : (
-            <div className="journey-field">
-              <CountryPicker
-                value={demoCountry}
-                onChange={setDemoCountry}
-                locale={localizedLocale}
-                searchLabel={t.countryLabel}
-                searchPlaceholder={t.countrySearch}
-                listLabel={t.countryList}
-                suggested={SUGGESTED_COUNTRIES}
-                allowed={SUGGESTED_COUNTRIES}
-                searchable={false}
-                suggestedLabel={t.countrySuggested}
-                emptyLabel={t.countryEmpty}
-              />
-            </div>
+          {documentJourney ? (
+            /* The document journey replaces this screen entirely once started.
+               Running the teaching steps and a country picker side by side put
+               two different mental models of "prove eligibility" on one page. */
+            <DocumentVerificationJourney
+              locale={locale}
+              onDocumentRead={handleDocumentRead}
+              onCancel={() => setDocumentJourney(false)}
+            />
+          ) : (
+            <>
+              <CapybaraMascot variant="thinking" alt={t.mascotThinking} size={140} />
+              <h1 className="journey-screen__title" id="onboarding-evidence-title" ref={headingRef}>
+                {t.eligibilityTitle}
+              </h1>
+              <p className="journey-screen__body">{t.eligibilityBody}</p>
+              {/* The demo label stays visible and stays above the action, because
+                  the reader has to know what they are about to get before they
+                  tap, not after. */}
+              <div className="journey-demo-banner" role="status">
+                <strong>{t.demoBanner}</strong>
+                <small>{t.demoBannerBody}</small>
+              </div>
+              {/* The walkthrough carries its own three steps, and they are the
+                  same three this list used to describe in the abstract. Two
+                  numbered lists of three, one above the other, inside one
+                  disclosure, is the repetition this pass exists to remove. */}
+              <WhyDetails summary={t.evidenceWhy}>
+                <PassportScanTutorial locale={locale} />
+              </WhyDetails>
+              {mode === 'showcase' ? null : (
+                <div className="journey-field">
+                  <CountryPicker
+                    value={demoCountry}
+                    onChange={setDemoCountry}
+                    locale={locale}
+                    searchLabel={t.countryLabel}
+                    searchPlaceholder={t.countrySearch}
+                    listLabel={t.countryList}
+                    suggested={SUGGESTED_COUNTRIES}
+                    allowed={SUGGESTED_COUNTRIES}
+                    searchable={false}
+                    suggestedLabel={t.countrySuggested}
+                    emptyLabel={t.countryEmpty}
+                  />
+                </div>
+              )}
+              <div className="journey-screen__actions">
+                {/* Reading the real document page is the primary path now. The
+                    simulated pass stays, clearly named, because demo has no
+                    provider behind it and a jury still has to walk the flow. */}
+                <button
+                  className="passport-action-button primary"
+                  onClick={() => setDocumentJourney(true)}
+                  type="button"
+                >
+                  {t.verifyDocument} <ArrowRight size={19} />
+                </button>
+                <button
+                  className="passport-action-button secondary"
+                  disabled={mode !== 'showcase' && !selectedCountry}
+                  onClick={() => setStage('credential-success')}
+                  type="button"
+                >
+                  {t.createCredential}
+                </button>
+              </div>
+            </>
           )}
-          <div className="journey-screen__actions">
-            <button
-              className="passport-action-button primary"
-              disabled={mode !== 'showcase' && !selectedCountry}
-              onClick={() => setStage('credential-success')}
-              type="button"
-            >
-              {t.createCredential} <ArrowRight size={19} />
-            </button>
-          </div>
         </section>
       ) : null}
 

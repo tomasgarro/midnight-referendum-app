@@ -94,3 +94,54 @@
   font-weight: 650;
   text-decoration: none;
 }
+.activity-card__lifecycle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.activity-card__status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.activity-card__status[data-open="true"] {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.activity-card__closes {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.activity-card__sealed {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.activity-card__sealed svg {
+  flex: none;
+  margin-top: 2px;
+}
+.activity-card__sealed strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+.activity-card__results {
+  margin-top: var(--space-3);
+}
+.activity-card__results-note {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}

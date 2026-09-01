@@ -372,6 +372,22 @@ const operatorFeeSeed =
 if (!/^[0-9a-f]{64}$/iu.test(operatorFeeSeed)) {
   fail('V2_OPERATOR_FEE_SEED_HEX must be 32 bytes of hexadecimal');
 }
+/*
+ * A cold wallet replays the whole indexer history before it reports a balance,
+ * and nothing here persists that state between runs. On Preview that took
+ * about 27 minutes against 180k indices in September 2026, so the eight-minute
+ * bound this used to hard-code failed a wallet that was funded and fine.
+ */
+const operatorSyncWaitMs = Number.parseInt(
+  optional('V2_OPERATOR_SYNC_WAIT_MS', String(40 * 60 * 1_000)),
+  10,
+);
+if (!Number.isSafeInteger(operatorSyncWaitMs) || operatorSyncWaitMs < 60_000) {
+  fail('V2_OPERATOR_SYNC_WAIT_MS must be at least 60000 milliseconds');
+}
+console.log(
+  `waiting up to ${Math.round(operatorSyncWaitMs / 60_000)} minutes for the operator wallet to synchronize…`,
+);
 const operatorWallet = await startRelayerWallet({ ...relayer, seedHex: operatorFeeSeed });
 const operatorState = await firstValueFrom(
   operatorWallet.facade.state().pipe(
@@ -383,7 +399,7 @@ const operatorState = await firstValueFrom(
         Boolean(state.shielded.coinPublicKey) &&
         Boolean(state.shielded.encryptionPublicKey),
     ),
-    timeout({ first: 8 * 60 * 1_000 }),
+    timeout({ first: operatorSyncWaitMs }),
   ),
 );
 const operatorProviders = {

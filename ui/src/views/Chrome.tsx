@@ -2,8 +2,8 @@ import {
   ClockCounterClockwise,
   Fingerprint,
   GlobeHemisphereWest,
+  IdentificationBadge,
   IdentificationCard,
-  Scan,
   UserCircle,
   X,
 } from '@phosphor-icons/react';
@@ -12,6 +12,37 @@ import { Button } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
 import { APP_COPY, type Tab } from '@/views/app-runtime';
 import './chrome.css';
+
+/** Shell strings that never belonged in inline `locale === 'es'` ternaries. */
+const CHROME_COPY = {
+  es: {
+    openPassport: 'Abrir Midnight Passport',
+    connectPassport: 'Conectar Midnight Passport',
+    passportFailed: 'No se pudo conectar Passport',
+    dismissNotice: 'Cerrar aviso',
+    retry: 'Reintentar',
+    primaryNav: 'Navegación principal',
+    verifyQualifier: 'documento físico',
+  },
+  en: {
+    openPassport: 'Open Midnight Passport',
+    connectPassport: 'Connect Midnight Passport',
+    passportFailed: 'Passport could not connect',
+    dismissNotice: 'Dismiss notice',
+    retry: 'Try again',
+    primaryNav: 'Primary navigation',
+    verifyQualifier: 'physical document',
+  },
+  fr: {
+    openPassport: 'Ouvrir Midnight Passport',
+    connectPassport: 'Connecter Midnight Passport',
+    passportFailed: 'Passport n’a pas pu se connecter',
+    dismissNotice: "Fermer l'avis",
+    retry: 'Réessayer',
+    primaryNav: 'Navigation principale',
+    verifyQualifier: 'document physique',
+  },
+} as const;
 
 /**
  * The app shell: a header that names the product and its identity, and the
@@ -44,7 +75,7 @@ export function AppHeader({
   locale,
 }: AppHeaderProps) {
   const copy = APP_COPY[locale];
-  const es = locale === 'es';
+  const chrome = CHROME_COPY[locale];
   return (
     <header className="chrome-header">
       <div className="chrome-brand">
@@ -56,15 +87,7 @@ export function AppHeader({
           type="button"
           className={`chrome-chip ${passportSession ? 'chrome-chip--on' : ''}`.trim()}
           onClick={onConnectPassport}
-          aria-label={
-            passportSession
-              ? es
-                ? 'Abrir Midnight Passport'
-                : 'Open Midnight Passport'
-              : es
-                ? 'Conectar Midnight Passport'
-                : 'Connect Midnight Passport'
-          }
+          aria-label={passportSession ? chrome.openPassport : chrome.connectPassport}
         >
           <Fingerprint size={14} weight="bold" />
           <span>{passportSession?.profile?.displayName ?? 'Passport'}</span>
@@ -72,19 +95,19 @@ export function AppHeader({
         {passportError ? (
           <div className="chrome-popover" role="alert">
             <div className="chrome-popover__head">
-              <strong>{es ? 'No se pudo conectar Passport' : 'Passport could not connect'}</strong>
+              <strong>{chrome.passportFailed}</strong>
               <button
                 type="button"
                 className="chrome-popover__close"
                 onClick={onDismissPassportError}
-                aria-label={es ? 'Cerrar aviso' : 'Dismiss notice'}
+                aria-label={chrome.dismissNotice}
               >
                 <X size={15} />
               </button>
             </div>
             <p>{passportError}</p>
             <Button variant="link" size="sm" onClick={onConnectPassport}>
-              {es ? 'Reintentar' : 'Try again'}
+              {chrome.retry}
             </Button>
           </div>
         ) : null}
@@ -102,17 +125,17 @@ export interface BottomNavProps {
 
 export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
   const copy = APP_COPY[locale];
-  const es = locale === 'es';
+  const chrome = CHROME_COPY[locale];
   const items = [
     { id: 'discover' as const, label: copy.nav.discover, Icon: GlobeHemisphereWest },
     { id: 'credentials' as const, label: copy.nav.credentials, Icon: IdentificationCard },
     { id: 'activity' as const, label: copy.nav.activity, Icon: ClockCounterClockwise },
     { id: 'passport' as const, label: copy.nav.passport, Icon: UserCircle },
   ];
-  const verifyLabel = `${copy.nav.verify} · ${es ? 'documento físico' : 'physical document'}`;
+  const verifyLabel = `${copy.nav.verify} · ${chrome.verifyQualifier}`;
   return (
     <div className="chrome-bar">
-      <nav className="chrome-nav" aria-label={es ? 'Navegación principal' : 'Primary navigation'}>
+      <nav className="chrome-nav" aria-label={chrome.primaryNav}>
         {items.map(({ id, label, Icon }) => (
           <button
             type="button"
@@ -147,7 +170,10 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
         aria-label={verifyLabel}
         title={verifyLabel}
       >
-        <Scan size={28} weight="regular" />
+        <span className="chrome-verify__disc">
+          <IdentificationBadge size={26} weight="fill" />
+        </span>
+        <span className="chrome-verify__name">{copy.nav.verify}</span>
       </button>
     </div>
   );

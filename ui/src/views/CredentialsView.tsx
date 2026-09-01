@@ -2,6 +2,7 @@ import { CalendarCheck, IdentificationCard, Plus, ShieldCheck } from '@phosphor-
 import { Button, Card, Display, EmptyState, Eyebrow } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName } from '@/integration/country-catalog';
+import { formatDate } from '@/integration/format';
 import type { CicoLocale } from '@/integration/locale';
 import './credentials-view.css';
 
@@ -40,14 +41,28 @@ const COPY = {
     emptyTitle: 'No pass yet',
     empty: 'Verify a compatible physical passport to create your first eligibility pass.',
   },
+  fr: {
+    eyebrow: 'Vos justificatifs',
+    title: "Éligibilité, prête à l'emploi",
+    lead: "Un laissez-passer conserve le résultat minimal d'une vérification. Ce n'est pas votre passeport physique.",
+    active: 'Laissez-passer actif',
+    eligibility: 'Éligibilité citoyenne',
+    issuer: 'Émis par',
+    age: "Condition d'âge",
+    simulated: 'Simulé pour cette démo',
+    verified: 'Vérifié',
+    add: 'Ajouter une éligibilité',
+    addAnother: 'Ajouter un autre laissez-passer',
+    validUntil: "Valable jusqu'au",
+    assurance: 'Niveau de vérification',
+    emptyTitle: 'Aucun laissez-passer pour le moment',
+    empty:
+      "Vérifiez un passeport physique compatible pour créer votre premier laissez-passer d'éligibilité.",
+  },
 } as const;
 
 function formatExpiry(value: string, locale: CicoLocale): string {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return value;
-  return new Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-US', {
-    dateStyle: 'medium',
-  }).format(timestamp);
+  return formatDate(value, locale) ?? value;
 }
 
 function formatAssurance(value: string, locale: CicoLocale): string {
@@ -63,6 +78,12 @@ function formatAssurance(value: string, locale: CicoLocale): string {
       document: 'Document',
       'document-nfc': 'Document + NFC',
       'passport-native': 'Native Passport',
+    },
+    fr: {
+      fixture: 'Simulé',
+      document: 'Document',
+      'document-nfc': 'Document + NFC',
+      'passport-native': 'Passport natif',
     },
   } as const;
   return labels[locale][value as keyof (typeof labels)[typeof locale]] ?? value;

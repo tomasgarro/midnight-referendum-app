@@ -1,10 +1,27 @@
-import { ArrowUpRight, CheckCircle, Clock, Copy, Receipt } from '@phosphor-icons/react';
+import { ArrowUpRight, CheckCircle, Clock, Copy, Lock, Receipt } from '@phosphor-icons/react';
 import { Card, Display, EmptyState, Eyebrow } from '@/components/system';
+import { formatDate, formatDateTime } from '@/integration/format';
 import type { CicoLocale } from '@/integration/locale';
+import { getPollAvailability, type PollAvailability } from '@/integration/poll-lifecycle';
 import { CopyReceiptButton } from '@/views/CopyReceiptButton';
 import { localizePoll, type Poll, type VoteReceipt } from '@/views/poll-model';
 import { ReceiptVerifier } from '@/views/ReceiptVerifier';
+import { ResultsPanel } from '@/views/ResultsPanel';
 import './activity-view.css';
+
+/**
+ * A receipt used to be an identifier and a timestamp, which answered "did it go
+ * through" and nothing else. The two questions people actually arrive with are
+ * "is that consultation still running" and "what did it decide", and both were
+ * answerable already: this view is handed the whole poll list and only used it
+ * to look up a title.
+ *
+ * What it deliberately does not offer is a way to change the vote. The
+ * contract's nullifier makes a second vote impossible, and the receipt store
+ * never records the choice -- so the honest thing, and the thing that explains
+ * the privacy design, is to say the vote is sealed rather than to leave the
+ * question hanging.
+ */
 
 const COPY = {
   es: {
@@ -18,6 +35,18 @@ const COPY = {
     simulated: 'Simulado',
     pending: 'Pendiente',
     copy: 'Copiar comprobante',
+    statusOpen: 'Votación abierta',
+    statusClosed: 'Votación cerrada',
+    statusNotOpen: 'Todavía no abrió',
+    closesOn: 'Cierra el',
+    closedOn: 'Cerró el',
+    sealed: 'Tu voto está sellado y no se puede cambiar.',
+    sealedWhy:
+      'El contrato registra un anulador por persona y por consulta, así que nadie puede votar dos veces — vos incluido.',
+    resultsPending: 'Los resultados se publican en la cadena cuando termina el recuento.',
+    resultsDemo:
+      'Demo local: esta consulta no tiene un contrato detrás, así que no hay recuento para mostrar.',
+    resultsTitle: 'Resultado de esta consulta',
   },
   en: {
     eyebrow: 'Your activity',
@@ -30,6 +59,42 @@ const COPY = {
     simulated: 'Simulated',
     pending: 'Pending',
     copy: 'Copy receipt',
+    statusOpen: 'Voting open',
+    statusClosed: 'Voting closed',
+    statusNotOpen: 'Not open yet',
+    closesOn: 'Closes',
+    closedOn: 'Closed',
+    sealed: 'Your vote is sealed and cannot be changed.',
+    sealedWhy:
+      'The contract records one nullifier per person per consultation, so nobody can vote twice — including you.',
+    resultsPending: 'Results are published on-chain once counting ends.',
+    resultsDemo:
+      'Local demo: this consultation has no contract behind it, so there is no tally to show.',
+    resultsTitle: 'Result of this consultation',
+  },
+  fr: {
+    eyebrow: 'Votre activité',
+    title: 'Reçus de participation',
+    lead: 'Conservés chiffrés sur cet appareil. Un reçu atteste un statut, il ne révèle pas votre choix.',
+    emptyTitle: 'Aucune activité pour le moment',
+    empty: 'Dès que vous aurez voté, votre reçu apparaîtra ici.',
+    consultation: 'Consultation citoyenne',
+    confirmed: 'Confirmé',
+    simulated: 'Simulé',
+    pending: 'En attente',
+    copy: 'Copier le reçu',
+    statusOpen: 'Vote ouvert',
+    statusClosed: 'Vote clos',
+    statusNotOpen: 'Pas encore ouvert',
+    closesOn: 'Clôture le',
+    closedOn: 'Clos le',
+    sealed: 'Votre vote est scellé et ne peut pas être modifié.',
+    sealedWhy:
+      'Le contrat enregistre un annulateur par personne et par consultation : personne ne peut voter deux fois, vous y compris.',
+    resultsPending: 'Les résultats sont publiés sur la chaîne une fois le dépouillement terminé.',
+    resultsDemo:
+      "Démo locale : cette consultation n'a pas de contrat derrière elle, il n'y a donc aucun décompte à afficher.",
+    resultsTitle: 'Résultat de cette consultation',
   },
 } as const;
 
@@ -39,12 +104,21 @@ export interface ActivityViewProps {
   readonly locale: CicoLocale;
 }
 
+/**
+ * A malformed schedule must not take the whole screen down with it. Runtime
+ * polls can arrive without dates, and `getPollAvailability` throws on an
+ * interval it cannot parse.
+ */
+function availabilityOf(poll: Poll): PollAvailability | null {
+  try {
+    return getPollAvailability(poll);
+  } catch {
+    return null;
+  }
+}
+
 export function ActivityView({ polls, receipts, locale }: ActivityViewProps) {
   const copy = COPY[locale];
-  const receiptTitle = (receipt: VoteReceipt) => {
-    const poll = polls.find((item) => item.id === receipt.pollId);
-    return poll ? localizePoll(poll, locale).title : copy.consultation;
-  };
 
   return (
     <main className="activity">
@@ -58,6 +132,11 @@ export function ActivityView({ polls, receipts, locale }: ActivityViewProps) {
         <ol className="activity__list">
           {receipts.map((receipt) => {
             const confirmed = receipt.status === 'confirmed';
+            const poll = polls.find((item) => item.id === receipt.pollId);
+            const availability = poll ? availabilityOf(poll) : null;
+            const isOpen = availability?.isOpen ?? false;
+            const closesLabel = poll ? formatDate(poll.closesAt, locale) : null;
+            const contractAddress = poll?.runtimeContractAddress ?? null;
             return (
               <li key={receipt.id}>
                 <Card className="activity-card">
@@ -66,17 +145,41 @@ export function ActivityView({ polls, receipts, locale }: ActivityViewProps) {
                   </span>
                   <div className="activity-card__body">
                     <div className="activity-card__top">
-                      <strong>{receiptTitle(receipt)}</strong>
+                      <strong>{poll ? localizePoll(poll, locale).title : copy.consultation}</strong>
                       <span data-confirmed={confirmed}>
                         {confirmed ? copy.confirmed : copy.simulated}
                       </span>
                     </div>
+
+                    {availability ? (
+                      <p className="activity-card__lifecycle">
+                        <span className="activity-card__status" data-open={isOpen}>
+                          {availability.reason === 'not-open'
+                            ? copy.statusNotOpen
+                            : isOpen
+                              ? copy.statusOpen
+                              : copy.statusClosed}
+                        </span>
+                        {closesLabel ? (
+                          <span className="activity-card__closes">
+                            {isOpen ? copy.closesOn : copy.closedOn} {closesLabel}
+                          </span>
+                        ) : null}
+                      </p>
+                    ) : null}
+
                     <time dateTime={receipt.createdAt}>
-                      {new Date(receipt.createdAt).toLocaleString(
-                        locale === 'es' ? 'es-AR' : 'en-GB',
-                      )}
+                      {formatDateTime(receipt.createdAt, locale) ?? receipt.createdAt}
                     </time>
                     <code>{receipt.id}</code>
+
+                    <p className="activity-card__sealed">
+                      <Lock size={14} weight="fill" aria-hidden="true" />
+                      <span>
+                        <strong>{copy.sealed}</strong> {copy.sealedWhy}
+                      </span>
+                    </p>
+
                     <div className="activity-card__actions">
                       <CopyReceiptButton receiptId={receipt.id} locale={locale} />
                       {receipt.explorerUrl ? (
@@ -85,6 +188,24 @@ export function ActivityView({ polls, receipts, locale }: ActivityViewProps) {
                         </a>
                       ) : null}
                     </div>
+
+                    {/* A tally only exists where a contract does. Everywhere else
+                        the screen says so rather than rendering an empty chart. */}
+                    {availability && !isOpen ? (
+                      contractAddress ? (
+                        <div className="activity-card__results">
+                          <ResultsPanel
+                            contractAddress={contractAddress}
+                            title={copy.resultsTitle}
+                            locale={locale}
+                          />
+                        </div>
+                      ) : (
+                        <p className="activity-card__results-note">
+                          {confirmed ? copy.resultsPending : copy.resultsDemo}
+                        </p>
+                      )
+                    ) : null}
                   </div>
                 </Card>
               </li>

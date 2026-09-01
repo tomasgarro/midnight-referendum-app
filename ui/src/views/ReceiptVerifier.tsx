@@ -54,6 +54,22 @@ const COPY = {
     missingBody: 'Check the identifier or wait for confirmation.',
     explorer: 'Open in explorer',
   },
+  fr: {
+    eyebrow: 'Transparence',
+    title: 'Vérifier un reçu',
+    local: 'La recherche est locale : elle ne consulte que les reçus enregistrés sur cet appareil.',
+    label: 'Identifiant du reçu',
+    search: 'Rechercher',
+    confirmed: 'Reçu confirmé',
+    simulated: 'Reçu simulé',
+    stillPrivate: 'Votre choix reste privé.',
+    confirmedOn: (network: string) => `L'enregistrement est confirmé sur ${network}.`,
+    simulatedNote:
+      "Cet enregistrement local n'est ni une transaction ni une preuve de vote réelle.",
+    missing: "Nous n'avons pas trouvé ce reçu",
+    missingBody: "Vérifiez l'identifiant ou attendez la confirmation.",
+    explorer: "Ouvrir dans l'explorateur",
+  },
 } as const;
 
 export interface ReceiptVerifierProps {

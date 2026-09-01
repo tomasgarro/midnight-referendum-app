@@ -1,36 +1,43 @@
 /**
  * Light, dark, or whatever the device says.
  *
- * The palette's cream ground is the product's identity, and it was being
- * silently replaced by the dark palette on any device set to dark -- a choice
- * the reader never made here and could not undo here. `system` stays the
- * default, so nothing changes for anyone who has not asked; the other two are
- * an explicit override that wins in both directions.
+ * The cream ground is the product's identity, so it is what a reader who has
+ * never touched this control gets -- on any device, whatever the OS is set to.
+ * `system` remains available, but as a deliberate choice rather than the
+ * silent default it used to be; picking it is stored explicitly so that
+ * "asked for the device" and "never asked for anything" stay distinguishable.
  */
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
 const STORAGE_KEY = 'cico-theme';
 
+/**
+ * What a reader with no stored preference sees. `index.html` hard-codes the
+ * same answer before first paint; the two must not drift.
+ */
+export const DEFAULT_THEME: ThemePreference = 'light';
+
 export function parseThemePreference(value: string | null | undefined): ThemePreference {
-  return value === 'light' || value === 'dark' ? value : 'system';
+  if (value === 'light' || value === 'dark' || value === 'system') return value;
+  return DEFAULT_THEME;
 }
 
 export function detectThemePreference(): ThemePreference {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return DEFAULT_THEME;
   try {
     return parseThemePreference(window.localStorage.getItem(STORAGE_KEY));
   } catch {
     // Private windows and blocked site data both throw on read.
-    return 'system';
+    return DEFAULT_THEME;
   }
 }
 
 export function persistThemePreference(preference: ThemePreference): void {
   if (typeof window === 'undefined') return;
   try {
-    if (preference === 'system') window.localStorage.removeItem(STORAGE_KEY);
-    else window.localStorage.setItem(STORAGE_KEY, preference);
+    // `system` is written out rather than cleared: absence now means light.
+    window.localStorage.setItem(STORAGE_KEY, preference);
   } catch {
     // A theme that cannot be remembered is still worth applying for this visit.
   }
@@ -60,8 +67,8 @@ export function applyTheme(preference: ThemePreference): ResolvedTheme {
 }
 
 /**
- * Follows the device while the reader has expressed no preference. Returns an
- * unsubscribe, or a no-op where `matchMedia` is unavailable.
+ * Follows the device while the reader has explicitly chosen `system`. Returns
+ * an unsubscribe, or a no-op where `matchMedia` is unavailable.
  */
 export function watchSystemTheme(onChange: (theme: ResolvedTheme) => void): () => void {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {};

@@ -93,4 +93,38 @@ describe('runtime poll catalog projection', () => {
       runtimeContractAddress: '0xcountry-contract',
     });
   });
+
+  /* The contract publishes and enforces its own schedule. Ignoring it made
+     every deployed referendum read as permanently open on the screens whose
+     job is to say when it closes. */
+  it('takes its schedule from the contract when the catalog carries no dates', () => {
+    const polls = toRuntimePolls([
+      referendum({
+        referendumId: 'runtime-scheduled',
+        contractAddress: '0xscheduled',
+        title: 'Consulta con calendario',
+        question: '¿Aprobás esta consulta?',
+        opensAtUnix: 1_788_000_000n,
+        closesAtUnix: 1_788_600_000n,
+      }),
+    ]);
+
+    expect(polls[0]?.opensAt).toBe(new Date(1_788_000_000_000).toISOString());
+    expect(polls[0]?.closesAt).toBe(new Date(1_788_600_000_000).toISOString());
+  });
+
+  it('lets the catalog override the contract schedule for display', () => {
+    const base = referendum({
+      referendumId: 'runtime-overridden',
+      contractAddress: '0xoverridden',
+      title: 'Consulta con fechas publicadas',
+      question: '¿Aprobás esta consulta?',
+    });
+    const polls = toRuntimePolls([
+      { ...base, opensAt: '2026-01-01T00:00:00.000Z', closesAt: '2026-02-01T00:00:00.000Z' },
+    ]);
+
+    expect(polls[0]?.opensAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(polls[0]?.closesAt).toBe('2026-02-01T00:00:00.000Z');
+  });
 });

@@ -4,13 +4,14 @@ import {
   ASSIGNED_COUNTRIES,
   countryName as resolveCountryName,
 } from '@/integration/country-catalog';
+import type { CicoLocale } from '@/integration/locale';
 import { CountryFlag, useFlagSupport } from './CountryFlag';
 import './system.css';
 
 export interface CountryPickerProps {
   readonly value: string;
   readonly onChange: (alpha2: string) => void;
-  readonly locale: 'es' | 'en';
+  readonly locale: CicoLocale;
   readonly searchLabel: string;
   readonly searchPlaceholder: string;
   readonly listLabel: string;

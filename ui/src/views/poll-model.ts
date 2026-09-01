@@ -594,6 +594,18 @@ export function isCountryPollForCountry(poll: Poll, countryCode: string): boolea
  * catalog referendumId.
 
  */
+/** Only reached by a catalog that publishes neither ISO dates nor a schedule. */
+const EPOCH_START = '1970-01-01T00:00:00.000Z';
+const FAR_FUTURE = '9999-12-31T23:59:59.000Z';
+
+/** Contract seconds to an ISO instant. Null for anything unusable. */
+function unixToIso(seconds: bigint | undefined): string | null {
+  if (seconds === undefined) return null;
+  const ms = Number(seconds) * 1000;
+  if (!Number.isSafeInteger(ms) || ms <= 0) return null;
+  return new Date(ms).toISOString();
+}
+
 export function toRuntimePolls(referenda: ReadonlyArray<PassportV2RuntimeReferendum>): Poll[] {
   return toPassportV2Catalog(referenda).map((item) => {
     const countryNumeric = countryPolicyCode(item);
@@ -607,10 +619,15 @@ export function toRuntimePolls(referenda: ReadonlyArray<PassportV2RuntimeReferen
       description: item.description ?? 'Consulta ciudadana publicada en el catálogo v2.',
       opened: item.opened ?? 'Según el catálogo v2',
       deadline: item.deadline ?? 'Según el estado del contrato',
-      // The catalog currently carries contract identity/policy, not calendar dates. Keep the
-      // action available and let the canonical contract phase decide final acceptance.
-      opensAt: item.opensAt ?? '1970-01-01T00:00:00.000Z',
-      closesAt: item.closesAt ?? '9999-12-31T23:59:59.000Z',
+      /* The contract publishes its own schedule, and it is enforced on chain --
+         `closeVote` and `finalizeVote` are rejected before their deadlines. The
+         catalog's ISO fields are an optional display override; when they are
+         absent the contract's seconds are the truth. Falling straight through
+         to 1970/9999, as this did, made every deployed referendum read as
+         permanently open on a screen whose whole job is to say when it closes.
+         The sentinels remain only for a catalog carrying neither. */
+      opensAt: item.opensAt ?? unixToIso(item.source?.config.opensAtUnix) ?? EPOCH_START,
+      closesAt: item.closesAt ?? unixToIso(item.source?.config.closesAtUnix) ?? FAR_FUTURE,
       eligible: item.eligible ?? '—',
       participation: item.participation ?? 'Estado público consultado en Midnight',
       whyNow: 'Esta consulta se publica desde el manifiesto de despliegue v2.',

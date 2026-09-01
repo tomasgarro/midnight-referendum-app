@@ -73,7 +73,59 @@ Rarimo verification, or canonical on-chain receipt.
 | Contract policy and ports | Checked-in Compact contracts, provider-neutral ports, simulator/unit coverage, and a historical local lifecycle | A current Preview deployment, funded action, or current release manifest |
 | Rarimo/NFC | Temporary adapter boundary, minimal-claim design, and source/conformance tests | Hosted verifier, authenticated callback, real proof, or a physical NFC/ePassport run |
 | Historical Undeployed v2 | Exact source SHA, tree, manifest digest, and preserved local transcript at [`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/) | Evidence for this checkout, Preview, Passport approval, or NFC |
+| Document journey | Real camera access with per-cause recovery, check-digit-verified TD3 parsing tested against the ICAO specimen, EN/FR/ES copy, and an explicit RariMe handoff where the browser cannot proceed | A physical ePassport chip read in this browser, an NFC-backed credential issued end to end, or a recorded walkthrough video |
 | Static public artifact | Current Hostinger synthetic demo, exact archive SHA, privacy scan, 79-file build match, HTTPS render, SPA fallback, 320/390/tablet/desktop first interactions, and green release CI | Response-header hardening and re-verification before public-release certification |
+
+## The document journey, and where the browser stops
+
+Verify is the app's one global action. Pressing it opens a nine-screen journey
+modelled on Référendum Citoyen — the French civic-voting app built on the same
+Rarimo passport attestation this product uses — in English, French, and
+Spanish.
+
+| Screen | What it does | Real or explained |
+| --- | --- | --- |
+| 1-3 · Voting process | Teaches unique-vote, local verification, anonymous credential, and states that identity is not retained | Explanation |
+| 4 · Walkthrough | Skippable video slot | **Placeholder** — labelled as not yet recorded, not a stock clip |
+| 5 · Start analysis | Sets expectations: physical passport, about two minutes | Explanation |
+| 6 · Camera permission | Explains why before the browser prompt; distinct recovery for denied, insecure-context, no-device, in-use, unsupported | **Real** |
+| 7 · Photo page | Live rear camera, passport-page-ratio frame, MRZ guide, and check-digit-verified TD3 parsing; manual document number / birth date / expiry as the guaranteed fallback | **Real** |
+| 8-9 · Chip read | Hold the passport to the phone, read in progress | **Handoff to RariMe** |
+
+**The browser cannot read a passport chip.** The chip speaks ISO 14443 APDUs
+and no web API exposes them; Web NFC does not perform ePassport reads. The
+reference app is a native Android build and does it itself. Rather than
+animate a progress bar that measures nothing, screens 8-9 keep the reference's
+instruction and hand off to RariMe, where the read genuinely happens. No
+simulated chip read ships.
+
+What is genuinely ours, and testable from source:
+
+- `ui/src/integration/mrz.ts` — TD3 parser verifying all four ICAO 9303 check
+  digits, including the composite digit that catches a two-frame OCR splice.
+  Tested against the published Doc 9303 specimen rather than a self-generated
+  fixture, so a wrong implementation could not agree with its own tests.
+- `ui/src/integration/camera.ts` — secure-context, permission, device, and
+  in-use guards, each with its own recovery.
+- `ui/src/integration/mrz-recognition.ts` — native `TextDetector` where the
+  platform has it. A WASM OCR engine is ruled out rather than attempted: the
+  deployed CSP is `script-src 'self'` with no `wasm-unsafe-eval`, so it would
+  be blocked on the very origin a juror opens.
+- Reduction happens before anything leaves the screen: the parsed record
+  becomes country plus adult status, and the birth date is never carried
+  forward.
+
+Manual entry is offered as the weaker read and says so: a typed document
+number carries no check digit to verify, and no nationality, so the chip
+remains the authority in either case.
+
+**Where the journey is wired.** It fronts the demo and showcase modes, which
+is what a juror opens. Preview and undeployed keep their existing enrolment
+screen, which already performs the real RariMe handoff and polls the real
+enrolment status. Bringing the nine screens in front of that path is the next
+step and is deliberately not done here: it cannot be exercised until the CICO
+service is hosted, and shipping untested code on the one path that talks to a
+real issuer is the wrong trade.
 
 ## Privacy and trust boundaries
 
@@ -167,7 +219,12 @@ stateDiagram-v2
 
 - No Midnight Preview registry, referendum, credential, vote, or receipt is
   deployed or evidenced in this snapshot.
-- No physical NFC or ePassport APDU read has been observed on hardware.
+- No physical NFC or ePassport APDU read has been observed on hardware, and
+  none is possible in this browser. Screens 8-9 of the document journey are a
+  handoff to RariMe, not a chip read.
+- A camera MRZ read is not an NFC-backed credential. Reading the printed page
+  proves the page was presented; only the chip proves the document is genuine.
+  Manual entry is weaker still and is labelled as such in the interface.
 - No hosted Rarimo verifier, authenticated callback, real proof, or deletion
   and replay run is evidenced.
 - No Passport credential, Preview address, wallet, recovery, biometric,

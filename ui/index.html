@@ -6,8 +6,10 @@
     <title>midnight-referendum</title>
     <!--
       Stamp the theme before first paint. The dark palette is keyed on
-      data-theme alone, so without this a device set to dark would show the
-      cream ground for one frame and then swap.
+      data-theme alone, so without this a reader who chose dark would see the
+      cream ground for one frame and then swap. Must stay in step with
+      DEFAULT_THEME in src/integration/theme.ts: no stored value means light,
+      and only an explicit 'system' follows the device.
     -->
     <script>
       (() => {
@@ -17,10 +19,15 @@
         } catch {
           stored = null;
         }
-        const prefersDark =
-          window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const resolved =
-          stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light';
+        let resolved = 'light';
+        if (stored === 'light' || stored === 'dark') {
+          resolved = stored;
+        } else if (stored === 'system') {
+          resolved =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        }
         document.documentElement.dataset.theme = resolved;
       })();
     </script>

@@ -68,6 +68,17 @@ const PREVIEW_SCREENS: readonly PreviewStage[] = [
   'credential',
 ];
 /** Provider enum values are not citizen copy. */
+/**
+ * This screen predates the third language and carried its copy as inline
+ * English/Spanish ternaries. Rather than restructure a working flow into a copy
+ * table mid-submission, those ternaries became three-argument picks: the same
+ * shape, one more language, and every string still readable where it is used.
+ */
+function picker(locale: CicoLocale) {
+  return (english: string, spanish: string, french: string) =>
+    locale === 'fr' ? french : locale === 'en' ? english : spanish;
+}
+
 const ENROLLMENT_STATUS_LABEL = {
   es: {
     pending: 'esperando al proveedor',
@@ -83,10 +94,18 @@ const ENROLLMENT_STATUS_LABEL = {
     denied: 'the provider rejected the verification',
     failed: 'the verification failed',
   },
+  fr: {
+    pending: 'en attente du fournisseur',
+    issued: 'justificatif émis',
+    expired: 'le lien a expiré',
+    denied: 'le fournisseur a refusé la vérification',
+    failed: 'la vérification a échoué',
+  },
 } as const;
 const PREVIEW_STAGE_LABEL = {
   es: { consent: 'Passport', provider: 'Sesión', enrollment: 'Evidencia', credential: 'Lista' },
   en: { consent: 'Passport', provider: 'Session', enrollment: 'Evidence', credential: 'Ready' },
+  fr: { consent: 'Passport', provider: 'Session', enrollment: 'Preuve', credential: 'Prêt' },
 } as const;
 
 function toDisplayCredential(summary: CredentialSummary): DemoCredentialSummary {
@@ -127,6 +146,7 @@ export function PreviewPassportJourney({
   const pollingRef = useRef(false);
   const checkEnrollmentRef = useRef<(automatic?: boolean) => Promise<void>>(async () => {});
   const en = locale === 'en';
+  const pick = picker(locale);
   const setLanguage = (next: CicoLocale) => {
     setLocale(next);
     persistLocale(next);
@@ -366,17 +386,19 @@ export function PreviewPassportJourney({
       <JourneyTopBar
         locale={locale}
         onLocaleChange={setLanguage}
-        languageLabel={en ? 'Language' : 'Idioma'}
+        languageLabel={pick('Language', 'Idioma', 'Langue')}
         onExit={onClose}
-        exitLabel={en ? 'Back to app' : 'Volver a la app'}
+        exitLabel={pick('Back to app', 'Volver a la app', "Retour à l'application")}
         {...(previousStage[stage]
           ? { onBack: () => setStage(previousStage[stage] as PreviewStage) }
           : {})}
-        backLabel={en ? 'Previous step' : 'Paso anterior'}
-        badge={mode === 'undeployed' ? (en ? 'Local chain' : 'Cadena local') : 'Preview'}
+        backLabel={pick('Previous step', 'Paso anterior', 'Étape précédente')}
+        badge={
+          mode === 'undeployed' ? pick('Local chain', 'Cadena local', 'Chaîne locale') : 'Preview'
+        }
         current={screenIndex + 1}
         total={PREVIEW_SCREENS.length}
-        stageLabel={PREVIEW_STAGE_LABEL[en ? 'en' : 'es'][stage]}
+        stageLabel={PREVIEW_STAGE_LABEL[locale][stage]}
         progressLabel={
           en
             ? `Step ${screenIndex + 1} of ${PREVIEW_SCREENS.length}`
@@ -397,12 +419,18 @@ export function PreviewPassportJourney({
           aria-labelledby="preview-consent-title"
         >
           <h2 id="preview-consent-title" ref={headingRef} tabIndex={-1}>
-            {en ? 'Connect Midnight Passport' : 'Conectá Midnight Passport'}
+            {pick(
+              'Connect Midnight Passport',
+              'Conectá Midnight Passport',
+              'Connectez Midnight Passport',
+            )}
           </h2>
           <p>
-            {en
-              ? 'Passport establishes your session and profile consent. It does not share your response or replace a country credential.'
-              : 'Passport establece la sesión y el consentimiento de perfil. No comparte tu respuesta ni se usa como sustituto de una credencial de país.'}
+            {pick(
+              'Passport establishes your session and profile consent. It does not share your response or replace a country credential.',
+              'Passport establece la sesión y el consentimiento de perfil. No comparte tu respuesta ni se usa como sustituto de una credencial de país.',
+              'Passport établit votre session et le consentement de profil. Il ne partage pas votre réponse et ne remplace pas un justificatif de pays.',
+            )}
           </p>
           {/* The boundary belongs at the moment consent is asked for, not one
               screen later as a summary of what already happened. Two stacked
@@ -410,36 +438,49 @@ export function PreviewPassportJourney({
               the same promise, itemised once. */}
           <dl className="unified-consent-grid">
             <div>
-              <dt>{en ? 'Requested' : 'Se solicita'}</dt>
+              <dt>{pick('Requested', 'Se solicita', 'Demandé')}</dt>
               <dd>
                 <Check size={16} />
-                {en ? 'Session and approved profile' : 'Sesión y perfil aprobado'}
+                {pick(
+                  'Session and approved profile',
+                  'Sesión y perfil aprobado',
+                  'Session et profil approuvé',
+                )}
               </dd>
             </div>
             <div>
-              <dt>{en ? 'Not requested' : 'No se solicita'}</dt>
+              <dt>{pick('Not requested', 'No se solicita', 'Non demandé')}</dt>
               <dd>
                 <Lock size={16} />
-                {en
-                  ? 'Wallet, vote, witnesses, or transaction approval'
-                  : 'Wallet, voto, witnesses ni autorización de transacción'}
+                {pick(
+                  'Wallet, vote, witnesses, or transaction approval',
+                  'Wallet, voto, witnesses ni autorización de transacción',
+                  'Portefeuille, vote, témoins ou approbation de transaction',
+                )}
               </dd>
             </div>
           </dl>
           {mode === 'undeployed' ? (
             <details className="journey-why">
               <summary>
-                {en ? 'Which network am I connecting to?' : '¿A qué red me estoy conectando?'}
+                {pick(
+                  'Which network am I connecting to?',
+                  '¿A qué red me estoy conectando?',
+                  'À quel réseau est-ce que je me connecte ?',
+                )}
               </summary>
               <div>
-                {en
-                  ? 'Your Passport account connects on Preview. This environment’s local chain is a separate surface and has no deployed contract; connecting an account does not turn it into a local account.'
-                  : 'Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una cuenta local.'}
+                {pick(
+                  'Your Passport account connects on Preview. This environment’s local chain is a separate surface and has no deployed contract; connecting an account does not turn it into a local account.',
+                  'Tu cuenta Passport se conecta en Preview. La cadena local de este entorno es otra superficie y sigue sin contrato desplegado; conectar una cuenta no la convierte en una cuenta local.',
+                  "Votre compte Passport se connecte sur Preview. La chaîne locale de cet environnement est une surface distincte et n'a aucun contrat déployé ; connecter un compte n'en fait pas un compte local.",
+                )}
               </div>
             </details>
           ) : null}
           <JourneyButton locale={locale} busy={busy} onClick={connect}>
-            {en ? 'Connect Passport' : 'Conectar Passport'} <ArrowRight size={19} />
+            {pick('Connect Passport', 'Conectar Passport', 'Connecter Passport')}{' '}
+            <ArrowRight size={19} />
           </JourneyButton>
         </section>
       ) : null}
@@ -453,21 +494,26 @@ export function PreviewPassportJourney({
             <ShieldCheck size={38} />
           </div>
           <h2 id="preview-provider-title" ref={headingRef} tabIndex={-1}>
-            {en ? 'Passport session connected' : 'Sesión Passport conectada'}
+            {pick(
+              'Passport session connected',
+              'Sesión Passport conectada',
+              'Session Passport connectée',
+            )}
           </h2>
           <dl className="credential-summary">
             <div>
-              <dt>{en ? 'Profile' : 'Perfil'}</dt>
+              <dt>{pick('Profile', 'Perfil', 'Profil')}</dt>
               <dd>
-                {session?.profile?.displayName ?? (en ? 'Approved profile' : 'Perfil aprobado')}
+                {session?.profile?.displayName ??
+                  pick('Approved profile', 'Perfil aprobado', 'Profil approuvé')}
               </dd>
             </div>
             <div>
-              <dt>{en ? 'Network' : 'Red'}</dt>
+              <dt>{pick('Network', 'Red', 'Réseau')}</dt>
               <dd>{session?.network}</dd>
             </div>
             <div>
-              <dt>{en ? 'Capabilities' : 'Capacidades'}</dt>
+              <dt>{pick('Capabilities', 'Capacidades', 'Capacités')}</dt>
               <dd>{session?.capabilities.join(', ')}</dd>
             </div>
           </dl>
@@ -475,11 +521,18 @@ export function PreviewPassportJourney({
             <div className="passport-notice info" role="status">
               <Info size={18} />
               <p>
-                {en ? 'Passport account:' : 'Cuenta Passport:'}{' '}
+                {pick('Passport account:', 'Cuenta Passport:', 'Compte Passport :')}{' '}
                 <strong>{session?.network ?? 'preview'}</strong>.{' '}
-                {en ? 'App chain:' : 'Cadena de la aplicación:'}{' '}
-                <strong>{en ? 'undeployed local' : 'local no desplegada'}</strong>.{' '}
-                {en ? 'These networks stay separate.' : 'Estas redes no se mezclan.'}
+                {pick('App chain:', 'Cadena de la aplicación:', "Chaîne de l'application :")}{' '}
+                <strong>
+                  {pick('undeployed local', 'local no desplegada', 'locale non déployée')}
+                </strong>
+                .{' '}
+                {pick(
+                  'These networks stay separate.',
+                  'Estas redes no se mezclan.',
+                  'Ces réseaux restent séparés.',
+                )}
               </p>
             </div>
           ) : null}
@@ -491,12 +544,16 @@ export function PreviewPassportJourney({
               {holderBinding.status === 'verified' ? <Check size={18} /> : <Info size={18} />}
               <p>
                 {holderBinding.status === 'verified'
-                  ? en
-                    ? 'Holder binding verified for this Passport session. The binding is not shown or treated as a claim.'
-                    : 'Holder binding verificado para esta sesión Passport. El binding no se muestra ni se trata como un claim.'
-                  : en
-                    ? 'This Passport build does not expose a verified holder binding. The session is not presented as a credential.'
-                    : 'Esta versión de Passport no expone un holder binding verificado. La sesión no se presenta como una credencial.'}
+                  ? pick(
+                      'Holder binding verified for this Passport session. The binding is not shown or treated as a claim.',
+                      'Holder binding verificado para esta sesión Passport. El binding no se muestra ni se trata como un claim.',
+                      "Le lien avec le porteur est vérifié pour cette session Passport. Il n'est ni affiché ni traité comme une revendication.",
+                    )
+                  : pick(
+                      'This Passport build does not expose a verified holder binding. The session is not presented as a credential.',
+                      'Esta versión de Passport no expone un holder binding verificado. La sesión no se presenta como una credencial.',
+                      "Cette version de Passport n'expose pas de lien vérifié avec le porteur. La session n'est pas présentée comme un justificatif.",
+                    )}
               </p>
             </div>
           ) : null}
@@ -505,12 +562,18 @@ export function PreviewPassportJourney({
           {ports.credential ? (
             <>
               <PrivacyNotice>
-                {en
-                  ? 'Evidence is processed through the configured adapter; Passport remains the session and consent surface.'
-                  : 'La evidencia se procesa mediante el adaptador configurado; Passport sigue siendo la superficie de sesión y consentimiento.'}
+                {pick(
+                  'Evidence is processed through the configured adapter; Passport remains the session and consent surface.',
+                  'La evidencia se procesa mediante el adaptador configurado; Passport sigue siendo la superficie de sesión y consentimiento.',
+                  "Les preuves passent par l'adaptateur configuré ; Passport reste la surface de session et de consentement.",
+                )}
               </PrivacyNotice>
               <JourneyButton locale={locale} busy={busy} onClick={beginEnrollment}>
-                {en ? 'Start evidence verification' : 'Iniciar verificación documental'}{' '}
+                {pick(
+                  'Start evidence verification',
+                  'Iniciar verificación documental',
+                  'Démarrer la vérification documentaire',
+                )}{' '}
                 <ArrowRight size={19} />
               </JourneyButton>
             </>
@@ -519,9 +582,11 @@ export function PreviewPassportJourney({
               <Info size={18} />
               <p>
                 {ports.configurationError ??
-                  (en
-                    ? 'Passport works, but the evidence gateway and credential issuer are not configured in this deployment. They will not be replaced with synthetic data.'
-                    : 'Passport funciona, pero el gateway de evidencia y el emisor de credenciales aún no están configurados en este despliegue. No se sustituirán por datos sintéticos.')}
+                  pick(
+                    'Passport works, but the evidence gateway and credential issuer are not configured in this deployment. They will not be replaced with synthetic data.',
+                    'Passport funciona, pero el gateway de evidencia y el emisor de credenciales aún no están configurados en este despliegue. No se sustituirán por datos sintéticos.',
+                    "Passport fonctionne, mais la passerelle de preuves et l'émetteur de justificatifs ne sont pas configurés dans ce déploiement. Ils ne seront pas remplacés par des données synthétiques.",
+                  )}
               </p>
             </div>
           )}
@@ -534,23 +599,29 @@ export function PreviewPassportJourney({
           aria-labelledby="preview-evidence-title"
         >
           <h2 id="preview-evidence-title" ref={headingRef} tabIndex={-1}>
-            {en ? 'Complete verification on your phone' : 'Completá la verificación en tu teléfono'}
+            {pick(
+              'Complete verification on your phone',
+              'Completá la verificación en tu teléfono',
+              'Terminez la vérification sur votre téléphone',
+            )}
           </h2>
           <p>
-            {en
-              ? 'The browser keeps the holder binding. The backend receives provider proof and returns only minimal verified evidence.'
-              : 'El navegador conserva el holder binding. El backend recibe la prueba del proveedor y devuelve únicamente evidencia mínima verificada.'}
+            {pick(
+              'The browser keeps the holder binding. The backend receives provider proof and returns only minimal verified evidence.',
+              'El navegador conserva el holder binding. El backend recibe la prueba del proveedor y devuelve únicamente evidencia mínima verificada.',
+              'Le navigateur conserve le lien avec le porteur. Le serveur reçoit la preuve du fournisseur et ne renvoie que des preuves minimales vérifiées.',
+            )}
           </p>
           <dl className="credential-summary">
             <div>
-              <dt>{en ? 'Status' : 'Estado'}</dt>
+              <dt>{pick('Status', 'Estado', 'Statut')}</dt>
               {/* Once the link's own expiry has passed, "waiting for the
                   provider" is no longer true: the attempt cannot succeed. The
                   clock outranks the last status the provider reported. */}
-              <dd>{ENROLLMENT_STATUS_LABEL[en ? 'en' : 'es'][displayStatus] ?? displayStatus}</dd>
+              <dd>{ENROLLMENT_STATUS_LABEL[locale][displayStatus] ?? displayStatus}</dd>
             </div>
             <div>
-              <dt>{en ? 'Expires' : 'Vence'}</dt>
+              <dt>{pick('Expires', 'Vence', 'Expire')}</dt>
               <dd>{enrollment ? new Date(enrollment.expiresAt).toLocaleString() : '—'}</dd>
             </div>
           </dl>
@@ -568,9 +639,11 @@ export function PreviewPassportJourney({
             <div className="passport-notice warning" role="alert">
               <Info size={18} />
               <p>
-                {en
-                  ? 'The link expired. Create a new link to try verification again.'
-                  : 'El enlace venció. Generá un enlace nuevo para volver a intentar la verificación.'}
+                {pick(
+                  'The link expired. Create a new link to try verification again.',
+                  'El enlace venció. Generá un enlace nuevo para volver a intentar la verificación.',
+                  'Le lien a expiré. Créez un nouveau lien pour réessayer la vérification.',
+                )}
               </p>
             </div>
           ) : null}
@@ -585,19 +658,25 @@ export function PreviewPassportJourney({
             <span>
               <strong>
                 {polling
-                  ? en
-                    ? 'Checking with the provider…'
-                    : 'Consultando al proveedor…'
-                  : en
-                    ? 'Waiting for the provider'
-                    : 'Esperando al proveedor'}
+                  ? pick(
+                      'Checking with the provider…',
+                      'Consultando al proveedor…',
+                      'Consultation du fournisseur…',
+                    )
+                  : pick(
+                      'Waiting for the provider',
+                      'Esperando al proveedor',
+                      'En attente du fournisseur',
+                    )}
               </strong>
               <small>
                 {lastCheckedAt
-                  ? `${en ? 'Last checked' : 'Última comprobación'}: ${new Date(lastCheckedAt).toLocaleTimeString()}`
-                  : en
-                    ? 'Automatic checks every few seconds'
-                    : 'Comprobación automática cada pocos segundos'}
+                  ? `${pick('Last checked', 'Última comprobación', 'Dernière vérification')}: ${new Date(lastCheckedAt).toLocaleTimeString()}`
+                  : pick(
+                      'Automatic checks every few seconds',
+                      'Comprobación automática cada pocos segundos',
+                      'Vérification automatique toutes les quelques secondes',
+                    )}
               </small>
             </span>
           </div>
@@ -608,18 +687,19 @@ export function PreviewPassportJourney({
               is just no longer competing with the thing that usually works. */}
           {needsFreshAttempt ? (
             <JourneyButton locale={locale} busy={busy} onClick={restartEnrollment}>
-              {en ? 'Get a new link' : 'Generar un enlace nuevo'} <ArrowRight size={19} />
+              {pick('Get a new link', 'Generar un enlace nuevo', 'Générer un nouveau lien')}{' '}
+              <ArrowRight size={19} />
             </JourneyButton>
           ) : (
             <>
               <JourneyButton locale={locale} busy={busy} onClick={() => void checkEnrollment()}>
                 {error
-                  ? en
-                    ? 'Retry verification'
-                    : 'Reintentar verificación'
-                  : en
-                    ? 'Check now'
-                    : 'Comprobar ahora'}{' '}
+                  ? pick(
+                      'Retry verification',
+                      'Reintentar verificación',
+                      'Réessayer la vérification',
+                    )
+                  : pick('Check now', 'Comprobar ahora', 'Vérifier maintenant')}{' '}
                 <ArrowRight size={19} />
               </JourneyButton>
               <button
@@ -628,7 +708,11 @@ export function PreviewPassportJourney({
                 disabled={busy}
                 onClick={restartEnrollment}
               >
-                {en ? 'Cancel and start over' : 'Cancelar y empezar de nuevo'}
+                {pick(
+                  'Cancel and start over',
+                  'Cancelar y empezar de nuevo',
+                  'Annuler et recommencer',
+                )}
               </button>
             </>
           )}
@@ -642,28 +726,38 @@ export function PreviewPassportJourney({
         >
           <div className="journey-success-hero">
             <CapybaraMascot variant="achievement" decorative size={168} />
-            <SuccessMark label={en ? 'Credential created' : 'Credencial creada'} size="sm" />
+            <SuccessMark
+              label={pick('Credential created', 'Credencial creada', 'Justificatif créé')}
+              size="sm"
+            />
           </div>
           <h2 id="preview-success-title" ref={headingRef} tabIndex={-1}>
-            {en ? 'Your credential is ready' : 'Tu credencial está lista'}
+            {pick(
+              'Your credential is ready',
+              'Tu credencial está lista',
+              'Votre justificatif est prêt',
+            )}
           </h2>
           <p>
-            {en
-              ? 'This credential can be used to explore consultations. Your response and any later action remain separate and do not appear in it.'
-              : 'La credencial se puede usar para explorar consultas. La respuesta y cualquier acción posterior siguen separadas y no aparecen en esta credencial.'}
+            {pick(
+              'This credential can be used to explore consultations. Your response and any later action remain separate and do not appear in it.',
+              'La credencial se puede usar para explorar consultas. La respuesta y cualquier acción posterior siguen separadas y no aparecen en esta credencial.',
+              "Ce justificatif permet d'explorer les consultations. Votre réponse et toute action ultérieure restent séparées et n'y figurent pas.",
+            )}
           </p>
           <div className="credential-success-summary">
             <span className="synthetic-credential-banner">
-              <ShieldCheck size={16} /> {en ? 'VERIFIED CREDENTIAL' : 'CREDENCIAL VERIFICADA'}
+              <ShieldCheck size={16} />{' '}
+              {pick('VERIFIED CREDENTIAL', 'CREDENCIAL VERIFICADA', 'JUSTIFICATIF VÉRIFIÉ')}
             </span>
             <dl>
               <div>
-                <dt>{en ? 'Verified country' : 'País verificado'}</dt>
+                <dt>{pick('Verified country', 'País verificado', 'Pays vérifié')}</dt>
                 <dd className="credential-country-value">
                   <span>
                     {countryName(
                       iso31661NumericToAlpha2[String(credential.country)] ?? credential.country,
-                      en ? 'en' : 'es',
+                      locale,
                     )}
                   </span>
                   <small>
@@ -672,11 +766,11 @@ export function PreviewPassportJourney({
                 </dd>
               </div>
               <div>
-                <dt>{en ? 'Age class' : 'Clase de edad'}</dt>
+                <dt>{pick('Age class', 'Clase de edad', "Classe d'âge")}</dt>
                 <dd>{credential.ageClass === '18-plus' ? '18+' : credential.ageClass}</dd>
               </div>
               <div>
-                <dt>{en ? 'Issuer' : 'Emisor'}</dt>
+                <dt>{pick('Issuer', 'Emisor', 'Émetteur')}</dt>
                 <dd>{credential.issuerId}</dd>
               </div>
               <div>
@@ -684,7 +778,7 @@ export function PreviewPassportJourney({
                 <dd>{credential.assurance}</dd>
               </div>
               <div>
-                <dt>{en ? 'Valid until' : 'Válida hasta'}</dt>
+                <dt>{pick('Valid until', 'Válida hasta', "Valable jusqu'au")}</dt>
                 <dd>{new Date(credential.validUntil).toLocaleDateString()}</dd>
               </div>
             </dl>
@@ -692,13 +786,20 @@ export function PreviewPassportJourney({
           <div className="passport-notice success">
             <ShieldCheck size={18} />
             <p>
-              {en
-                ? 'Your evidence and future choice do not appear in the identity receipt.'
-                : 'Tu evidencia y tu futura elección no aparecen en el comprobante de identidad.'}
+              {pick(
+                'Your evidence and future choice do not appear in the identity receipt.',
+                'Tu evidencia y tu futura elección no aparecen en el comprobante de identidad.',
+                "Vos preuves et votre futur choix n'apparaissent pas dans le reçu d'identité.",
+              )}
             </p>
           </div>
           <JourneyButton locale={locale} busy={false} onClick={finish}>
-            {en ? 'Go to civic dashboard' : 'Ir al panel cívico'} <ArrowRight size={19} />
+            {pick(
+              'Go to civic dashboard',
+              'Ir al panel cívico',
+              'Aller au tableau de bord civique',
+            )}{' '}
+            <ArrowRight size={19} />
           </JourneyButton>
         </section>
       ) : null}
@@ -737,7 +838,7 @@ function JourneyButton({
       onClick={onClick}
       type="button"
     >
-      {busy ? (locale === 'es' ? 'Procesando…' : 'Processing…') : children}
+      {busy ? picker(locale)('Processing…', 'Procesando…', 'Traitement…') : children}
     </button>
   );
 }

@@ -18,6 +18,7 @@ import {
 import { CountryFlag } from '@/components/system/CountryFlag';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName, findAssignedCountry } from '@/integration/country-catalog';
+import { formatDate } from '@/integration/format';
 import type { CicoLocale } from '@/integration/locale';
 import { getPollAvailability } from '@/integration/poll-lifecycle';
 import type { DiscoveryScope } from '@/integration/product-boundaries';
@@ -91,6 +92,37 @@ const COPY = {
     fromContract: 'Public state read from Midnight',
     empty: 'No consultations are published in this scope yet.',
     passOnFile: 'Pass on file for',
+  },
+  fr: {
+    eyebrow: 'Découvrir',
+    title: 'Des décisions à explorer',
+    lead: "Consulter un pays ne déclare pas votre nationalité. L'éligibilité n'est vérifiée qu'au moment où vous choisissez de participer.",
+    world: 'Monde',
+    scopeButton: 'Parcourir par lieu',
+    scopeDialogTitle: 'Choisir un lieu',
+    scopeLabel: 'Périmètre de la consultation',
+    globalScope: 'Consultations mondiales',
+    countryScope: 'Consultations en',
+    globalDescription:
+      "Ouvertes aux personnes disposant d'un justificatif éligible, sans pays particulier.",
+    availableCountries: 'Consultations disponibles',
+    countrySearch: "Rechercher n'importe quel pays",
+    countryList: 'Pays disponibles',
+    countrySuggested: 'Pays avec des consultations publiées',
+    countryEmpty: 'Aucun pays ne correspond. Essayez un autre nom ou code.',
+    closeScope: 'Fermer le sélecteur de lieu',
+    browsing: 'Vous explorez',
+    notEligibility: 'Cela ne prouve pas votre éligibilité.',
+    open: 'Ouvert',
+    closed: 'Clos',
+    closes: 'Clôture',
+    read: 'Voir la consultation',
+    vote: 'Participer',
+    addEligibility: 'Ajouter une éligibilité',
+    simulated: 'Expérience publique simulée',
+    fromContract: 'État public lu depuis Midnight',
+    empty: "Aucune consultation n'est encore publiée dans ce périmètre.",
+    passOnFile: 'Laissez-passer enregistré pour',
   },
 } as const;
 
@@ -221,7 +253,12 @@ export function VotesView({
                         {isOpen ? copy.open : copy.closed}
                       </span>
                       <span>
-                        {copy.closes} {poll.deadline}
+                        {/* Formatted from `closesAt`, not the pre-rendered
+                            `deadline` string: that one is authored per fixture
+                            (French on the French one, whatever the reader
+                            chose) and it disagreed with the date Activity
+                            computed for the same consultation. */}
+                        {copy.closes} {formatDate(poll.closesAt, locale) ?? poll.deadline}
                       </span>
                     </div>
                     <h3 className="poll__title">{displayPoll.title}</h3>
