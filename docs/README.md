@@ -24,6 +24,8 @@ Preview release.
   does, its dependency, and whether its copy is honest.
 - [`UX-FINDINGS-20260831.md`](UX-FINDINGS-20260831.md) — prioritized findings
   from the 31 August journey audit, fixed and open.
+- [`SESSION-HANDOFF-2026-09-01-UI.md`](SESSION-HANDOFF-2026-09-01-UI.md) — current
+  UI pass, verification state, and product-facing backlog.
 - [`BRIEF-PASSPORT-AND-NFC.md`](BRIEF-PASSPORT-AND-NFC.md) — forward-looking
   Passport and NFC brief; read its hardware and network limitations.
 - [`RARIMO-REFERENCE-UX.md`](RARIMO-REFERENCE-UX.md) — review of the supplied

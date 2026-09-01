@@ -16,9 +16,8 @@ describe('PassportJourney', () => {
     const onClose = vi.fn();
     render(<PassportJourney mode="demo" onClose={onClose} onCredentialReady={onCredentialReady} />);
 
-    expect(
-      screen.getByRole('heading', { name: 'Prove you can vote. Without proving who you are.' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
+    expect(screen.queryByText(/Midnight Passport opens your account/i)).toBeNull();
     await user.click(screen.getByRole('button', { name: /Get started/i }));
     expect(screen.getByRole('heading', { name: 'What protects your vote' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Continue/i }));
@@ -41,6 +40,17 @@ describe('PassportJourney', () => {
       expect.objectContaining({ country: 'FR', ageClass: '18+' }),
     );
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the existing-user Passport shortcut quiet and reversible', async () => {
+    const user = userEvent.setup();
+    render(<PassportJourney mode="demo" onClose={vi.fn()} />);
+
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Already have Passport/i }));
+    expect(screen.getByRole('heading', { name: 'Connect your Passport' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Previous step/i }));
+    expect(screen.getByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
   });
 
   it('keeps Preview honest when the live credential ports are not configured', () => {

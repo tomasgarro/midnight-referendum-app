@@ -555,6 +555,10 @@
   gap: var(--space-3);
   padding: var(--space-4) var(--space-4) var(--space-2);
 }
+.sys-journey-top--welcome {
+  gap: 0;
+  padding-bottom: var(--space-3);
+}
 .sys-journey-top__utility {
   display: flex;
   align-items: center;
@@ -621,8 +625,8 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--surface);
@@ -660,6 +664,13 @@
   border-radius: var(--r-pill);
   background: var(--surface);
   color: var(--ink);
+}
+.sys-lang--compact {
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
 }
 .sys-lang__value {
   font-size: 12px;

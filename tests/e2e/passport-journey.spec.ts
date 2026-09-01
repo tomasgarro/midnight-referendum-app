@@ -49,7 +49,7 @@ test('ends credential onboarding before scope, ballot, proving, or receipts', as
   ).toBeVisible();
 });
 
-test('keeps the bilingual journey accessible and unclipped at all jury widths', async ({
+test('keeps the multilingual journey accessible and unclipped at all jury widths', async ({
   page,
 }) => {
   test.skip(showcase, 'The deployed public artifact uses the live Passport showcase path.');
@@ -71,13 +71,13 @@ test('keeps the bilingual journey accessible and unclipped at all jury widths', 
   });
   await page.setViewportSize({ width: 390, height: 720 });
   await page.goto('/');
-  for (const locale of ['en', 'es'] as const) {
-    await page.getByRole('combobox', { name: /Language|Idioma/i }).selectOption(locale);
+  for (const locale of ['en', 'es', 'fr'] as const) {
+    await page.getByRole('combobox', { name: /Language|Idioma|Langue/i }).selectOption(locale);
     for (const width of [320, 390, 768, 1280]) {
       await page.setViewportSize({ width, height: width < 768 ? 720 : 900 });
       await expect(page.locator('html')).toHaveAttribute('lang', locale);
       await expectNoHorizontalOverflow();
-      const cta = page.getByRole('button', { name: /Comenzar|Get started/i });
+      const cta = page.getByRole('button', { name: /Comenzar|Get started|Commencer/i });
       await expect(cta).toBeVisible();
       const box = await cta.boundingBox();
       expect(box).not.toBeNull();

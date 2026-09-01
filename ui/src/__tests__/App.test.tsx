@@ -41,9 +41,7 @@ describe('App', () => {
 
   it('opens the first visit on Welcome instead of the dashboard', async () => {
     render(<App />);
-    expect(
-      await screen.findByRole('heading', { name: /Demostrá que podés votar|Prove you can vote/i }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
   });
@@ -105,9 +103,53 @@ describe('App', () => {
     const verify = screen.getByRole('button', { name: /Verificar · documento físico/ });
     expect(nav.contains(verify)).toBe(false);
     expect(verify.getAttribute('aria-current')).toBeNull();
-    // The label is visible now. Unlabelled, it was the one control a first-time
-    // reader had to press to discover what it did, beside four labelled tabs.
-    expect(verify.textContent).toBe('Verificar');
+    // The action is icon-led now; its purpose remains available to assistive
+    // technology and the tooltip without adding another line to the capsule.
+    expect(verify.textContent?.trim()).toBe('');
+    expect(verify.querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'midnight.vote' })).toBeTruthy();
+  });
+
+  it('keeps the compact utility shell visible and opens the settings surface', async () => {
+    skipOnboarding();
+    render(<App />);
+    const user = userEvent.setup();
+
+    expect(screen.getByText('DEMO')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Abrir feedback' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Cambiar idioma' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Abrir ajustes' })).toBeTruthy();
+    expect(screen.queryByText('referendum.earth')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /Abrir Midnight Passport|Conectar Midnight Passport/ }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Abrir ajustes' }));
+    expect(screen.getByRole('heading', { name: 'Ajustes' })).toBeTruthy();
+
+    const darkMode = screen.getByRole('switch', { name: 'Modo oscuro' });
+    expect(darkMode.getAttribute('aria-checked')).toBe('false');
+    await user.click(darkMode);
+    expect(darkMode.getAttribute('aria-checked')).toBe('true');
+
+    await user.click(screen.getByRole('button', { name: /Política de privacidad/ }));
+    expect(screen.getByRole('heading', { name: 'Política de privacidad' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Volver' }));
+
+    await user.click(screen.getByRole('button', { name: /Recuperación y backup/ }));
+    expect(screen.getAllByText('Pronto').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByText(/Nunca inventamos una clave privada/i)).toBeTruthy();
+  });
+
+  it('opens feedback directly from the persistent shell control', async () => {
+    skipOnboarding();
+    render(<App />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Abrir feedback' }));
+    expect(screen.getByRole('heading', { name: 'Ayuda y feedback' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Tu mensaje' })).toBeTruthy();
+    expect(screen.getByText(/no envía feedback a un servidor/i)).toBeTruthy();
   });
 
   /**
@@ -294,9 +336,7 @@ describe('App', () => {
     await completeDemoCredential(user);
     await user.click(screen.getByRole('button', { name: /^Passport$/ }));
     await user.click(screen.getByRole('button', { name: /Revisar cómo funciona/i }));
-    expect(
-      screen.getByRole('heading', { name: /Demostrá que podés votar|Prove you can vote/i }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Volver a la app|Back to the app/i })).toBeTruthy();
   });
 

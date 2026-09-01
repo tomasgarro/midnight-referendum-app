@@ -81,7 +81,7 @@ async function main() {
     window.localStorage.clear();
   });
   await page.reload();
-  await page.getByRole('heading', { name: /Demostrá que podés votar/ }).waitFor();
+  await page.getByRole('heading', { name: 'midnight.vote' }).waitFor();
 
   await shot('welcome');
   await click(/Comenzar/);
@@ -92,13 +92,13 @@ async function main() {
   await shot('consent-return');
   await click(/Continuar/);
   await shot('eligibility-country');
-  await click(/Crear mi credencial/);
+  await click(/Crear mi pase simulado/);
   await shot('credential-ready');
   await click(/Ver las consultas/);
   await shot('dashboard');
 
   await page
-    .getByRole('button', { name: /Votá ahora/ })
+    .getByRole('button', { name: /Votá ahora|Participar/ })
     .first()
     .click();
   await page.waitForTimeout(400);
@@ -110,10 +110,6 @@ async function main() {
   await shot('vote-receipt');
   await click(/Ver mi comprobante/);
   await shot('profile');
-
-  await page.getByRole('button', { name: /Explorá/ }).click();
-  await page.waitForTimeout(400);
-  await shot('explore');
 
   await browser.close();
 }

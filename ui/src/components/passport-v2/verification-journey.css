@@ -12,7 +12,10 @@
   flex: 1;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-5) var(--space-4) var(--space-6);
+  width: 100%;
+  max-width: 34rem;
+  margin-inline: auto;
+  padding: var(--space-2) 0 var(--space-4);
   color: var(--ink);
   font-family: var(--font-body);
 }
@@ -27,7 +30,12 @@
 .verify-journey__art {
   display: grid;
   place-items: center;
-  padding: var(--space-5) 0;
+  width: 88px;
+  height: 88px;
+  margin: var(--space-2) auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--accent-wash);
   color: var(--accent);
 }
 .verify-journey__numbered {
@@ -50,8 +58,9 @@
 .verify-journey__title {
   margin: 0;
   font-family: var(--font-display, var(--font-body));
-  font-size: 24px;
-  font-weight: 700;
+  font-size: clamp(25px, 7vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
   line-height: 1.2;
 }
 .verify-journey__title:focus-visible {
@@ -174,7 +183,7 @@
   gap: 8px;
   min-height: 52px;
   padding: 0 var(--space-4);
-  border-radius: var(--r-input);
+  border-radius: var(--r-pill);
   font-family: var(--font-body);
   font-size: 16px;
   font-weight: 700;
@@ -186,9 +195,11 @@
   color: var(--accent-ink);
 }
 .verify-journey__secondary {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink);
+  min-height: 46px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 14px;
 }
 
 /* ---- camera ---- */
@@ -231,11 +242,12 @@
   display: grid;
   place-items: center;
   gap: var(--space-2);
+  min-height: 184px;
   padding: var(--space-6) var(--space-4);
-  border: 1px dashed var(--line);
-  border-radius: var(--r-card, 16px);
-  background: var(--surface-sunken);
-  color: var(--ink-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--accent);
   font-size: 13px;
   text-align: center;
 }
@@ -281,5 +293,25 @@
   .verify-journey__primary,
   .verify-journey__secondary {
     transition: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .verify-journey__screen {
+    gap: var(--space-2);
+  }
+  .verify-journey__numbered {
+    gap: var(--space-2);
+  }
+  .verify-journey__badge {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .verify-journey__progress {
+    gap: 5px;
+  }
+  .verify-journey__progress li {
+    width: 34px;
   }
 }

@@ -21,8 +21,6 @@ export type FlowStage = 'choose' | 'review' | 'processing' | 'receipt';
 /** The active app keeps the same language across identity, jury, and receipt surfaces. */
 export const APP_COPY = {
   es: {
-    brand: 'referendum.earth',
-    brandNote: 'Privacidad con Midnight',
     language: 'Idioma',
     nav: {
       discover: 'Descubrir',
@@ -34,8 +32,6 @@ export const APP_COPY = {
     network: { undeployed: 'Local no desplegado', preview: 'Preview', demo: 'Demo local' },
   },
   en: {
-    brand: 'referendum.earth',
-    brandNote: 'Privacy powered by Midnight',
     language: 'Language',
     nav: {
       discover: 'Discover',
@@ -47,8 +43,6 @@ export const APP_COPY = {
     network: { undeployed: 'Undeployed local', preview: 'Preview', demo: 'Local demo' },
   },
   fr: {
-    brand: 'referendum.earth',
-    brandNote: 'Confidentialité assurée par Midnight',
     language: 'Langue',
     nav: {
       discover: 'Découvrir',

@@ -49,6 +49,12 @@ describe('LanguageToggle', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Idioma' }), 'en');
     expect(onChange).toHaveBeenCalledWith('en');
   });
+
+  it('can reduce shell chrome to the globe without losing the language picker', () => {
+    render(<LanguageToggle locale="es" onChange={vi.fn()} label="Cambiar idioma" compact />);
+    expect(screen.getByRole('combobox', { name: 'Cambiar idioma' })).toBeTruthy();
+    expect(screen.queryByText('ES')).toBeNull();
+  });
 });
 
 describe('CountryFlag', () => {

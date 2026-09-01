@@ -7,10 +7,12 @@ export interface LanguageToggleProps {
   readonly onChange: (locale: CicoLocale) => void;
   /** Localized accessible name for the control. */
   readonly label: string;
+  /** Keep the shell utility strip to the globe while retaining the native picker. */
+  readonly compact?: boolean;
 }
 
 /**
- * Globe, two letters, caret.
+ * Globe, two letters, caret — or just the globe in compact shell chrome.
  *
  * The control it replaces was a full-height bordered <select> with a visible
  * "Idioma" label beside it, which is the widest possible way to offer a binary
@@ -24,14 +26,18 @@ export interface LanguageToggleProps {
  */
 const SHORT_LABEL: Record<CicoLocale, string> = { es: 'ES', en: 'EN', fr: 'FR' };
 
-export function LanguageToggle({ locale, onChange, label }: LanguageToggleProps) {
+export function LanguageToggle({ locale, onChange, label, compact = false }: LanguageToggleProps) {
   return (
-    <span className="sys-lang">
+    <span className={`sys-lang${compact ? ' sys-lang--compact' : ''}`.trim()}>
       <Globe size={15} weight="bold" aria-hidden="true" />
-      <span className="sys-lang__value" aria-hidden="true">
-        {SHORT_LABEL[locale]}
-      </span>
-      <CaretDown size={11} weight="bold" aria-hidden="true" />
+      {!compact ? (
+        <>
+          <span className="sys-lang__value" aria-hidden="true">
+            {SHORT_LABEL[locale]}
+          </span>
+          <CaretDown size={11} weight="bold" aria-hidden="true" />
+        </>
+      ) : null}
       <select
         className="sys-lang__select"
         aria-label={label}

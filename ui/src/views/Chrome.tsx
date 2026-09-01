@@ -1,117 +1,147 @@
 import {
+  ChatCircleText,
   ClockCounterClockwise,
-  Fingerprint,
+  GearSix,
   GlobeHemisphereWest,
-  IdentificationBadge,
   IdentificationCard,
   UserCircle,
   X,
 } from '@phosphor-icons/react';
-import type { CivicPassportSession } from 'midnight-referendum-api';
+import { Fragment } from 'react';
+import { MidnightMark, VotingMark } from '@/components/brand/MidnightMark';
 import { Button } from '@/components/system';
+import { LanguageToggle } from '@/components/system/LanguageToggle';
 import type { CicoLocale } from '@/integration/locale';
-import { APP_COPY, type Tab } from '@/views/app-runtime';
+import { APP_COPY, APP_MODE, type Tab } from '@/views/app-runtime';
 import './chrome.css';
 
 /** Shell strings that never belonged in inline `locale === 'es'` ternaries. */
 const CHROME_COPY = {
   es: {
-    openPassport: 'Abrir Midnight Passport',
-    connectPassport: 'Conectar Midnight Passport',
     passportFailed: 'No se pudo conectar Passport',
     dismissNotice: 'Cerrar aviso',
     retry: 'Reintentar',
+    feedback: 'Abrir feedback',
+    language: 'Cambiar idioma',
+    settings: 'Abrir ajustes',
     primaryNav: 'Navegación principal',
     verifyQualifier: 'documento físico',
   },
   en: {
-    openPassport: 'Open Midnight Passport',
-    connectPassport: 'Connect Midnight Passport',
     passportFailed: 'Passport could not connect',
     dismissNotice: 'Dismiss notice',
     retry: 'Try again',
+    feedback: 'Open feedback',
+    language: 'Change language',
+    settings: 'Open settings',
     primaryNav: 'Primary navigation',
     verifyQualifier: 'physical document',
   },
   fr: {
-    openPassport: 'Ouvrir Midnight Passport',
-    connectPassport: 'Connecter Midnight Passport',
     passportFailed: 'Passport n’a pas pu se connecter',
     dismissNotice: "Fermer l'avis",
     retry: 'Réessayer',
+    feedback: 'Ouvrir les retours',
+    language: 'Changer de langue',
+    settings: 'Ouvrir les réglages',
     primaryNav: 'Navigation principale',
     verifyQualifier: 'document physique',
   },
 } as const;
 
 /**
- * The app shell: a header that names the product and its identity, and the
- * four-tab capsule and a separate scan action.
+ * The app shell: a quiet utility header, the four-tab capsule, and a separate
+ * scan action.
  *
  * These were the last surfaces on the legacy sky-blue palette. With the views
  * rebuilt on indigo, every screen was showing two accent hues at once -- the
  * blue header and nav framing an indigo screen -- which is the first thing the
- * slop pre-flight counts. They read from the tokens now, and the accent
- * appears in exactly one place here: the active tab.
+ * slop pre-flight counts. They read from the tokens now, and the accent is
+ * reserved for the active state and the small, truthful environment signal.
  *
- * The header carries identity and nothing else. The language <select> that
- * used to sit beside it lives in Profile, and the mode strip that sat under it
- * is gone -- readiness now surfaces where it is actionable.
+ * The header keeps the mode truth visible while making feedback, language, and
+ * settings available from every dashboard screen. Passport identity belongs
+ * in the Passport tab and in the verification journey, not in persistent
+ * chrome.
  */
 
 export interface AppHeaderProps {
-  readonly passportSession: CivicPassportSession | null;
   readonly passportError: string | null;
   readonly onConnectPassport: () => void;
   readonly onDismissPassportError: () => void;
+  readonly onOpenFeedback: () => void;
+  readonly onOpenSettings: () => void;
   readonly locale: CicoLocale;
+  readonly onLocaleChange: (locale: CicoLocale) => void;
 }
 
 export function AppHeader({
-  passportSession,
   passportError,
   onConnectPassport,
   onDismissPassportError,
+  onOpenFeedback,
+  onOpenSettings,
   locale,
+  onLocaleChange,
 }: AppHeaderProps) {
-  const copy = APP_COPY[locale];
   const chrome = CHROME_COPY[locale];
+  const environment =
+    APP_MODE === 'showcase'
+      ? 'LIVE'
+      : APP_MODE === 'preview'
+        ? 'PREVIEW'
+        : APP_MODE === 'undeployed'
+          ? 'LOCAL'
+          : 'DEMO';
   return (
     <header className="chrome-header">
-      <div className="chrome-brand">
-        <p className="chrome-brand__name">{copy.brand}</p>
-        <p className="chrome-brand__note">{copy.brandNote}</p>
+      <div className="chrome-header__identity">
+        <MidnightMark className="chrome-mark" title="midnight.vote" size={44} />
+        <span className={`chrome-environment chrome-environment--${APP_MODE}`}>
+          <span className="chrome-environment__dot" aria-hidden="true" />
+          {environment}
+        </span>
       </div>
-      <div className="chrome-identity">
+      <div className="chrome-actions">
         <button
           type="button"
-          className={`chrome-chip ${passportSession ? 'chrome-chip--on' : ''}`.trim()}
-          onClick={onConnectPassport}
-          aria-label={passportSession ? chrome.openPassport : chrome.connectPassport}
+          className="chrome-utility"
+          onClick={onOpenFeedback}
+          aria-label={chrome.feedback}
+          title={chrome.feedback}
         >
-          <Fingerprint size={14} weight="bold" />
-          <span>{passportSession?.profile?.displayName ?? 'Passport'}</span>
+          <ChatCircleText size={19} weight="regular" />
         </button>
-        {passportError ? (
-          <div className="chrome-popover" role="alert">
-            <div className="chrome-popover__head">
-              <strong>{chrome.passportFailed}</strong>
-              <button
-                type="button"
-                className="chrome-popover__close"
-                onClick={onDismissPassportError}
-                aria-label={chrome.dismissNotice}
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <p>{passportError}</p>
-            <Button variant="link" size="sm" onClick={onConnectPassport}>
-              {chrome.retry}
-            </Button>
-          </div>
-        ) : null}
+        <LanguageToggle locale={locale} onChange={onLocaleChange} label={chrome.language} compact />
+        <button
+          type="button"
+          className="chrome-settings"
+          onClick={onOpenSettings}
+          aria-label={chrome.settings}
+          title={chrome.settings}
+        >
+          <GearSix size={20} weight="regular" />
+        </button>
       </div>
+      {passportError ? (
+        <div className="chrome-popover chrome-popover--header" role="alert">
+          <div className="chrome-popover__head">
+            <strong>{chrome.passportFailed}</strong>
+            <button
+              type="button"
+              className="chrome-popover__close"
+              onClick={onDismissPassportError}
+              aria-label={chrome.dismissNotice}
+            >
+              <X size={15} />
+            </button>
+          </div>
+          <p>{passportError}</p>
+          <Button variant="link" size="sm" onClick={onConnectPassport}>
+            {chrome.retry}
+          </Button>
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -136,21 +166,24 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
   return (
     <div className="chrome-bar">
       <nav className="chrome-nav" aria-label={chrome.primaryNav}>
-        {items.map(({ id, label, Icon }) => (
-          <button
-            type="button"
-            key={id}
-            className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''}`.trim()}
-            onClick={() => onChange(id)}
-            aria-current={tab === id ? 'page' : undefined}
-          >
-            {/* Tab switching is met 100+ times a day, so it gets the platform
-                default and nothing else: no slide, no icon animation. */}
-            <span className="chrome-nav__icon">
-              <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
-            </span>
-            <span>{label}</span>
-          </button>
+        {items.map(({ id, label, Icon }, index) => (
+          <Fragment key={id}>
+            {index === 2 ? <span className="chrome-nav__center-slot" aria-hidden="true" /> : null}
+            <button
+              type="button"
+              className={`chrome-nav__item ${tab === id ? 'chrome-nav__item--active' : ''}`.trim()}
+              onClick={() => onChange(id)}
+              aria-current={tab === id ? 'page' : undefined}
+              aria-label={label}
+              title={label}
+            >
+              {/* Tab switching is met 100+ times a day, so it gets the platform
+                  default and nothing else: no slide, no icon animation. */}
+              <span className="chrome-nav__icon">
+                <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
+              </span>
+            </button>
+          </Fragment>
         ))}
       </nav>
       {/*
@@ -171,9 +204,8 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
         title={verifyLabel}
       >
         <span className="chrome-verify__disc">
-          <IdentificationBadge size={26} weight="fill" />
+          <VotingMark className="chrome-verify__mark" size={44} />
         </span>
-        <span className="chrome-verify__name">{copy.nav.verify}</span>
       </button>
     </div>
   );

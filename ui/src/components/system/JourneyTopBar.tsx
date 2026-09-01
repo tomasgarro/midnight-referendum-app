@@ -14,8 +14,10 @@ export interface JourneyTopBarProps {
   /** Steps back one screen inside the journey. */
   readonly onBack?: () => void;
   readonly backLabel: string;
-  /** Short environment truth, e.g. "Demo". Rendered beside the language pill. */
+  /** Short environment truth, e.g. "Demo". Rendered beside the globe control. */
   readonly badge?: string;
+  /** Welcome is a landing surface; inner screens keep the continuous rail. */
+  readonly showProgress?: boolean;
   readonly current: number;
   readonly total: number;
   readonly stageLabel: string;
@@ -44,13 +46,14 @@ export function JourneyTopBar({
   onBack,
   backLabel,
   badge,
+  showProgress = true,
   current,
   total,
   stageLabel,
   progressLabel,
 }: JourneyTopBarProps) {
   return (
-    <div className="sys-journey-top">
+    <div className={`sys-journey-top${showProgress ? '' : ' sys-journey-top--welcome'}`}>
       <div className="sys-journey-top__utility">
         {onExit ? (
           <button type="button" className="sys-journey-top__exit" onClick={onExit}>
@@ -62,27 +65,29 @@ export function JourneyTopBar({
         )}
         <div className="sys-journey-top__right">
           {badge ? <span className="sys-journey-top__badge">{badge}</span> : null}
-          <LanguageToggle locale={locale} onChange={onLocaleChange} label={languageLabel} />
+          <LanguageToggle locale={locale} onChange={onLocaleChange} label={languageLabel} compact />
         </div>
       </div>
-      <div className="sys-journey-top__track">
-        {onBack ? (
-          <button
-            type="button"
-            className="sys-journey-top__back"
-            onClick={onBack}
-            aria-label={backLabel}
-          >
-            <CaretLeft size={17} weight="bold" />
-          </button>
-        ) : null}
-        <JourneyProgress
-          current={current}
-          total={total}
-          stageLabel={stageLabel}
-          label={progressLabel}
-        />
-      </div>
+      {showProgress ? (
+        <div className="sys-journey-top__track">
+          {onBack ? (
+            <button
+              type="button"
+              className="sys-journey-top__back"
+              onClick={onBack}
+              aria-label={backLabel}
+            >
+              <CaretLeft size={17} weight="bold" />
+            </button>
+          ) : null}
+          <JourneyProgress
+            current={current}
+            total={total}
+            stageLabel={stageLabel}
+            label={progressLabel}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
