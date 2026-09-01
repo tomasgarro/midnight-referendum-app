@@ -1,7 +1,7 @@
 import { MidnightBech32m } from '@midnight-ntwrk/wallet-sdk-address-format';
 import * as rx from 'rxjs';
 import { loadConfig } from './config.js';
-import { summarizeRelayerFunding } from './funding-status.js';
+import { summarizeRelayerFunding, summarizeRelayerSync } from './funding-status.js';
 import { startRelayerWallet } from './wallet.js';
 
 const config = loadConfig();
@@ -42,7 +42,20 @@ try {
   });
 
   console.log(`unshielded address: ${bech32(state.unshielded.address)}`);
-  console.log(JSON.stringify(status, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ...status,
+        syncProgress: summarizeRelayerSync({
+          shielded: state.shielded.progress,
+          unshielded: state.unshielded.progress,
+          dust: state.dust.progress,
+        }),
+      },
+      null,
+      2,
+    ),
+  );
   if (!status.synced) {
     console.error(`Wallet did not synchronize within ${waitMs}ms; funding status is inconclusive.`);
     process.exitCode = 2;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summarizeRelayerFunding } from './funding-status.js';
+import { summarizeRelayerFunding, summarizeRelayerSync } from './funding-status.js';
 
 describe('summarizeRelayerFunding', () => {
   it('distinguishes an unfunded synchronized wallet from an unsynchronized view', () => {
@@ -46,6 +46,46 @@ describe('summarizeRelayerFunding', () => {
       dustBalance: '42',
       readyToRegister: false,
       readyToSubmit: true,
+    });
+  });
+});
+
+describe('summarizeRelayerSync', () => {
+  it('reports only JSON-safe public sync cursors', () => {
+    expect(
+      summarizeRelayerSync({
+        shielded: {
+          appliedIndex: 10n,
+          highestRelevantWalletIndex: 9n,
+          highestIndex: 12n,
+          highestRelevantIndex: 11n,
+          isConnected: true,
+        },
+        unshielded: { appliedId: 7n, highestTransactionId: 8n, isConnected: false },
+        dust: {
+          appliedIndex: 4n,
+          highestRelevantWalletIndex: 3n,
+          highestIndex: 6n,
+          highestRelevantIndex: 5n,
+          isConnected: true,
+        },
+      }),
+    ).toEqual({
+      shielded: {
+        appliedIndex: '10',
+        highestRelevantWalletIndex: '9',
+        highestIndex: '12',
+        highestRelevantIndex: '11',
+        isConnected: true,
+      },
+      unshielded: { appliedId: '7', highestTransactionId: '8', isConnected: false },
+      dust: {
+        appliedIndex: '4',
+        highestRelevantWalletIndex: '3',
+        highestIndex: '6',
+        highestRelevantIndex: '5',
+        isConnected: true,
+      },
     });
   });
 });

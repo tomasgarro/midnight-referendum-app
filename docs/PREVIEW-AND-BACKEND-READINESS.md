@@ -2,7 +2,7 @@
 
 What exists on Midnight Preview today, what does not, and what stands between
 the current state and a submission that can be checked end to end. Measured
-against the working tree on 31 August 2026 by probing the live networks and
+against the working tree on 1 September 2026 by probing the live networks and
 reading the deployment tooling — not from the roadmap.
 
 ## The short answer
@@ -13,22 +13,26 @@ credential. Every deployment record in the repository is for the local
 complete and unit-tested; what is missing is one funded wallet, one deploy run,
 and one hosted backend.
 
-The single hard blocker is small and concrete: **the Preview relayer wallet
-holds 0 DUST**, and DUST is what pays for every transaction. A read-only status
-run on 1 September observed one NIGHT UTXO already marked as registered for
-DUST generation, but the wallet did not finish synchronizing within three
-minutes. That is progress, not deployment evidence: the current DUST balance
-remains zero and the fully synchronized state is still unverified.
+The first hard gate is small and concrete: **the Preview relayer wallet must
+finish synchronizing and report positive DUST**, which pays for every
+transaction. An unrestricted read-only run on 1 September observed one NIGHT
+UTXO already registered for DUST generation. After eight minutes the
+unshielded section was current (`42630/42630`), while shielded
+(`36775/179871`) and DUST (`43762/179872`) were still replaying their indexer
+history. The partial state reported zero DUST, so this is progress rather than
+deployment evidence. Once full sync and positive DUST are confirmed, the proof
+server, deployment inputs, and hosted backend remain separate gates; none is
+being represented as complete.
 
 ## What was actually checked
 
 | Check | Result |
 | --- | --- |
 | Preview indexer (`indexer.preview.midnight.network`) | **Reachable** — GraphQL returns HTTP 200 in ~1.2s |
-| Preview RPC (`rpc.preview.midnight.network`) | **Reachable** — HTTP 405 to a GET, which is the expected response for a POST-only RPC |
+| Preview RPC (`rpc.preview.midnight.network`) | **Reachable** — JSON-RPC and WebSocket both identify `Midnight Preview` outside the restricted test sandbox |
 | Preview explorer | **Reachable** — HTTP 200 |
 | Deployment manifests in the repo | **4 found, all `networkId: undeployed`.** Zero Preview records |
-| Relayer wallet, Preview | Keys derive correctly; one registered NIGHT UTXO was observed in an incomplete sync; **DUST balance 0** |
+| Relayer wallet, Preview | Connected; unshielded caught up; shielded/DUST replay still incomplete; one registered NIGHT UTXO observed; partial **DUST balance 0** |
 | Compiled contracts | **Present** — `referendum-v2`, `credential-registry-v1` and `referendum` all have `contract/`, `keys/` and `zkir/` |
 | Local proof server (`:6300`) | **Not running** |
 | CICO service environment | **No `.env`** — only `.env.example` |
@@ -50,7 +54,11 @@ mn_addr_preview1r7lyp9rnaphxpzjhn4u39tggjwt05zl630tekhme9z275rj5p4eqr97gss
 
 Run `npm run relayer:status` first. It never submits a transaction and reports
 whether the wallet is synchronized, whether NIGHT is registered, and whether
-positive DUST is available. No faucet is documented in the repository.
+positive DUST is available. If the bounded wait expires, its public sync
+cursors show which wallet section is still behind without exposing keys or
+transaction contents. Midnight documents a rate-limited
+[Preview faucet](https://midnight-tmnight-preview.nethermind.dev/), but do not
+request more tNIGHT while the incomplete status already sees a registered coin.
 
 ### 2. Register NIGHT for DUST — **only if a full sync reports it unregistered**
 
@@ -65,10 +73,11 @@ The incomplete 1 September status run already observed its one NIGHT UTXO as
 registered, so rerunning this write-capable command is not justified unless a
 fully synchronized read-only status contradicts that observation.
 
-> **Known limit that will bite immediately.** The relayer holds a single DUST
-> coin. Two submissions in quick succession return error 170 and the relayer
-> needs a restart — waiting does not clear it. Register enough NIGHT to produce
-> several coins, or serialise submissions, before more than one person uses it.
+> **Known limit that will bite immediately.** The current status sees zero DUST
+> coins. Even after generation begins, operating with only one DUST coin can
+> make two quick submissions contend and return error 170; waiting does not
+> clear the relayer's stale reservation. Confirm several available coins or
+> serialise submissions before more than one person uses it.
 
 ### 3. A local proof server — **one command**
 
