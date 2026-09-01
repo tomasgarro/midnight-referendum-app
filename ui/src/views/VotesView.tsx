@@ -18,6 +18,7 @@ import {
 import { CountryFlag } from '@/components/system/CountryFlag';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName, findAssignedCountry } from '@/integration/country-catalog';
+import { formatDate } from '@/integration/format';
 import type { CicoLocale } from '@/integration/locale';
 import { getPollAvailability } from '@/integration/poll-lifecycle';
 import type { DiscoveryScope } from '@/integration/product-boundaries';
@@ -252,7 +253,12 @@ export function VotesView({
                         {isOpen ? copy.open : copy.closed}
                       </span>
                       <span>
-                        {copy.closes} {poll.deadline}
+                        {/* Formatted from `closesAt`, not the pre-rendered
+                            `deadline` string: that one is authored per fixture
+                            (French on the French one, whatever the reader
+                            chose) and it disagreed with the date Activity
+                            computed for the same consultation. */}
+                        {copy.closes} {formatDate(poll.closesAt, locale) ?? poll.deadline}
                       </span>
                     </div>
                     <h3 className="poll__title">{displayPoll.title}</h3>

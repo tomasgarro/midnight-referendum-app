@@ -11,6 +11,7 @@ import {
 } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName as getCountryName } from '@/integration/country-catalog';
+import { formatDate } from '@/integration/format';
 import type { CicoLocale } from '@/integration/locale';
 import { getPollAvailability } from '@/integration/poll-lifecycle';
 import { COUNTRY_POLL_COUNTRIES, localizePoll, type Poll } from '@/views/poll-model';
@@ -197,7 +198,10 @@ export function PolicyDetailView({
 
       <Card>
         <StatGroup label={copy.facts}>
-          <StatRow label={copy.closes} value={displayPoll.deadline} />
+          <StatRow
+            label={copy.closes}
+            value={formatDate(poll.closesAt, locale) ?? displayPoll.deadline}
+          />
           <StatRow
             label={copy.eligible}
             value={runtimePoll ? copy.contractState : displayPoll.eligible}
