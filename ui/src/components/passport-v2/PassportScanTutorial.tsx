@@ -70,7 +70,7 @@ const COPY = {
 } as const;
 
 /**
- * What the phone step looks like, in nine and a half seconds.
+ * What the phone step looks like, in about ten seconds.
  *
  * The clip is trimmed from the RariMe scan walkthrough to the three moments
  * that matter and nothing else: take the case off, photograph the passport
