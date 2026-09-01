@@ -15,7 +15,6 @@ export interface VerificationJourneyCopy {
   readonly processTitle: string;
   readonly stepOf: (n: number, total: number) => string;
   readonly next: string;
-  readonly back: string;
   readonly skip: string;
   readonly close: string;
 
@@ -80,15 +79,9 @@ export interface VerificationJourneyCopy {
   readonly readBody: string;
   readonly readHintClose: string;
   readonly readHintStill: string;
-  readonly readStart: string;
-  readonly readInProgress: string;
-  readonly readWaiting: string;
   readonly boundaryTitle: string;
   readonly boundaryNote: string;
   readonly chipInBrowserNote: string;
-
-  readonly documentAccepted: string;
-  readonly documentAcceptedBody: string;
 }
 
 export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJourneyCopy> = {
@@ -96,7 +89,6 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
     processTitle: 'Proceso de votación',
     stepOf: (n, total) => `Paso ${n} de ${total}`,
     next: 'Continuar',
-    back: 'Volver',
     skip: 'Saltar',
     close: 'Cerrar',
 
@@ -174,24 +166,17 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
       'El chip se lee con NFC, y eso ocurre en la app RariMe de tu teléfono — no en esta pestaña.',
     readHintClose: 'Acercá el pasaporte al teléfono',
     readHintStill: 'Mantenelo pegado y sin moverlo durante la lectura',
-    readStart: 'Continuar en RariMe',
-    readInProgress: 'Lectura en curso…',
-    readWaiting: 'Esperando la confirmación de RariMe. Podés dejar esta pantalla abierta.',
     boundaryTitle: 'Qué sale de tu dispositivo',
     boundaryNote:
       'La imagen de la cámara y los datos del documento no salen de este dispositivo. Lo que sí viaja es el resultado de la comprobación: país, mayoría de edad y nivel de verificación.',
     chipInBrowserNote:
       'Un navegador no puede leer el chip de un pasaporte: hace falta NFC con comandos de tarjeta, que la web no expone. Por eso este paso pasa a RariMe en lugar de simular una lectura.',
-
-    documentAccepted: 'Documento leído',
-    documentAcceptedBody: 'Ya podemos preparar tu credencial de elegibilidad.',
   },
 
   en: {
     processTitle: 'Voting process',
     stepOf: (n, total) => `Step ${n} of ${total}`,
     next: 'Continue',
-    back: 'Back',
     skip: 'Skip',
     close: 'Close',
 
@@ -269,24 +254,17 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
       'The chip is read over NFC, and that happens in the RariMe app on your phone — not in this tab.',
     readHintClose: 'Hold the passport against your phone',
     readHintStill: 'Keep it pressed and still while it reads',
-    readStart: 'Continue in RariMe',
-    readInProgress: 'Reading in progress…',
-    readWaiting: 'Waiting for RariMe to confirm. You can leave this screen open.',
     boundaryTitle: 'What leaves your device',
     boundaryNote:
       'The camera image and the document details never leave this device. What does travel is the result of the check: country, adult status, and verification level.',
     chipInBrowserNote:
       'A browser cannot read a passport chip: it needs NFC with smart-card commands, which the web does not expose. That is why this step moves to RariMe rather than simulating a read.',
-
-    documentAccepted: 'Document read',
-    documentAcceptedBody: 'We can now prepare your eligibility credential.',
   },
 
   fr: {
     processTitle: 'Processus de vote',
     stepOf: (n, total) => `Étape ${n} sur ${total}`,
     next: 'Continuer',
-    back: 'Retour',
     skip: 'Passer',
     close: 'Fermer',
 
@@ -366,16 +344,10 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
       "La puce se lit en NFC, et cela se passe dans l'application RariMe sur votre téléphone — pas dans cet onglet.",
     readHintClose: 'Approchez votre passeport du téléphone',
     readHintStill: 'Gardez votre passeport bien collé contre le téléphone, sans bouger',
-    readStart: 'Continuer dans RariMe',
-    readInProgress: 'Lecture en cours…',
-    readWaiting: 'En attente de la confirmation de RariMe. Vous pouvez laisser cet écran ouvert.',
     boundaryTitle: 'Ce qui quitte votre appareil',
     boundaryNote:
       "L'image de la caméra et les informations du document ne quittent jamais cet appareil. Ce qui circule, c'est le résultat de la vérification : pays, majorité et niveau de vérification.",
     chipInBrowserNote:
       "Un navigateur ne peut pas lire la puce d'un passeport : il faut du NFC avec des commandes de carte à puce, que le web n'expose pas. C'est pourquoi cette étape passe à RariMe plutôt que de simuler une lecture.",
-
-    documentAccepted: 'Document lu',
-    documentAcceptedBody: 'Nous pouvons maintenant préparer votre justificatif d’éligibilité.',
   },
 };

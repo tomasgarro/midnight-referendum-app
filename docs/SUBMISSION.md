@@ -119,6 +119,14 @@ Manual entry is offered as the weaker read and says so: a typed document
 number carries no check digit to verify, and no nationality, so the chip
 remains the authority in either case.
 
+**Where the journey is wired.** It fronts the demo and showcase modes, which
+is what a juror opens. Preview and undeployed keep their existing enrolment
+screen, which already performs the real RariMe handoff and polls the real
+enrolment status. Bringing the nine screens in front of that path is the next
+step and is deliberately not done here: it cannot be exercised until the CICO
+service is hosted, and shipping untested code on the one path that talks to a
+real issuer is the wrong trade.
+
 ## Privacy and trust boundaries
 
 The core product argument is a separation of authorities. Passport is a
