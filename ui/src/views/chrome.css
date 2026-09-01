@@ -170,7 +170,7 @@
    the AppLlama round-two references, adapted to a web shell. */
 .chrome-bar {
   position: relative;
-  padding: 30px var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  padding: 30px var(--space-2) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   background: color-mix(in srgb, var(--ground) 72%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(118%);
   backdrop-filter: blur(16px) saturate(118%);
@@ -180,7 +180,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  width: min(100%, 380px);
+  width: min(100%, 420px);
   margin: 0 auto;
   padding: 4px;
   border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
@@ -221,7 +221,7 @@
    visual weight without adding another line of chrome. */
 .chrome-verify {
   position: absolute;
-  top: 14px;
+  top: 21px;
   left: 50%;
   z-index: 21;
   display: flex;
