@@ -24,9 +24,8 @@ targeted Go tests during every build.
 `docker-compose.hostinger.yml` is the reproducible build manifest used for local
 verification. Hostinger's project runner only pulls images, so
 `docker-compose.hostinger.registry.yml` contains the identical runtime services
-with the verified image pinned to the proposed public GHCR tag. Publishing that
-tag is a separate explicitly authorized step; the manifest itself does not
-publish anything.
+with the verified image pinned to both its published GHCR tag and immutable
+registry digest `sha256:c617e38b457d488dce937741ee3ce395b1d4d9749fcc254cadbb8eefe408aa40`.
 
 The remaining non-secret project inputs are:
 

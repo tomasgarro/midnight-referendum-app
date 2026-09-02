@@ -26,7 +26,7 @@ const checks = [
   [compose.includes("git apply --check --include='internal/service/handlers/*'"), 'reviewed cleanup patch is not checked before application'],
   [compose.includes('go test ./internal/service/handlers'), 'cleanup tests are not executed during the build'],
   [registryCompose.length <= 8192, 'pull-only Hostinger manifest exceeds the API content limit'],
-  [registryCompose.includes('ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68'), 'pull-only manifest image is not pinned'],
+  [registryCompose.includes('ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68@sha256:c617e38b457d488dce937741ee3ce395b1d4d9749fcc254cadbb8eefe408aa40'), 'pull-only manifest image is not pinned to the published registry digest'],
   [!registryCompose.includes('build:'), 'pull-only Hostinger manifest still requires a build'],
   [servicesSection(registryCompose) === servicesSection(compose), 'build and pull-only manifests have different runtime services'],
 ];

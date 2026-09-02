@@ -1,7 +1,7 @@
 name: midnight-rarimo-nfc
 
 x-runtime-image: &runtime-image
-  image: ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68
+  image: ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68@sha256:c617e38b457d488dce937741ee3ce395b1d4d9749fcc254cadbb8eefe408aa40
 
 services:
   secret-init:
