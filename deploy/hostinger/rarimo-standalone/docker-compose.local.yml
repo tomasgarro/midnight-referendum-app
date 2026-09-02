@@ -1,0 +1,8 @@
+services:
+  rarimo-verificator:
+    ports: !override
+      - "127.0.0.1:28080:8000"
+
+  rarimo-gateway:
+    ports: !override
+      - "127.0.0.1:28081:8080"
