@@ -30,6 +30,7 @@ x-rarimo: &rarimo
       exec verificator-svc $$RARIMO_ARGS
   environment: *rarimo-env
   volumes: [rarimo-secrets:/run/rarimo-secrets:ro]
+  tmpfs: [/tmp]
   networks: [rarimo-internal]
 
 services:
@@ -72,7 +73,7 @@ services:
     security_opt: [no-new-privileges:true]
     command: [midnight-proof-server, -v]
     tmpfs: [/tmp]
-    networks: [rarimo-internal]
+    networks: [rarimo-internal, rarimo-egress]
 
   cico:
     image: ghcr.io/tomasgarro/midnight-civic-cico:0.1.0-3f2f6b4@sha256:ec3080c8ee6754365af0e390449ad1be7d1897bb95b9b58891d90b36bd66789e
@@ -104,7 +105,7 @@ services:
     tmpfs: [/tmp]
     healthcheck: {test: [CMD, node, -e, "fetch('http://127.0.0.1:8791/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], interval: 10s, timeout: 5s, retries: 18, start_period: 60s}
     depends_on: {cico-proof: {condition: service_started}, rarimo-verificator: {condition: service_started}}
-    networks: [rarimo-internal]
+    networks: [rarimo-internal, rarimo-egress]
 
   edge:
     image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
