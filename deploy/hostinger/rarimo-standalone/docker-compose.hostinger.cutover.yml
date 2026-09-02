@@ -162,7 +162,10 @@ services:
     volumes: [caddy-data:/data, caddy-config:/config]
     read_only: true
     tmpfs: [/tmp]
-    depends_on: {cico: {condition: service_healthy}, rarimo-verificator: {condition: service_started}}
+    # A fresh Preview wallet currently needs about 38 minutes to reach its first
+    # synced state. Start the TLS edge immediately; Caddy returns 502 for /v1/*
+    # until CICO is actually listening, while every non-allow-listed path stays 404.
+    depends_on: {cico: {condition: service_started}, rarimo-verificator: {condition: service_started}}
     networks: [rarimo-internal, rarimo-edge]
 
 networks:
