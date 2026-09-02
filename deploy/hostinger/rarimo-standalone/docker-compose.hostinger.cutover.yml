@@ -12,20 +12,20 @@ x-rarimo: &rarimo
   entrypoint: [/bin/sh, -ec]
   command:
     - |
-      p="$$(cat "$$DB_PASSWORD_FILE")"
+      umask 077
+      p=
+      IFS= read -r p <"$$DB_PASSWORD_FILE" || test -n "$$p"
       case "$$p" in (*[!0-9a-f]*|'') exit 1;; esac
-      cat >/tmp/config.yaml <<EOF
-      log: {level: info, disable_sentry: true}
-      db: {url: "postgres://rarimo:$${p}@rarimo-postgres:5432/rarimo_verificator?sslmode=disable"}
-      listener: {addr: ":8000"}
-      cop: {disabled: true, endpoint: "http://unused.invalid", upstream: "http://unused.invalid", service_name: verificator-svc, service_port: 8000}
-      callback: {url: "$${RARIMO_CALLBACK_ORIGIN}"}
-      verifier: {verification_key_path: "/proof_keys/passport.json", allowed_identity_timestamp: $${RARIMO_ALLOWED_IDENTITY_TIMESTAMP}, event_id: "$${RARIMO_EVENT_ID}", multiproof: false, preserve_user_id_case: false, erc_1155: "0x0000000000000000000000000000000000000000"}
-      signature_verification: {pub_key: "04e29323ad356ab524fa5dbe3e490244e741b4d445ac7d2ee5f321556b3fda616bb9d2f2216fc27e099ab3019103cca872679e130629b2b90ea16cedb2b2136371"}
-      poseidonsmt_root_verifier: {rpc: "https://l2.rarimo.com", contract: "0x479F84502Db545FA8d2275372E0582425204A879", request_timeout: 10s}
-      auth: {enabled: false, addr: "http://unused.invalid"}
-      EOF
-      chmod 0400 /tmp/config.yaml
+      printf '%s\n' \
+        'log: {level: info, disable_sentry: true}' \
+        "db: {url: \"postgres://rarimo:$${p}@rarimo-postgres:5432/rarimo_verificator?sslmode=disable\"}" \
+        'listener: {addr: ":8000"}' \
+        'cop: {disabled: true, endpoint: "http://unused.invalid", upstream: "http://unused.invalid", service_name: verificator-svc, service_port: 8000}' \
+        "callback: {url: \"$${RARIMO_CALLBACK_ORIGIN}\"}" \
+        "verifier: {verification_key_path: \"/proof_keys/passport.json\", allowed_identity_timestamp: $${RARIMO_ALLOWED_IDENTITY_TIMESTAMP}, event_id: \"$${RARIMO_EVENT_ID}\", multiproof: false, preserve_user_id_case: false, erc_1155: \"0x0000000000000000000000000000000000000000\"}" \
+        'signature_verification: {pub_key: "04e29323ad356ab524fa5dbe3e490244e741b4d445ac7d2ee5f321556b3fda616bb9d2f2216fc27e099ab3019103cca872679e130629b2b90ea16cedb2b2136371"}' \
+        'poseidonsmt_root_verifier: {rpc: "https://l2.rarimo.com", contract: "0x479F84502Db545FA8d2275372E0582425204A879", request_timeout: 10s}' \
+        'auth: {enabled: false, addr: "http://unused.invalid"}' >/tmp/config.yaml
       export KV_VIPER_FILE=/tmp/config.yaml
       exec verificator-svc $$RARIMO_ARGS
   environment: *rarimo-env
@@ -71,7 +71,6 @@ services:
     init: true
     security_opt: [no-new-privileges:true]
     command: [midnight-proof-server, -v]
-    read_only: true
     tmpfs: [/tmp]
     networks: [rarimo-internal]
 
@@ -162,9 +161,7 @@ services:
     volumes: [caddy-data:/data, caddy-config:/config]
     read_only: true
     tmpfs: [/tmp]
-    # A fresh Preview wallet currently needs about 38 minutes to reach its first
-    # synced state. Start the TLS edge immediately; Caddy returns 502 for /v1/*
-    # until CICO is actually listening, while every non-allow-listed path stays 404.
+    # TLS may start while the fresh Preview wallet performs its initial sync.
     depends_on: {cico: {condition: service_started}, rarimo-verificator: {condition: service_started}}
     networks: [rarimo-internal, rarimo-edge]
 
