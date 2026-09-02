@@ -7,11 +7,24 @@ reading the deployment tooling — not from the roadmap.
 
 ## The short answer
 
-**Nothing is deployed to Preview.** Not the registry, not a referendum, not a
-credential. Every deployment record in the repository is for the local
-`undeployed` Docker chain. The application code for the Preview path is
-complete and unit-tested; what is missing is one funded wallet, one deploy run,
-and one hosted backend.
+**The registry and a referendum are deployed to Midnight Preview**, as of
+2 September 2026, 02:16 UTC (blocks 683026 and 683030). Both are independently confirmed against the
+canonical Preview indexer, not merely asserted by our own manifest:
+
+| Contract | Address | Block |
+| --- | --- | --- |
+| `credential-registry-v1` | `9f8fe7c54d9907543cbcde82943c2be35ccb20f404e477ca2c29b8fc84a52132` | 683026 |
+| `referendum-v2` | `63d53d4d0adaa506f2e5b93ca072aeb48c1dcf3071577dddcb8bedea08cd8b3b` | 683030 |
+
+Four steps are confirmed in the manifest: `registry.deploy`, `registry.issue`,
+`registry.attest` and `referendum.deploy`.
+
+**No vote has been cast on Preview yet.** The run stopped at the walletless
+`castVote` step, which requires a reachable CICO service to mint the action
+capability (`V2_API_URL`); only the `undeployed` network gets the local fixture
+issuer. So a credential exists on Preview and a referendum exists on Preview,
+but there is still no Preview vote, receipt, or tally, and none may be claimed.
+The remaining gap is a running CICO, not a funded wallet.
 
 The first hard gate is small and concrete: **the Preview relayer wallet must
 finish synchronizing and report positive DUST**, which pays for every
@@ -78,6 +91,39 @@ fully synchronized read-only status contradicts that observation.
 > make two quick submissions contend and return error 170; waiting does not
 > clear the relayer's stale reservation. Confirm several available coins or
 > serialise submissions before more than one person uses it.
+
+### 2b. Register the *operator* wallet too — **a separate wallet, a separate run**
+
+`deploy:preview` needs two independent funded wallets: the relayer, which
+balances and submits votes, and an operator wallet (`V2_OPERATOR_FEE_SEED_HEX`)
+that deploys the contracts. Pointing both at one seed is what produced the
+error-170 failure on 1 September — two processes cannot share one DUST coin.
+
+`npm run relayer:dust` **cannot** serve the operator wallet: it signs with
+`RELAYER_SEED`, and only the owner of a UTXO can register it. Use:
+
+```bash
+npm run deploy:preview:operator-dust
+```
+
+It reads `V2_OPERATOR_FEE_SEED_HEX` from `.env.v2.preview`, prints the unshielded
+address it is about to change before submitting anything, and otherwise behaves
+exactly like `relayer:dust`. Do not work around this by editing `relayer/.env`;
+the deploy asserts role-secret independence from the relayer seed, and a `.env`
+left swapped is how the two wallets collided in the first place.
+
+> **Registering takes ~27 minutes, and looks like a hang for most of it.**
+> `estimateRegistration()` in `@midnight-ntwrk/wallet-sdk-facade` calls
+> `dust.waitForSyncedState()` internally, so it cannot return until the wallet
+> has replayed the entire indexer history — about 181,000 indices on Preview.
+> A run that has printed `NIGHT UTXOs: 1 (registered: 0)` and then gone quiet is
+> **working, not stuck**. Do not kill it; that mistake cost an hour on
+> 2 September. The script now waits for the sync explicitly and narrates
+> progress every 30 seconds so the delay is visible and attributable.
+
+Once a registration has been **submitted**, it is on chain regardless of what
+the script does afterwards. If the DUST wait times out, confirm with a
+long-budget status run rather than registering a second time.
 
 ### 3. A local proof server — **one command**
 

@@ -217,8 +217,13 @@ stateDiagram-v2
 
 ## What is not claimed
 
-- No Midnight Preview registry, referendum, credential, vote, or receipt is
-  deployed or evidenced in this snapshot.
+- A Midnight Preview **registry and referendum are deployed** as of
+  2 September 2026 (`9f8fe7c5...a52132` at block 683026 and
+  `63d53d4d...cd8b3b` at block 683030, both confirmed against the canonical
+  Preview indexer), and a credential was issued and attested on Preview.
+  **No Preview vote, receipt, or tally exists**, and none is claimed: the run
+  stopped at the walletless `castVote` step, which needs a reachable CICO
+  service.
 - No physical NFC or ePassport APDU read has been observed on hardware, and
   none is possible in this browser. Screens 8-9 of the document journey are a
   handoff to RariMe, not a chip read.
