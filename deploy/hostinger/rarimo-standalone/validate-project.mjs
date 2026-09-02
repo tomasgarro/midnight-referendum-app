@@ -5,6 +5,10 @@ const registryCompose = await readFile(
   new URL('./docker-compose.hostinger.registry.yml', import.meta.url),
   'utf8',
 );
+const cutoverCompose = await readFile(
+  new URL('./docker-compose.hostinger.cutover.yml', import.meta.url),
+  'utf8',
+);
 
 const servicesSection = (value) => value.slice(value.indexOf('services:'));
 
@@ -29,13 +33,30 @@ const checks = [
   [registryCompose.includes('ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68@sha256:c617e38b457d488dce937741ee3ce395b1d4d9749fcc254cadbb8eefe408aa40'), 'pull-only manifest image is not pinned to the published registry digest'],
   [!registryCompose.includes('build:'), 'pull-only Hostinger manifest still requires a build'],
   [servicesSection(registryCompose) === servicesSection(compose), 'build and pull-only manifests have different runtime services'],
+  [cutoverCompose.length <= 8192, 'CICO cutover manifest exceeds the Hostinger API content limit'],
+  [!cutoverCompose.includes('build:'), 'CICO cutover manifest still requires a build'],
+  [cutoverCompose.includes('sha256:c617e38b457d488dce937741ee3ce395b1d4d9749fcc254cadbb8eefe408aa40'), 'cutover verifier digest is missing'],
+  [cutoverCompose.includes('sha256:ec3080c8ee6754365af0e390449ad1be7d1897bb95b9b58891d90b36bd66789e'), 'cutover CICO digest is missing'],
+  [cutoverCompose.includes('sha256:801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531'), 'cutover proof-server digest is missing'],
+  [cutoverCompose.includes('"80:80"') && cutoverCompose.includes('"443:443"'), 'HTTPS edge ports are missing'],
+  [cutoverCompose.includes('cico.cardanoschool.org') && cutoverCompose.includes('rarimo.cardanoschool.org'), 'cutover domains are missing'],
+  [cutoverCompose.includes('@ok path /v1/*'), 'CICO public route allow-list is missing'],
+  [cutoverCompose.includes('/public/proof-params/*') && cutoverCompose.includes('/public/callback/*'), 'Rarimo public route allow-list is missing'],
+  [!cutoverCompose.includes('/private/*'), 'a private Rarimo wildcard is exposed at cutover'],
+  [cutoverCompose.includes('CICO_RARIMO_BASE_URL: http://rarimo-verificator:8000'), 'CICO does not use the private verifier network'],
+  [cutoverCompose.includes('CICO_STATE_DIRECTORY: /var/lib/cico-passport'), 'CICO durable state is missing'],
+  [!cutoverCompose.includes('CICO_REFERENDA_JSON') && !cutoverCompose.includes('CICO_ACTION_CAPABILITY_SECRET'), 'Stage B cutover must not publish roots or mint vote capabilities'],
+  [cutoverCompose.includes('CICO_ISSUER_WALLET_SEED: ${CICO_ISSUER_WALLET_SEED:?required}'), 'CICO wallet seed is not injected'],
+  [cutoverCompose.includes('CICO_ISSUER_ROLE_SECRET: ${CICO_ISSUER_ROLE_SECRET:?required}'), 'CICO issuer role secret is not injected'],
+  [cutoverCompose.includes('CICO_ROOT_PUBLISHER_SECRET_HEX: ${CICO_ROOT_PUBLISHER_SECRET_HEX:?required}'), 'CICO root role secret is not injected'],
+  [cutoverCompose.includes('rarimo-internal: {internal: true}'), 'cutover private network is not internal'],
 ];
 
 for (const [ok, message] of checks) {
   if (!ok) throw new Error(message);
 }
 
-const unresolved = `${compose}\n${registryCompose}`.match(/REPLACE_[A-Z0-9_]+/gu) ?? [];
+const unresolved = `${compose}\n${registryCompose}\n${cutoverCompose}`.match(/REPLACE_[A-Z0-9_]+/gu) ?? [];
 if (unresolved.length !== 0) {
   throw new Error(`unexpected unresolved placeholders: ${unresolved.join(', ') || '(none)'}`);
 }
