@@ -19,8 +19,14 @@ official Rarimo Git context with both `ref` and `checksum` fixed to commit
 `f7ebbdf4d692326dd50d2c49976dd31042b2c29a`. The reviewed handler-only cleanup
 patch is fetched from immutable application commit `268c217886135cd618983d445fd8c996d17eb3de`
 with SHA-256 verification, checked with `git apply --check`, and covered by
-targeted Go tests during every build. No unpublished branch or private registry
-is required by the VPS.
+targeted Go tests during every build.
+
+`docker-compose.hostinger.yml` is the reproducible build manifest used for local
+verification. Hostinger's project runner only pulls images, so
+`docker-compose.hostinger.registry.yml` contains the identical runtime services
+with the verified image pinned to the proposed public GHCR tag. Publishing that
+tag is a separate explicitly authorized step; the manifest itself does not
+publish anything.
 
 The remaining non-secret project inputs are:
 

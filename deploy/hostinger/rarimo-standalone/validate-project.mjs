@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises';
 
 const compose = await readFile(new URL('./docker-compose.hostinger.yml', import.meta.url), 'utf8');
+const registryCompose = await readFile(
+  new URL('./docker-compose.hostinger.registry.yml', import.meta.url),
+  'utf8',
+);
+
+const servicesSection = (value) => value.slice(value.indexOf('services:'));
 
 const checks = [
   [compose.includes('name: midnight-rarimo-nfc'), 'isolated project name is missing'],
@@ -19,13 +25,17 @@ const checks = [
   [compose.includes('ADD --checksum=sha256:91ab66698f70ae1456d3f54cbb2cb5e84fefa44c2b0dd55194eff3fe2ae85053'), 'reviewed cleanup patch download is not checksum-bound'],
   [compose.includes("git apply --check --include='internal/service/handlers/*'"), 'reviewed cleanup patch is not checked before application'],
   [compose.includes('go test ./internal/service/handlers'), 'cleanup tests are not executed during the build'],
+  [registryCompose.length <= 8192, 'pull-only Hostinger manifest exceeds the API content limit'],
+  [registryCompose.includes('ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68'), 'pull-only manifest image is not pinned'],
+  [!registryCompose.includes('build:'), 'pull-only Hostinger manifest still requires a build'],
+  [servicesSection(registryCompose) === servicesSection(compose), 'build and pull-only manifests have different runtime services'],
 ];
 
 for (const [ok, message] of checks) {
   if (!ok) throw new Error(message);
 }
 
-const unresolved = compose.match(/REPLACE_[A-Z0-9_]+/gu) ?? [];
+const unresolved = `${compose}\n${registryCompose}`.match(/REPLACE_[A-Z0-9_]+/gu) ?? [];
 if (unresolved.length !== 0) {
   throw new Error(`unexpected unresolved placeholders: ${unresolved.join(', ') || '(none)'}`);
 }

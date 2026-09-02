@@ -1,0 +1,209 @@
+name: midnight-rarimo-nfc
+
+x-runtime-image: &runtime-image
+  image: ghcr.io/tomasgarro/midnight-rarimo-verificator:v0.3.12-cico-delete-204-22c3c68
+
+services:
+  secret-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        if [ ! -s /run/rarimo-secrets/db-password ]; then
+          head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > /run/rarimo-secrets/db-password
+        fi
+        test "$$(wc -c < /run/rarimo-secrets/db-password)" -eq 64
+    volumes:
+      - rarimo-secrets:/run/rarimo-secrets
+    networks:
+      - rarimo-internal
+
+  config-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      RARIMO_CALLBACK_ORIGIN: ${RARIMO_CALLBACK_ORIGIN:?set RARIMO_CALLBACK_ORIGIN}
+      RARIMO_ALLOWED_IDENTITY_TIMESTAMP: ${RARIMO_ALLOWED_IDENTITY_TIMESTAMP:?set RARIMO_ALLOWED_IDENTITY_TIMESTAMP}
+      RARIMO_EVENT_ID: ${RARIMO_EVENT_ID:?set RARIMO_EVENT_ID}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        password="$$(cat /run/rarimo-secrets/db-password)"
+        case "$$password" in (*[!0-9a-f]*|'') echo 'invalid generated database password' >&2; exit 1;; esac
+        cat > /runtime/config.yaml <<EOF
+        log:
+          level: info
+          disable_sentry: true
+        db:
+          url: "postgres://rarimo:$${password}@rarimo-postgres:5432/rarimo_verificator?sslmode=disable"
+        listener:
+          addr: ":8000"
+        cop:
+          disabled: true
+          endpoint: "http://unused.invalid"
+          upstream: "http://unused.invalid"
+          service_name: verificator-svc
+          service_port: 8000
+        callback:
+          url: "$${RARIMO_CALLBACK_ORIGIN}"
+        verifier:
+          verification_key_path: "/proof_keys/passport.json"
+          allowed_identity_timestamp: $${RARIMO_ALLOWED_IDENTITY_TIMESTAMP}
+          event_id: "$${RARIMO_EVENT_ID}"
+          multiproof: false
+          preserve_user_id_case: false
+          erc_1155: "0x0000000000000000000000000000000000000000"
+        signature_verification:
+          pub_key: "04e29323ad356ab524fa5dbe3e490244e741b4d445ac7d2ee5f321556b3fda616bb9d2f2216fc27e099ab3019103cca872679e130629b2b90ea16cedb2b2136371"
+        poseidonsmt_root_verifier:
+          rpc: "https://l2.rarimo.com"
+          contract: "0x479F84502Db545FA8d2275372E0582425204A879"
+          request_timeout: 10s
+        auth:
+          enabled: false
+          addr: "http://unused.invalid"
+        EOF
+        chmod 0400 /runtime/config.yaml
+        cat > /gateway/Caddyfile <<'EOF'
+        :8080 {
+          request_body {
+            max_size 2MB
+          }
+          @proof_params {
+            method GET
+            path /integrations/verificator-svc/public/proof-params/*
+          }
+          handle @proof_params {
+            reverse_proxy rarimo-verificator:8000
+          }
+          @callback {
+            method POST
+            path /integrations/verificator-svc/public/callback/*
+          }
+          handle @callback {
+            reverse_proxy rarimo-verificator:8000
+          }
+          handle {
+            respond "Not Found" 404
+          }
+        }
+        EOF
+        chmod 0444 /gateway/Caddyfile
+    depends_on:
+      secret-init:
+        condition: service_completed_successfully
+    volumes:
+      - rarimo-secrets:/run/rarimo-secrets:ro
+      - rarimo-runtime-config:/runtime
+      - rarimo-gateway-config:/gateway
+    networks:
+      - rarimo-internal
+
+  rarimo-postgres:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_DB: rarimo_verificator
+      POSTGRES_USER: rarimo
+      POSTGRES_PASSWORD_FILE: /run/rarimo-secrets/db-password
+    expose:
+      - "5432"
+    volumes:
+      - rarimo-secrets:/run/rarimo-secrets:ro
+      - rarimo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rarimo -d rarimo_verificator"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      secret-init:
+        condition: service_completed_successfully
+    networks:
+      - rarimo-internal
+
+  rarimo-migrate:
+    <<: *runtime-image
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KV_VIPER_FILE: /config/config.yaml
+    command: ["migrate", "up"]
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+      rarimo-postgres:
+        condition: service_healthy
+    volumes:
+      - rarimo-runtime-config:/config:ro
+    networks:
+      - rarimo-internal
+
+  rarimo-verificator:
+    <<: *runtime-image
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KV_VIPER_FILE: /config/config.yaml
+    command: ["run", "service"]
+    depends_on:
+      rarimo-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:18080:8000"
+    volumes:
+      - rarimo-runtime-config:/config:ro
+    networks:
+      - rarimo-internal
+      - rarimo-egress
+
+  rarimo-gateway:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    command: ["caddy", "run", "--config", "/runtime/Caddyfile"]
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+      rarimo-verificator:
+        condition: service_started
+    ports:
+      - "127.0.0.1:18081:8080"
+    volumes:
+      - rarimo-gateway-config:/runtime:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - rarimo-internal
+      - rarimo-edge
+networks:
+  rarimo-internal:
+    internal: true
+  rarimo-egress:
+  rarimo-edge:
+
+volumes:
+  rarimo-secrets:
+    name: midnight-rarimo-nfc-secrets
+  rarimo-runtime-config:
+    name: midnight-rarimo-nfc-runtime-config
+  rarimo-gateway-config:
+    name: midnight-rarimo-nfc-gateway-config
+  rarimo-postgres-data:
+    name: midnight-rarimo-nfc-postgres-data
