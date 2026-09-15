@@ -1,101 +1,129 @@
-# Mascot integration design QA
+# Landing design QA - 2026-09-15
 
-## Comparison target
+Status: passed for local review.
 
-- Source visual truth: `C:/Users/tomas/Downloads/capy.jpg`
-- Rendered welcome: `qa/mascot-welcome-390x844.png`
-- Rendered credential success: `qa/mascot-success-390x844.png`
-- Full-view comparison: `qa/mascot-full-view-comparison.png`
-- Focused comparison: `qa/mascot-focused-comparison.png`
-- State: Spanish demo onboarding, welcome and synthetic credential-success stages.
-- Viewport override: 390 × 844 CSS px.
-- Browser-reported viewport: 390 × 844 CSS px at device pixel ratio 1.
-- Exported implementation screenshots: 375 × 811 px after the in-app browser's
-  capture normalization.
-- Source photo: 4000 × 3000 px with EXIF orientation applied for comparison.
-- Production mascot PNGs: 1024 × 1024 px, RGBA, alpha extrema 0–255.
+## Visual review
 
-The source is a photographed physical sticker rather than a screen mock. The
-comparison therefore treats character identity, art direction, crop, and mood
-as visual truth while preserving the app's existing layout and design tokens.
+Compared the supplied step-layout reference with the updated implementation in
+`outputs/passport-hero-20260915/section-comparison.jpg`. The comparison includes
+both centered headline states and the controls above the illustration.
 
-## Full-view comparison evidence
+Reviewed neutral, center and palm reveal screenshots, plus mobile layouts in
+`outputs/passport-hero-20260915/revision-tests/`. Settled step captures and reversible
+headline captures are in `outputs/passport-hero-20260915/visual-review/`.
 
-`qa/mascot-full-view-comparison.png` places the oriented source photo beside the
-rendered welcome and success screens. Both integrations preserve the card's
-existing hierarchy and keep the primary action visible. The welcome mascot is
-clearly secondary to the privacy explanation; the success mascot supports the
-state without displacing the credential summary.
+Observed: clean hero without wrist captions, larger palm reveal, softly fading
+wrist edge. Official logo remains an SVG overlay with unchanged geometry. No
+visible human/robot ghosting in reviewed states. Large centered section headline
+has no kicker or subheading. Step controls sit above the artwork below navigation.
+Cream canvas and illustrations remain consistent with the accepted direction.
+Mobile keeps static artwork and a linear step sequence; reduced motion stays readable.
 
-## Focused comparison evidence
+## Verification
 
-`qa/mascot-focused-comparison.png` places the source character beside the two
-browser-rendered mascot crops. The generated family retains the golden-yellow
-body, muted muzzle and paws, black dot eye, short limbs, rounded proportions,
-hand-drawn dark linework, coral accent, white sticker edge, and calm expression.
-The focused region is sufficient because the task changes only the mascot asset
-and its reserved onboarding slots; no typography, navigation, or layout redesign
-was requested.
+- Browser suite: 18 passed; 5 live-service/showcase-specific tests skipped.
+- Additional settled desktop visual test: passed.
+- Windows and Linux UI tests: 234 passed on each.
+- Windows and Linux demo build: passed; existing bundle-size warning remains.
+- Showcase privacy gate: passed (11 text assets).
+- Biome: 11 changed source/test files checked and formatted.
+- git diff --check: passed.
+- Original Hostinger compose hash unchanged:
+  458D25C9E9F2189442AFE3854319647BE4F3DE9F9B83547CA15A45E28D60FECB.
 
-## Required fidelity surfaces
+The earlier CI onboarding failure was reproduced as cold Vite development
+transforms. Playwright now previews the production demo while preserving the
+10-second assertion. Civic Pulse's privacy test derives its allowed origin from
+baseURL, preserving its no-external-request assertion when testing another port.
 
-- Fonts and typography: unchanged from the existing product. The mascot contains
-  no text, and the two new Spanish alternative-text strings are localized.
-- Spacing and layout rhythm: the responsive `lg` size remains within the intended
-  96–180 px UI reading range after transparent padding. No mascot is cropped, the
-  welcome CTA remains above the fold, and the success summary keeps its prior
-  vertical order.
-- Colors and visual tokens: the amber, taupe, coral, and soft green illustration
-  palette matches the source family and sits comfortably against the app's warm
-  neutral card and blue action system. Existing UI tokens are unchanged.
-- Image quality and asset fidelity: every delivered asset is a square 1024 px
-  transparent PNG. Alpha was validated programmatically and both rendered states
-  show clean edges without a checkerboard, background box, stretching, or visible
-  halo. The reference's quiet paper texture remains legible at UI scale.
-- Copy and content: no generated image contains words, marks, or logos. The mascot
-  remains absent from privacy, eligibility, dashboard, and ballot-adjacent states.
+## Boundaries
 
-## Interaction and console checks
+The full 566-test verification and Linux contract compilation passed before this
+UI-only revision; updated Linux UI build and tests passed afterward. Five browser
+tests require environments outside this local demo and were skipped.
 
-- Tested the complete local demo path: welcome → privacy → Passport demo →
-  consent return → eligibility → country selection → credential success → civic
-  dashboard.
-- Confirmed zero `[data-mascot]` elements on privacy and eligibility stages and
-  after onboarding completion.
-- Confirmed semantic localized image labels on welcome and credential success.
-- Checked warning and error console output after both rendered mascot states:
-  none recorded.
+Gradient exploration remains for a later review. Hostinger work is paused by the
+user. No push, deployment, DNS, live wallet or live relayer action was performed.
 
-## Findings
+## Mountain finish and shared arrow motion
 
-No actionable P0, P1, or P2 mismatch was found.
+Implemented the next user review: all actionable northeast arrows across the
+landing hero, navigation, steps, future section, invitation, and footer rotate
+45 degrees to point right on hover and keyboard focus, then reset. Existing color
+and gap changes remain. Reduced-motion users receive no arrow rotation or transition.
 
-Residual test gap: reading, thinking, climbing, and waiting are production assets
-exposed by the component but are not yet placed in a live product state. Their
-RGBA channels and dimensions were validated, and the component API covers them;
-their final page-level scale should be checked when those states are introduced.
+Removed the invitation kicker, explanatory paragraph, and large moon illustration.
+The invitation now centers above an original illustrated mountain panorama, fading
+from cream/lavender into a dark plum footer with light text. Footer links and labels
+remain. The empty future-mascot art slot is preserved within the landscape.
 
-## Comparison history
+Asset: ui/public/art/landscape/midnight-mountains.webp, 1536x1024, 77,832 bytes.
+Generated using the built-in image tool: original painterly dawn alpine valley,
+layered lavender/slate ridges, mist, drawn pine forests, cream sky, dark plum
+foreground; no text, moon, people, buildings, or logos. Inspired by the user's
+landscape examples without copying the stock artwork. PNG original remains at
+C:/Users/tomas/.codex/generated_images/01a0a52a-d3ff-7761-8c90-16a3281d0e9b/exec-7e6d8080-df87-427a-ab4e-506b948bbb74.png.
 
-- Pass 1: no actionable P0/P1/P2 differences. No visual fixes were required after
-  the browser-rendered comparison. Earlier background-extraction and square-canvas
-  normalization happened before this QA pass and were validated in the final
-  evidence above.
+Validation for this iteration: demo production build passed; 8 targeted browser
+checks passed (390/1440 arrow hover-reset-focus, reduced motion, image loading,
+footer links and overflow, 320/390 onboarding, reversible steps and navigation).
+Showcase privacy gate passed. Biome and git diff checks passed. Visual screenshots
+in outputs/passport-hero-20260915/mountain-tests/ confirm clean footer blending
+and readable mobile navigation. Prior Linux/unit results above predate this visual
+iteration and were not unnecessarily rerun. No push or deployment performed.
 
-## Implementation checklist
+## Selective disclosure and Midnight City review
 
-- [x] Replace welcome placeholder with the waving variant.
-- [x] Replace credential-success placeholders with the achievement variant.
-- [x] Keep mascot out of consent, privacy-decision, eligibility, and ballot states.
-- [x] Validate accessible semantic and decorative usage.
-- [x] Validate transparent square PNG output and responsive rendering.
-- [x] Test the complete onboarding path and console.
+Privacy outro: removed top border, increased 15px text to 17.25px, changed to
+Georgia italic (local system serif; no extra font request). Bottom section change
+remains. Human copy now explicitly describes future citizenship proofs (Argentina,
+Italy or elsewhere), verified-citizen conversations, opt-in attribute-based
+consultations including gender, and AI summaries/presentations/research about
+local politicians and national issues with sources. These are labelled On the
+horizon, separate from Try it today.
 
-## Follow-up polish
+Replaced the orbit illustration with a native CSS/React concept scene: private
+fields remain masked, only a requested citizenship attribute is shared, followed
+by conversations and sourced briefings. Intro animation runs once on mounting;
+reduced motion disables it. Visual remains decorative and does not claim live
+verification or send data.
 
-- When Explore / FAQ or enrollment-pending screens are implemented, place the
-  reading or waiting variants through the existing component rather than adding
-  new ad hoc image markup.
+Replaced the agents image with the supplied midnight-city-platzi.png, edited by
+ImageGen to remove the bottom Enter the city button/frame/glow and fill it with
+foreground rocks and foliage. Preserved the poster title and upper branding. The
+original is untouched. New asset: ui/public/art/city/midnight-city-without-button.webp,
+1122x1402, 255516 bytes. Generated PNG: exec-a90d5ac0-df07-4162-add5-a40a464781d4.png
+in the thread's generated_images directory. Portrait artwork is shown uncropped.
 
-final result: passed
+Validation: demo build passed; all 10 targeted landing browser tests passed,
+including 320/1440 human/agent panels, asset loading, italic size and border,
+reduced motion, 320/390 onboarding, arrows, navigation and footer. Showcase gate
+passed (11 assets); Biome passed (6 files); git diff check passed. Screenshots and
+logs: outputs/passport-hero-20260915/disclosure-tests/. Browser visual inspection
+confirmed balanced desktop human and agent compositions. No publishing performed.
 
+## Compact audience panels
+
+Moved Humans/Agents controls beside the section heading on desktop, stacking them
+below the heading at mobile widths. Shortened the future-feature copy and human
+introduction while retaining citizenship, opt-in attribute consultations and AI
+research. Both artworks now have a 380px maximum width; tightened disclosure-card
+padding and spacing. Removed the city caption block; its portrait remains uncropped
+and below 480px high on desktop. Section padding and type spacing are more compact.
+Privacy outro now uses the bundled Fraunces font (Landing Editorial), italic 350,
+21-26px responsive size, raised 6px; no external font request or new divider.
+
+Compact-panel validation: final demo build passed; 4 focused browser tests passed
+at 320/390/1440 widths, including the new privacy type sizes, absent city caption,
+city height cap, reduced motion and existing arrow/footer interactions. The first
+run caught an unchanged old font rule; corrected it and reran successfully.
+Showcase gate and formatting passed. Desktop visual inspection confirms the
+right-aligned switch and tighter panel. No push or deployment.
+
+## GitHub PR preparation
+
+Final combined browser suite: 22 passed, 5 environment-specific tests skipped
+(outputs/passport-hero-20260915/pr-final-tests.log). All 20 staged code/config/test
+files pass Biome; staged diff check passes. User authorized pushing this landing
+batch and opening a follow-up PR. Hostinger remains paused and excluded.
+Next-session handoff: docs/SESSION-HANDOFF-LANDING-TO-ONBOARDING-2026-09-15.md.

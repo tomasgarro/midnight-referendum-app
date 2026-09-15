@@ -42,15 +42,6 @@
 .civic-landing .midnight-atmosphere::after {
   background: linear-gradient(95deg, #f4f0e770, transparent 60%);
 }
-.civic-landing .midnight-eclipse__halo {
-  opacity: 0.3;
-}
-.civic-landing .midnight-eclipse__caption {
-  color: #776c88;
-}
-.civic-landing .midnight-eclipse__caption > span:last-child {
-  color: #4e4561;
-}
 .civic-landing .midnight-cta {
   background: #272435;
   color: #faf5e9;
@@ -61,15 +52,4 @@
 }
 .civic-landing .midnight-cta:hover > span {
   background: #f3ebff;
-}
-.civic-landing .midnight-hero__base {
-  border-color: #81728e26;
-  color: #89808c;
-  padding-bottom: 30px;
-}
-.civic-landing .midnight-hero__base p > span {
-  color: #5d5269;
-}
-.civic-landing .midnight-hero__base > a {
-  border-color: #81728e40;
 }

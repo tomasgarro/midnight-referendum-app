@@ -20,14 +20,20 @@
   color: #302b3b;
 }
 .future-section {
-  padding: 100px max(6vw, calc((100% - 1160px) / 2));
+  padding: 64px max(6vw, calc((100% - 1160px) / 2));
   background: #faf7f1;
 }
-.future-heading,
-.future-panel,
-.future-switch {
+.future-header,
+.future-panel {
   max-width: 1160px;
   margin-inline: auto;
+}
+.future-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
 }
 .civic-landing .future-heading h2,
 .civic-landing .finale-invitation h2 {
@@ -44,12 +50,12 @@
 .future-heading > p:last-child {
   font-size: 18px;
   color: #817568;
-  margin: 24px 0 32px;
+  margin: 18px 0 0;
 }
 .future-switch {
   display: flex;
   width: fit-content;
-  margin: 0 auto 48px 0;
+  margin: 0;
   border: 1px solid #ddd5c9;
   padding: 5px;
   border-radius: 999px;
@@ -84,9 +90,9 @@
 }
 .future-panel {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 0.95fr 1.05fr;
   align-items: center;
-  gap: 7vw;
+  gap: clamp(32px, 5vw, 72px);
   animation: future-reveal 350ms ease-out;
 }
 .future-art {
@@ -94,94 +100,9 @@
   border-radius: 28px;
   overflow: hidden;
   background: #eee7ee;
-  min-height: 430px;
-}
-.future-human-scene {
-  position: relative;
-  min-height: 460px;
-  isolation: isolate;
-  background: radial-gradient(ellipse at 50% 45%, #dcd3f0, transparent 67%), #eee8df;
-}
-.future-orbit {
-  position: absolute;
-  width: 60%;
-  aspect-ratio: 1;
-  border: 1px solid #bfb1cd66;
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-.future-orbit--outer {
-  width: 87%;
-  border-style: dashed;
-}
-.future-core {
-  position: absolute;
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 170px;
-  height: 170px;
-  background: linear-gradient(130deg, #514760, #262233);
-  border: 1px solid #84738f;
-  border-radius: 50%;
-  color: #eadcc7;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 20px 35px #41315020;
-}
-.future-core span {
-  text-align: center;
-  font-size: 14px;
-  line-height: 1.35;
-}
-.future-person {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 66px;
-  height: 66px;
-  background: #fffbf3;
-  border: 1px solid #fff;
-  border-radius: 20px;
-  color: #9581a2;
-  box-shadow: 0 12px 24px #42364c0f;
-}
-.future-person--one {
-  top: 14%;
-  left: 17%;
-  transform: rotate(-10deg);
-}
-.future-person--two {
-  top: 19%;
-  right: 13%;
-  transform: rotate(8deg);
-}
-.future-person--three {
-  bottom: 19%;
-  left: 12%;
-  transform: rotate(-5deg);
-}
-.future-person--four {
-  bottom: 18%;
-  right: 17%;
-  transform: rotate(12deg);
-}
-.future-art-note {
-  position: absolute;
-  bottom: 5%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-  font-size: 12px;
-  color: #86748f;
+  width: 100%;
+  max-width: 380px;
+  margin-inline: auto;
 }
 .future-art--agents {
   background: #272130;
@@ -192,47 +113,33 @@
 .future-city-image {
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-.future-city-note {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 30px;
-  color: #e8d6bb;
-  font-size: 18px;
-}
-.future-city-note small {
-  display: block;
-  color: #b4a4b9;
-  font-size: 12px;
-  margin-top: 6px;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
 }
 .future-label {
   color: #95868f;
   font-size: 11px;
   letter-spacing: 0.08em;
-  margin: 0 0 20px;
+  margin: 0 0 12px;
 }
 .civic-landing .future-copy h3 {
   font:
-    450 clamp(32px, 3.2vw, 46px) / 1.12 Outfit,
+    450 clamp(30px, 2.8vw, 40px) / 1.12 Outfit,
     sans-serif;
   letter-spacing: -0.035em;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
 }
 .future-copy > p:not(.future-label) {
   color: #7a6f65;
-  font-size: 17px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.5;
 }
 .future-copy ul {
   list-style: none;
   padding: 0;
-  margin: 26px 0;
+  margin: 20px 0;
   display: grid;
-  gap: 22px;
+  gap: 16px;
 }
 .future-copy li {
   display: flex;
@@ -280,24 +187,19 @@
   font-size: 13px;
 }
 .finale-invitation {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  align-items: center;
-  gap: 30px;
-  padding: 85px 8vw;
-  background: radial-gradient(ellipse at 90% 60%, #e1d9ed, transparent 55%), #eee8dd;
+  position: relative;
+  background: #f4f0e8;
+  text-align: center;
+  overflow: clip;
 }
 .finale-invitation > div:first-child {
-  max-width: 650px;
-}
-.finale-invitation p:not(.how-kicker) {
-  max-width: 440px;
-  font-size: 18px;
-  line-height: 1.6;
-  color: #807469;
-  margin: 26px 0;
+  position: relative;
+  z-index: 1;
+  padding: 80px 6vw 0;
+  margin: 0 auto -50px;
 }
 .finale-invitation .midnight-cta {
+  margin: 32px auto 0;
   background: #2d2638;
   color: #fff8ed;
 }
@@ -307,48 +209,50 @@
 }
 .finale-invitation small {
   display: block;
-  color: #978777;
+  color: #756b7e;
   margin-top: 17px;
   font-size: 12px;
 }
-.finale-guide-space {
+.finale-landscape {
   position: relative;
-  height: 330px;
-  isolation: isolate;
-  max-width: 400px;
+  aspect-ratio: 2.1;
+  min-height: 320px;
+  background: linear-gradient(#f4f0e8, #aaa3bd 55%, #252435);
+}
+.finale-landscape img {
+  display: block;
   width: 100%;
-  margin: auto;
-}
-.finale-guide-halo {
+  height: 100%;
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, #cfc0e3, transparent 68%);
+  object-fit: cover;
+  object-position: center bottom;
+  mask-image: linear-gradient(transparent, #000 22%, #000 85%, transparent);
 }
-.finale-guide-orbit {
-  position: absolute;
-  inset: 12%;
-  border: 1px solid #b8a9c277;
-  border-radius: 50%;
-  transform: rotate(-25deg) scaleX(0.75);
-}
-.finale-guide-symbol {
+.finale-landscape::after {
+  content: "";
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  color: #74627d;
+  background: linear-gradient(transparent 78%, #252435);
+  pointer-events: none;
 }
-.finale-guide-spark {
+.finale-guide-space {
   position: absolute;
-  top: 20%;
-  right: 18%;
-  font-size: 27px;
-  color: #a99bb8;
+  right: 12%;
+  bottom: 10%;
+  width: 160px;
+  height: 200px;
 }
 .finale-footer {
-  background: #f8f4ec;
+  background: #252435;
+  color: #f4f0e8;
   padding: 64px 8vw 28px;
+}
+.finale-footer .midnight-brand {
+  color: #fff9f0;
+}
+.finale-footer .midnight-brand__suffix {
+  color: #c2bbce;
 }
 .finale-footer__top {
   display: flex;
@@ -357,7 +261,7 @@
   padding-bottom: 56px;
 }
 .finale-footer__top > div > p {
-  color: #8a7d71;
+  color: #c2bbce;
   font-size: 16px;
   line-height: 1.6;
   margin: 22px 0 0;
@@ -372,7 +276,7 @@
   gap: 15px;
 }
 .finale-footer nav strong {
-  color: #4e4456;
+  color: #fff9f0;
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 6px;
@@ -382,22 +286,22 @@
   align-items: center;
   gap: 5px;
   font-size: 14px;
-  color: #8c7d6f;
+  color: #d2ccdc;
   min-height: 26px;
 }
 .finale-footer a:hover {
-  color: #695180;
+  color: #ffffff;
   text-decoration: underline;
   text-underline-offset: 5px;
 }
 .finale-footer__bottom {
-  border-top: 1px solid #dfd6c8;
+  border-top: 1px solid #ffffff26;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 30px;
   padding-top: 24px;
-  color: #978776;
+  color: #bdb5c9;
   font-size: 12px;
   line-height: 1.65;
 }
@@ -465,19 +369,12 @@
   .future-art {
     min-height: 0;
   }
-  .future-human-scene {
-    min-height: 360px;
-  }
-  .future-core {
-    width: 140px;
-    height: 140px;
-  }
-  .future-person {
-    width: 54px;
-    height: 54px;
+  .future-header {
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
   .future-switch {
-    margin-bottom: 32px;
+    margin: 0;
   }
   .future-switch button {
     padding: 12px 18px;
@@ -488,12 +385,16 @@
   .finale-quote {
     padding-block: 64px;
   }
-  .finale-invitation {
-    grid-template-columns: 1fr;
-    padding: 60px 6vw 30px;
+  .finale-invitation > div:first-child {
+    padding-top: 56px;
+    margin-bottom: 0;
+  }
+  .finale-landscape {
+    min-height: 280px;
   }
   .finale-guide-space {
-    height: 210px;
+    width: 100px;
+    height: 130px;
   }
   .finale-footer {
     padding: 44px 6vw 24px;

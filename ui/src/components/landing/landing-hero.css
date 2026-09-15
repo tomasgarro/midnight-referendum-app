@@ -262,7 +262,6 @@ body:has(.civic-landing) {
   transform: translateY(-2px);
 }
 .midnight-cta:hover > span {
-  transform: rotate(45deg);
   background: #101093;
 }
 .midnight-hero__learn {
@@ -277,130 +276,7 @@ body:has(.civic-landing) {
   transition: transform 200ms;
 }
 .midnight-hero__learn:hover svg {
-  transform: translateY(4px);
-}
-.midnight-eclipse {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-width: 0;
-  aspect-ratio: 1;
-  width: 100%;
-  perspective: 1000px;
-}
-.midnight-eclipse__halo {
-  position: absolute;
-  inset: 11%;
-  border-radius: 50%;
-  background: conic-gradient(from 25deg, #304eff, #808eff, #efd8d0, #547bff, #0a0e24, #304eff);
-  filter: blur(36px);
-  opacity: 0.75;
-  animation: midnight-halo 4s ease-out 1 both;
-}
-.midnight-eclipse__orb {
-  position: relative;
-  width: 76%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  padding: 3px;
-  background: conic-gradient(
-    from 25deg,
-    #383c60,
-    #909de8 12%,
-    #e6dbdd 29%,
-    #455dff 42%,
-    #080b16 59%,
-    #253875 77%,
-    #aac3ff 90%,
-    #383c60
-  );
-  box-shadow:
-    12px 20px 50px #00000070,
-    inset 0 0 9px #ced9ff;
-  transition:
-    transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 700ms;
-}
-.midnight-eclipse__face {
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 100%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 27% 12%, #2b2d3a, #101117 30%, #08090d 60%, #181a31 100%);
-  box-shadow:
-    inset 0 0 14px #b4c4ff35,
-    inset -10px -12px 25px #393d7845;
-  overflow: hidden;
-}
-.midnight-eclipse__face::after {
-  content: "";
-  position: absolute;
-  inset: -40%;
-  background: linear-gradient(125deg, transparent 40%, #c7d2ff12 47%, #fff3 49%, transparent 51%);
-  transform: translateX(-70%);
-  transition: transform 900ms;
-}
-.midnight-eclipse__face img {
-  width: 38%;
-  height: auto;
-  opacity: 0.9;
-  filter: drop-shadow(0 0 18px #a8b8ff30);
-}
-.midnight-eclipse__caption {
-  position: absolute;
-  bottom: -5%;
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  font-size: 13px;
-  letter-spacing: 0.025em;
-  color: #b4bddc;
-}
-.midnight-eclipse__caption > span:last-child {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #e3e6f4;
-}
-@media (hover: hover) {
-  .midnight-eclipse:hover .midnight-eclipse__orb {
-    transform: rotateY(-15deg) rotateX(8deg) translateY(-8px);
-    box-shadow:
-      25px 30px 70px #0009,
-      0 0 40px #748cff30;
-  }
-  .midnight-eclipse:hover .midnight-eclipse__face::after {
-    transform: translateX(70%);
-  }
-}
-.midnight-hero__base {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  width: 100%;
-  max-width: 1300px;
-  margin: auto auto 0;
-  border-top: 1px solid #ffffff1a;
-  padding-top: 20px;
-  color: #959bb1;
-  font-size: 12px;
-}
-.midnight-hero__base p {
-  margin: 0;
-}
-.midnight-hero__base p > span {
-  color: #d2d6e4;
-}
-.midnight-hero__base > a {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid #ffffff29;
-  border-radius: 50%;
+  transform: rotate(45deg);
 }
 .midnight-motion {
   border: 0;
@@ -415,8 +291,7 @@ body:has(.civic-landing) {
     sans-serif;
   min-height: 44px;
 }
-.midnight-hero[data-motion="paused"] .midnight-atmosphere > div,
-.midnight-hero[data-motion="paused"] .midnight-eclipse__halo {
+.midnight-hero[data-motion="paused"] .midnight-atmosphere > div {
   animation-play-state: paused;
 }
 @keyframes midnight-atmosphere {
@@ -425,12 +300,7 @@ body:has(.civic-landing) {
     opacity: 0.65;
   }
 }
-@keyframes midnight-halo {
-  to {
-    transform: scale(1.09) rotate(20deg);
-    opacity: 0.48;
-  }
-}
+
 .civic-landing .landing-skip {
   z-index: 50;
 }
@@ -546,31 +416,9 @@ body:has(.civic-landing) {
   .midnight-hero__learn {
     font-size: 14px;
   }
-  .midnight-eclipse {
-    width: min(100%, 410px);
-    margin: 0 auto;
-  }
-  .midnight-eclipse__caption {
-    bottom: -1%;
-    font-size: 12px;
-    gap: 6px;
-  }
   .midnight-atmosphere > div {
     inset: 30% -65% -10% -35%;
     filter: blur(30px);
-  }
-  .midnight-hero__base {
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 11px;
-  }
-  .midnight-hero__base p {
-    flex-basis: 100%;
-    line-height: 1.7;
-  }
-  .midnight-hero__base > a {
-    width: 40px;
-    height: 40px;
   }
 }
 @media (max-width: 360px) {
@@ -597,8 +445,5 @@ body:has(.civic-landing) {
   }
   .midnight-motion {
     display: none;
-  }
-  .midnight-eclipse:hover .midnight-eclipse__orb {
-    transform: none;
   }
 }
