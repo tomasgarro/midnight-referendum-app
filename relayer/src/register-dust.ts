@@ -212,12 +212,8 @@ try {
         console.log(`DUST coins: ${dustCoins}`);
         console.log(`DUST balance: ${dustBalance.toString()}`);
         if (dustCoins === 0 || dustBalance <= 0n) {
-          console.log(
-            'This wallet cannot pay fees yet. Registered NIGHT generates DUST over',
-          );
-          console.log(
-            'time, so this resolves by waiting, not by registering again.',
-          );
+          console.log('This wallet cannot pay fees yet. Registered NIGHT generates DUST over');
+          console.log('time, so this resolves by waiting, not by registering again.');
           process.exitCode = 1;
         } else {
           console.log('This wallet can pay fees.');

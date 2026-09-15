@@ -38,10 +38,13 @@ const request = {
 
 let created = false;
 try {
-  const create = await jsonApi(`${privateBase}/integrations/verificator-svc/v2/private/verification-link`, {
-    method: 'POST',
-    body: JSON.stringify(request),
-  });
+  const create = await jsonApi(
+    `${privateBase}/integrations/verificator-svc/v2/private/verification-link`,
+    {
+      method: 'POST',
+      body: JSON.stringify(request),
+    },
+  );
   assert(create.response.status === 200, `create returned ${create.response.status}`);
   assert(create.body?.data?.id === requestId, 'create response ID is not request-bound');
   assert(create.body?.data?.type === 'verification_link', 'create response type is unexpected');
@@ -58,17 +61,26 @@ try {
 
   const proofPath = new URL(proofParamsUrl).pathname;
   const publicProofParams = await fetch(`${gatewayBase}${proofPath}`);
-  assert(publicProofParams.status === 200, `public proof parameters returned ${publicProofParams.status}`);
+  assert(
+    publicProofParams.status === 200,
+    `public proof parameters returned ${publicProofParams.status}`,
+  );
 
   const blockedPrivate = await fetch(
     `${gatewayBase}/integrations/verificator-svc/private/verification-status/${encodeURIComponent(requestId)}`,
   );
-  assert(blockedPrivate.status === 404, `gateway exposed a private route (${blockedPrivate.status})`);
+  assert(
+    blockedPrivate.status === 404,
+    `gateway exposed a private route (${blockedPrivate.status})`,
+  );
 
   const wrongCallbackMethod = await fetch(
     `${gatewayBase}/integrations/verificator-svc/public/callback/${encodeURIComponent(requestId)}`,
   );
-  assert(wrongCallbackMethod.status === 404, `gateway accepted callback GET (${wrongCallbackMethod.status})`);
+  assert(
+    wrongCallbackMethod.status === 404,
+    `gateway accepted callback GET (${wrongCallbackMethod.status})`,
+  );
 
   const cleanup = await fetch(
     `${privateBase}/integrations/verificator-svc/private/user/${encodeURIComponent(requestId)}`,

@@ -40,14 +40,22 @@ if (mode === 'prepare') {
 } else if (mode === 'verify-cleanup') {
   const status = await jsonApi(statusUrl);
   assert(status.response.status === 200, `persisted status returned ${status.response.status}`);
-  assert(status.body?.data?.attributes?.status === 'not_verified', 'persisted request changed state');
+  assert(
+    status.body?.data?.attributes?.status === 'not_verified',
+    'persisted request changed state',
+  );
 
   const cleanup = await fetch(cleanupUrl, { method: 'DELETE' });
   assert(cleanup.status === 204, `cleanup returned ${cleanup.status}`);
   const afterDelete = await fetch(statusUrl);
   assert(afterDelete.status === 404, `deleted request still exists (${afterDelete.status})`);
   console.log(
-    JSON.stringify({ result: 'passed', survivedRestart: true, cleanup: 204, statusAfterCleanup: 404 }),
+    JSON.stringify({
+      result: 'passed',
+      survivedRestart: true,
+      cleanup: 204,
+      statusAfterCleanup: 404,
+    }),
   );
 } else {
   throw new Error('usage: node persistence-local.mjs <prepare|verify-cleanup>');

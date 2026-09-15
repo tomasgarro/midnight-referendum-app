@@ -20,8 +20,11 @@ Civic Pulse is a secondary, in-memory human demo inside Discover.
 
 - `npm test`: 529 tests passed across all packages.
 - `npm run build`: passed; existing large runtime chunk warnings remain.
+- `npm run verify:linux -- demo`: passed in WSL on an isolated source snapshot,
+  including fresh contract compilation and all package tests.
+- `npm audit --omit=dev`: zero production vulnerabilities.
 - Biome: zero errors after adding the imported SVG title.
-- Six landing browser checks passed before release preparation: 320/390px
+- Six landing browser checks passed against the packaged production build: 320/390px
   onboarding, reduced motion, pinned forward/reverse scroll, navigation layering,
   Humans/Agents toggle and footer.
 
@@ -43,9 +46,11 @@ archive for rollback. DNS, VPS services and public domain cutover are separate.
 
 ## Next iteration
 
-Inspect the dirty tree before editing. Older Hostinger cutover scripts,
-`relayer/src/register-dust.ts`, local QA, research and output files were preserved
-outside this PR. Do not bulk-stage or discard them.
+Inspect the dirty tree before editing. Older Hostinger cutover behavior changes,
+local QA, research and output files were preserved outside this PR. Four existing
+formatting-only failures in deployment scripts and the relayer are included in
+a separate cleanup commit so clean-checkout lint passes. Do not bulk-stage or
+discard the remaining work.
 
 Start with a visual review of the complete landing and mobile onboarding.
 Integrate the new mascot only after it is provided; polish spacing, story motion
