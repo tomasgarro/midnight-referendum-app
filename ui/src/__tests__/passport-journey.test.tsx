@@ -100,7 +100,7 @@ describe('PassportJourney', () => {
     expect(await screen.findByRole('heading', { name: 'Sesión Passport conectada' })).toBeTruthy();
     expect(connect).toHaveBeenCalledWith(
       expect.objectContaining({
-        network: 'preview',
+        network: 'devnet',
         requestedCapabilities: ['session', 'profile'],
       }),
     );

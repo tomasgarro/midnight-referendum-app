@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_MIDNIGHT_INDEXER_URL?: string;
   readonly VITE_MIDNIGHT_INDEXER_WS_URL?: string;
   readonly VITE_PASSPORT_ORIGIN?: string;
+  /** Passport account/profile network; separate from the contract runtime network. */
+  readonly VITE_PASSPORT_NETWORK?: string;
   /** HTTPS CICO backend exposing browser-safe Passport v2 domain endpoints. */
   readonly VITE_PASSPORT_V2_API_URL?: string;
   readonly VITE_CICO_ISSUER_ID?: string;

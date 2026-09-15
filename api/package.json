@@ -5,6 +5,20 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./pulse": {
+      "types": "./dist/pulse/index.d.ts",
+      "default": "./dist/pulse/index.js"
+    },
+    "./consultation": {
+      "types": "./dist/consultation/index.d.ts",
+      "default": "./dist/consultation/index.js"
+    }
+  },
   "scripts": {
     "build": "node ../scripts/sync-contract-assets.mjs && tsc --build --force",
     "test": "vitest run"

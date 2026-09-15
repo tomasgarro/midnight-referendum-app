@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { toRuntimePolls } from '../App';
 import type { PassportV2RuntimeReferendum } from '../integration/passport-v2-runtime-config';
+import { toRuntimePolls } from '../views/poll-model';
 
 function policy(value: string | null): Uint8Array {
   const result = new Uint8Array(32);

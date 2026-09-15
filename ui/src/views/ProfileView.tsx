@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { Button, Card, Display, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
 import type { ThemePreference } from '@/integration/theme';
-import { networkLabel } from '@/views/app-runtime';
+import { passportNetworkLabel } from '@/views/app-runtime';
 import './profile-view.css';
 
 const COPY = {
@@ -23,10 +23,10 @@ const COPY = {
     fallbackName: 'Tu Passport ciudadano',
     stateConnected: 'Midnight Passport conectado',
     statePending: 'Midnight Passport sin conectar',
-    lead: 'Tu cuenta para esta experiencia Preview. La elegibilidad y los comprobantes viven en secciones separadas.',
+    lead: 'Tu cuenta Passport y la red de esta sesión. La elegibilidad y las consultas viven en capas separadas.',
     connect: 'Conectar Midnight Passport',
     account: 'Cuenta Midnight Passport',
-    address: 'Dirección Preview',
+    address: 'Identificador de cuenta',
     unavailable: 'Passport no devolvió una dirección',
     copyAddress: 'Copiar dirección',
     network: 'Red',
@@ -58,10 +58,10 @@ const COPY = {
     fallbackName: 'Your citizen Passport',
     stateConnected: 'Midnight Passport connected',
     statePending: 'Midnight Passport not connected',
-    lead: 'Your account for this Preview experience. Eligibility and receipts live in separate sections.',
+    lead: 'Your Passport account and this session’s network. Eligibility and consultations remain separate layers.',
     connect: 'Connect Midnight Passport',
     account: 'Midnight Passport account',
-    address: 'Preview address',
+    address: 'Account identifier',
     unavailable: 'Passport did not return an address',
     copyAddress: 'Copy address',
     network: 'Network',
@@ -93,10 +93,10 @@ const COPY = {
     fallbackName: 'Votre Passport citoyen',
     stateConnected: 'Midnight Passport connecté',
     statePending: 'Midnight Passport non connecté',
-    lead: "Votre compte pour cette expérience Preview. L'éligibilité et les reçus vivent dans des sections distinctes.",
+    lead: "Votre compte Passport et le réseau de cette session. L'éligibilité et les consultations restent séparées.",
     connect: 'Connecter Midnight Passport',
     account: 'Compte Midnight Passport',
-    address: 'Adresse Preview',
+    address: 'Identifiant du compte',
     unavailable: "Passport n'a pas renvoyé d'adresse",
     copyAddress: "Copier l'adresse",
     network: 'Réseau',
@@ -202,7 +202,9 @@ export function ProfileView({
           <dl>
             <div>
               <dt>{copy.network}</dt>
-              <dd>{networkLabel(locale)}</dd>
+              <dd>
+                {passportSession ? passportNetworkLabel(passportSession.network, locale) : '—'}
+              </dd>
             </div>
             <div>
               <dt>{copy.passportStatus}</dt>

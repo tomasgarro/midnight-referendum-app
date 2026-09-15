@@ -7,9 +7,12 @@ Undeployed v2 lifecycle has an operator-verified local run, and its sanitized
 manifest/transcript are preserved at
 [docs/evidence/undeployed-v2/abdd0a2/](evidence/undeployed-v2/abdd0a2/).
 That record is tied to one source SHA and the older frozen-enrollment model; it
-is not evidence for the current branch.
-This document does not assert a Preview deployment, Passport approval, NFC
-session, release identity, CI result, test total, URL, or video.
+is not evidence for the current branch. Separate 2 September evidence records
+an earlier-SHA Registry V1 and Referendum V2 deployment, issuance, and root
+attestation on Preview, but no citizen vote or final receipt. See the [13
+September release record](releases/2026-09-13-current-state.md). This document
+does not assert current-head deployment, Passport credential approval, physical
+NFC, production readiness, or an official-election capability.
 
 The weekly product and submission cadence for the August–November 2026 program
 lives in [`BUILDATHON-ROADMAP.md`](BUILDATHON-ROADMAP.md). This document remains
@@ -47,13 +50,15 @@ post-Preview work.
 
 | Stage | Initiative | Intended outcome | Exit evidence | Status |
 | --- | --- | --- | --- | --- |
+| Now | Local human civic pulse | People can reflect on priorities before encountering identity or voting machinery | In-memory-only flow; cap, skip, back, review, reset, and no-network/storage tests | Implemented locally; no real collection |
+| Now | Actor-lane separation | Human and synthetic-agent participation can never share authorization, result, or cache semantics | Lane-bound ports, fail-closed fixture tests, separate future product labels | v1 domain boundary implemented; real adapters gated |
 | Now | Passport-first preview journey | People can understand the trust model and complete a wallet-less demo | Consent-to-receipt journey; explicit synthetic/provider disclosures | Synthetic journey path present; live Passport profile/session evidence recorded; credential and Preview action pending |
 | Now | Provider-neutral domain ports | Rarimo and future Passport-native providers remain replaceable | Session, credential, and action conformance checks; no provider transports in use cases | Source path present; verification pending |
 | Now | Quality and deployment foundation | Every change has repeatable checks and a safe hosting topology | Compact/API/UI/E2E pipeline, production build, Hostinger static artifact, isolated VPS plan | Configuration present; release checks pending |
 | Now | Credential Registry V1 + referendum policy | Claims are issuer-bound and reusable while each referendum pins an initial root and accepts only attested later roots | Compact simulator checks, TS/Compact golden vectors, wrong-root and policy rejection | Source path present; the preserved `abdd0a2` run is historical frozen-model evidence |
 | Next | Rarimo evidence adapter + issuer | A physical passport verification can authorize a provider-neutral credential for an open enrollment epoch | Server-verified callback, claim-bound authorization, replay/idempotency checks, raw-data deletion check, synthetic and Rarimo conformance parity | In progress; source boundary exists, but trusted verificator, callback approval, funded issuer, physical NFC transcript, and runtime evidence remain gates |
 | Now | Open-enrollment coordinator | Participants enroll during the published window; later roots are attested and accepted before the deadline | Indexer-reconciled enrollment close/accepted-root transcript; UI states for open, closed, eligible, and next consultation | Source path present; current runtime evidence pending |
-| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Preview evidence pending; historical local transcript is not current evidence |
+| Now | Real Midnight v2 action | The browser proves and submits the v2 vote, then waits for canonical confirmation | Fresh issue/cast/reveal/finalize transaction IDs and independent indexer reconciliation | Deployment/issuance evidence exists for an earlier SHA; citizen vote/reveal/finalize evidence remains pending |
 | Now | Atomic sponsored relay | Wallet-less voting cannot double-spend DUST or fund arbitrary actions | Authorization, allowlist, idempotency, concurrency, restart, and indexer-lag checks | Source path present; hosted/Preview evidence pending |
 | Next | Encrypted private state and receipts | Voting state and receipts remain privacy-preserving across refresh/restart | Threat model, encrypted IndexedDB checks, choice-free receipt UX, no sensitive storage/log matches | In progress; live recovery evidence pending |
 | Later | Invited Preview pilot | A small cohort completes real passport-backed consultations reliably | Acceptance funnel, support runbook, incident exercise, privacy review, uptime/error data | Gated |

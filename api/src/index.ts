@@ -458,6 +458,8 @@ export function createStateObservable(
   );
 }
 
+export * from './consultation/index.js';
 export * from './passport-v2/index.js';
 export type { PassportSession as CivicPassportSession } from './passport-v2/types.js';
+export * from './pulse/index.js';
 export * from './receipts/index.js';

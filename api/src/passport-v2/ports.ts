@@ -26,7 +26,7 @@ export type PassportHolderBindingResult =
       readonly status: 'verified';
       /** Public commitment only; never a voter secret or credential opening. */
       readonly holderBinding: Uint8Array;
-      readonly network: Extract<PassportNetwork, 'preview' | 'devnet'>;
+      readonly network: Extract<PassportNetwork, 'preview' | 'devnet' | 'stagenet'>;
       readonly sessionId: string;
     }
   | {
@@ -36,7 +36,7 @@ export type PassportHolderBindingResult =
 
 export interface PassportHolderBindingRequest {
   readonly session: PassportSession;
-  readonly network: Extract<PassportNetwork, 'preview' | 'devnet'>;
+  readonly network: Extract<PassportNetwork, 'preview' | 'devnet' | 'stagenet'>;
 }
 
 /**

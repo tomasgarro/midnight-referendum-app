@@ -1,17 +1,18 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { startPassportHandshakeWatch } from '@/integration/passport';
+import { PASSPORT_ORIGIN } from '@/views/app-runtime';
 import { App } from './App';
-import { startPassportHandshakeWatch } from './integration/passport';
 import './index.css';
 
-// Embedded Passport posts its handshake unprompted as soon as the frame loads
-// and stops re-broadcasting once anything answers, so the listener has to be
-// running before React mounts — not when the user presses "connect".
-startPassportHandshakeWatch(
-  import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com',
-);
+// Passport can post its embedded ready message before React finishes loading.
+// Latch the bound handshake immediately so onboarding can resume reliably.
+startPassportHandshakeWatch(PASSPORT_ORIGIN);
 
-createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (!root) throw new Error('Application root is missing');
+
+createRoot(root).render(
   <StrictMode>
     <App />
   </StrictMode>,

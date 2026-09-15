@@ -4,6 +4,7 @@ import {
   GlobeHemisphereWest,
   MapPin,
   ShieldCheck,
+  UsersThree,
 } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -62,6 +63,11 @@ const COPY = {
     fromContract: 'Estado público leído desde Midnight',
     empty: 'No hay consultas publicadas en este alcance todavía.',
     passOnFile: 'Pase registrado para',
+    pulseEyebrow: 'Pulso cívico · Demo local',
+    pulseTitle: '¿Qué debería priorizar el gobierno?',
+    pulseBody:
+      'Elegí prioridades y reflexioná sobre valores sin iniciar sesión. Tus respuestas no se envían ni se guardan.',
+    pulseAction: 'Probar el pulso cívico',
   },
   en: {
     eyebrow: 'Discover',
@@ -92,6 +98,11 @@ const COPY = {
     fromContract: 'Public state read from Midnight',
     empty: 'No consultations are published in this scope yet.',
     passOnFile: 'Pass on file for',
+    pulseEyebrow: 'Civic pulse · Local demo',
+    pulseTitle: 'What should government prioritize?',
+    pulseBody:
+      'Choose priorities and reflect on values without signing in. Your answers are not sent or stored.',
+    pulseAction: 'Try the civic pulse',
   },
   fr: {
     eyebrow: 'Découvrir',
@@ -123,6 +134,11 @@ const COPY = {
     fromContract: 'État public lu depuis Midnight',
     empty: "Aucune consultation n'est encore publiée dans ce périmètre.",
     passOnFile: 'Laissez-passer enregistré pour',
+    pulseEyebrow: 'Pouls civique · Démo locale',
+    pulseTitle: 'Que devrait prioriser le gouvernement ?',
+    pulseBody:
+      'Choisissez des priorités et réfléchissez aux valeurs sans vous connecter. Vos réponses ne sont ni envoyées ni enregistrées.',
+    pulseAction: 'Essayer le pouls civique',
   },
 } as const;
 
@@ -133,6 +149,7 @@ export interface VotesViewProps {
   readonly onStartVote: (pollId: string) => void;
   readonly onOpenPolicy: (pollId: string) => void;
   readonly onOpenPassportJourney: () => void;
+  readonly onOpenPulse: () => void;
   readonly locale: CicoLocale;
 }
 
@@ -143,6 +160,7 @@ export function VotesView({
   onStartVote,
   onOpenPolicy,
   onOpenPassportJourney,
+  onOpenPulse,
   locale,
 }: VotesViewProps) {
   const copy = COPY[locale];
@@ -194,6 +212,20 @@ export function VotesView({
         <Display>{copy.title}</Display>
         <p className="votes__lead">{copy.lead}</p>
       </header>
+
+      <section className="votes__pulse" aria-labelledby="civic-pulse-title">
+        <span className="votes__pulse-icon" aria-hidden="true">
+          <UsersThree size={23} />
+        </span>
+        <div className="votes__pulse-copy">
+          <p className="sys-eyebrow">{copy.pulseEyebrow}</p>
+          <h2 id="civic-pulse-title">{copy.pulseTitle}</h2>
+          <p>{copy.pulseBody}</p>
+          <Button size="sm" onClick={onOpenPulse}>
+            {copy.pulseAction} <ArrowRight size={16} />
+          </Button>
+        </div>
+      </section>
 
       <button
         type="button"

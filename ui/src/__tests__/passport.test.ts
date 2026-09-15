@@ -186,7 +186,7 @@ describe('PassportIdentityBridge', () => {
     await expect(pending).rejects.toMatchObject({ code: 'wrong_network' });
   });
 
-  it('rejects a malformed ready message from the trusted Passport popup', async () => {
+  it('accepts additive ready-message fields while validating the bound handshake', async () => {
     const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
     let opened = '';
     const bridge = new PassportIdentityBridge({
@@ -208,14 +208,15 @@ describe('PassportIdentityBridge', () => {
           type: 'passport.profile.ready',
           requestId: query.get('passportRequestId'),
           nonce: query.get('passportNonce'),
-          unexpected: true,
+          network: 'stagenet',
+          protocolVersion: 2,
         },
       }),
     );
-    await expect(pending).rejects.toMatchObject({ code: 'invalid_response' });
+    await expect(pending).rejects.toMatchObject({ code: 'wrong_network' });
   });
 
-  it('rejects a matching-origin response with an unknown field', async () => {
+  it('ignores additive response fields and consumes only the requested profile fields', async () => {
     const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
     let opened = '';
     const bridge = new PassportIdentityBridge({
@@ -251,11 +252,67 @@ describe('PassportIdentityBridge', () => {
           requestId,
           nonce,
           approved: true,
-          profile: { displayName: 'Bubbles', unexpected: 'reject-me' },
+          responseVersion: 2,
+          profile: { displayName: 'Bubbles', unexpected: 'ignore-me' },
         },
       }),
     );
-    await expect(pending).rejects.toMatchObject({ code: 'invalid_response' });
+    await expect(pending).resolves.toMatchObject({ displayName: 'Bubbles' });
+  });
+
+  it('connects to the Passport Stagenet profile surface', async () => {
+    const popup = { postMessage: vi.fn(), closed: false } as unknown as Window;
+    let opened = '';
+    const bridge = new PassportIdentityBridge({
+      passportOrigin: ORIGIN,
+      network: 'stagenet',
+      timeoutMs: 200,
+      openPassport: (url) => {
+        opened = url;
+        return popup;
+      },
+    });
+    const pending = bridge.connect(['displayName'], 'stagenet');
+    const query = new URL(opened).searchParams;
+    const requestId = query.get('passportRequestId');
+    const nonce = query.get('passportNonce');
+    expect(query.get('passportNetwork')).toBe('stagenet');
+    if (!requestId || !nonce) throw new Error('Passport request parameters were not created');
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.ready',
+          requestId,
+          nonce,
+          network: 'stagenet',
+          capabilities: ['profile'],
+        },
+      }),
+    );
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: ORIGIN,
+        source: popup,
+        data: {
+          protocol: PASSPORT_PROFILE_PROTOCOL,
+          type: 'passport.profile.response',
+          requestId,
+          nonce,
+          approved: true,
+          network: 'stagenet',
+          profile: { displayName: 'tomas.night' },
+        },
+      }),
+    );
+
+    await expect(pending).resolves.toMatchObject({
+      displayName: 'tomas.night',
+      network: 'stagenet',
+    });
   });
 
   it('fails closed when a response network changes after a valid ready', async () => {

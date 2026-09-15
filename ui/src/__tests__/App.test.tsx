@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { App } from '../App';
+import { CivicRuntime as App } from '../CivicRuntime';
 
 /**
  * The onboarding is one straight line: welcome, what the three things are,
@@ -108,6 +108,26 @@ describe('App', () => {
     expect(verify.textContent?.trim()).toBe('');
     expect(verify.querySelector('svg')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'midnight.vote' })).toBeTruthy();
+  });
+
+  it('keeps the civic pulse inside the dashboard instead of making it the product home', async () => {
+    skipOnboarding();
+    render(<App />);
+    const user = userEvent.setup();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Decisiones que podés explorar' }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Probar el pulso cívico/i }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'What should government focus on?' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Back to the app/i })).toBeTruthy();
+    expect(screen.queryByRole('navigation')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Back to the app/i }));
+    expect(screen.getByRole('heading', { name: 'Decisiones que podés explorar' })).toBeTruthy();
   });
 
   it('keeps the compact utility shell visible and opens the settings surface', async () => {
@@ -274,7 +294,9 @@ describe('App', () => {
     };
 
     await castVote(0, /^Sí/);
-    await castVote(1, /^No/);
+    // Completed consultations leave the open list, so the next distinct one
+    // becomes the first available action.
+    await castVote(0, /^No/);
     await user.click(screen.getByRole('button', { name: 'Actividad' }));
 
     // Every simulated receipt used to carry the identifier
@@ -325,7 +347,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /^Passport$/ }));
 
     expect(screen.getByText(/Midnight Passport conectado/i)).toBeTruthy();
-    expect(screen.getByText(/Dirección Preview/i)).toBeTruthy();
+    expect(screen.getByText(/Identificador de cuenta/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Bloquear y conservar datos/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Eliminar datos locales/i })).toBeTruthy();
   });

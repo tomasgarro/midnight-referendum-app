@@ -1,0 +1,364 @@
+/* Current visual revision: warm canvas, digital consent, physical proof, AI preview. */
+.landing-bridge {
+  position: relative;
+  z-index: 2;
+  margin: -26px auto 0;
+  width: min(1120px, 88%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding: 28px 34px;
+  border: 1px solid #fffdf5;
+  border-radius: 22px;
+  background: #faf7f0f2;
+  box-shadow: 0 16px 45px #5146350b;
+  font-family: Outfit, sans-serif;
+}
+.landing-bridge > div {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.landing-bridge svg {
+  color: #716592;
+  flex-shrink: 0;
+}
+.landing-bridge strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 500;
+  color: #272339;
+}
+.landing-bridge small {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #827667;
+}
+.how-digital-account {
+  position: absolute;
+  left: 8%;
+  top: 10%;
+  width: 62%;
+  height: 65%;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fefdf9, #e5dfef);
+  border: 1px solid #fff;
+  box-shadow: 0 18px 35px #40395615;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #76688a;
+  padding: 18px;
+  transform: rotate(-7deg);
+}
+.how-account-dots {
+  display: flex;
+  gap: 4px;
+  align-self: flex-start;
+  margin-bottom: 14px;
+}
+.how-account-dots i {
+  height: 4px;
+  width: 4px;
+  border-radius: 50%;
+  background: #bcb2c8;
+}
+.how-digital-account strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.how-digital-account > span {
+  font-size: 10px;
+}
+.how-account-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.how-account-link > span {
+  width: 22px;
+  border-top: 1px dashed #a595bc;
+}
+.how-art--passport .how-consent {
+  top: 22%;
+  left: 27%;
+  width: 72%;
+  transform: rotate(4deg) scale(0.86);
+  transform-origin: top left;
+}
+.how-physical-passport {
+  position: absolute;
+  top: 16%;
+  left: 5%;
+  width: 45%;
+  height: 56%;
+  transform: rotate(-9deg);
+}
+.how-passport-cover {
+  position: absolute;
+  inset: 0 14% 0 0;
+  border: 1px solid #817180;
+  border-radius: 5px 12px 12px 5px;
+  background: linear-gradient(140deg, #51354a, #281f30);
+  color: #e2cbaa;
+  box-shadow: 0 18px 35px #251b3526;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 24px 12px;
+  gap: 15px;
+}
+.how-passport-cover strong {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  font-weight: 450;
+}
+.how-passport-cover > svg:last-child {
+  margin-top: auto;
+}
+.how-passport-page {
+  position: absolute;
+  inset: 42% -6% -3% 7%;
+  border-radius: 5px 10px 10px 5px;
+  background: repeating-linear-gradient(35deg, #f2e7d4 0px, #f2e7d4 7px, #ece0c9 8px, #f2e7d4 9px);
+  border: 1px solid #fffaed;
+  padding: 13px 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px #24183318;
+}
+.how-passport-page > span {
+  font-size: 6px;
+  letter-spacing: 0.06em;
+  color: #8d7c64;
+}
+.how-passport-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  color: #a1937f;
+}
+.how-passport-identity > div {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+}
+.how-passport-identity i {
+  height: 4px;
+  width: 90%;
+  background: #c9bda7;
+  border-radius: 2px;
+}
+.how-passport-identity i:nth-child(2) {
+  width: 60%;
+}
+.how-passport-mrz {
+  font: 7px / 1.5 monospace;
+  letter-spacing: 1px;
+  color: #746450;
+  margin-top: 10px;
+}
+.how-passport-scan {
+  position: absolute;
+  top: 10%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #8881b8;
+  box-shadow: 0 -10px 18px #817dbe50;
+  opacity: 0;
+}
+.how-proof-compute {
+  position: absolute;
+  left: 44%;
+  top: 15%;
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  font-size: 10px;
+  color: #827095;
+}
+.how-proof-compute code {
+  color: #9d90af;
+  font-size: 8px;
+}
+.how-art--proof .how-proof-path {
+  left: 43%;
+  width: 18%;
+  top: 47%;
+}
+.how-art--proof .how-proof-seal {
+  width: 39%;
+  right: 4%;
+  top: 30%;
+}
+.how-art--proof .how-proof-result {
+  top: 76%;
+  right: 6%;
+}
+.how-panel[data-active="true"] .how-passport-scan {
+  animation: passport-scan 2s ease-in-out 2;
+}
+.how-panel[data-active="true"] .how-proof-compute code {
+  animation: proof-calculate 1s steps(3) 4;
+}
+.how-ai-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  margin: 14px 0 18px;
+  border: 1px solid #dcd3e1;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #ede6f0, #f8f3e9);
+}
+.how-ai-preview strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: #49405f;
+}
+.how-ai-preview p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 5px 0;
+  color: #706579;
+}
+.how-ai-preview small {
+  font-size: 10px;
+  color: #8a7b8f;
+}
+.how-ai-robot {
+  width: 46px;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #75648b;
+}
+.how-ai-robot svg {
+  flex-basis: 100%;
+}
+.how-ai-robot > span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #b4a2c9;
+}
+.how-panel[data-active="true"] .how-ai-robot svg {
+  animation: robot-read 2s ease-in-out 2;
+}
+.how-panel[data-active="true"] .how-ai-robot > span {
+  animation: proof-calculate 1s steps(3) 4;
+}
+.how-panel[data-active="true"] .how-ai-robot > span:nth-child(3) {
+  animation-delay: 0.2s;
+}
+@keyframes passport-scan {
+  0%,
+  100% {
+    top: 12%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  85% {
+    top: 88%;
+    opacity: 0.8;
+  }
+}
+@keyframes proof-calculate {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes robot-read {
+  50% {
+    transform: translateY(-3px) rotate(-6deg);
+  }
+}
+@media (max-width: 959px) {
+  .landing-bridge {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 24px;
+    max-width: 520px;
+  }
+  .landing-bridge small {
+    font-size: 14px;
+  }
+  .how-art--passport .how-consent {
+    top: 25%;
+    width: 80%;
+    left: 24%;
+    transform: rotate(4deg) scale(0.8);
+  }
+  .how-digital-account {
+    height: 60%;
+  }
+}
+@media (max-width: 380px) {
+  .how-passport-cover {
+    padding: 15px 8px;
+    gap: 10px;
+  }
+  .how-passport-cover strong {
+    font-size: 9px;
+  }
+  .how-passport-page {
+    padding: 10px 8px;
+  }
+  .how-passport-mrz {
+    font-size: 5px;
+    letter-spacing: 0.5px;
+  }
+  .how-passport-page > span {
+    font-size: 5px;
+  }
+  .how-proof-compute {
+    font-size: 8px;
+  }
+  .how-digital-account > svg {
+    width: 54px;
+  }
+  .how-digital-account strong {
+    font-size: 13px;
+  }
+  .how-digital-account > span {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .how-panel[data-active="true"] .how-passport-scan,
+  .how-panel[data-active="true"] .how-proof-compute code,
+  .how-panel[data-active="true"] .how-ai-robot svg,
+  .how-panel[data-active="true"] .how-ai-robot > span {
+    animation: none;
+  }
+}
+@media (max-width: 959px) {
+  .how-art--passport .how-consent {
+    top: 17%;
+    width: 84%;
+    left: 25%;
+    transform: rotate(4deg) scale(0.75);
+  }
+  .how-digital-account {
+    align-items: flex-start;
+  }
+  .how-digital-account > svg {
+    width: 48px;
+    height: 48px;
+  }
+  .how-digital-account strong {
+    max-width: 120px;
+  }
+  .how-art--passport .how-art__badge {
+    bottom: 3%;
+  }
+}

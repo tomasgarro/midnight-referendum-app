@@ -5,6 +5,7 @@ import type {
   PassportSessionPort,
 } from 'midnight-referendum-api';
 import { type ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ProofPlayground } from '@/components/landing/ProofPlayground';
 import { CapybaraMascot } from '@/components/mascot';
 import { CountryFlag, CountryPicker, JourneyTopBar, SuccessMark } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
@@ -12,6 +13,7 @@ import type { OnboardingStage } from '@/integration/civic-state';
 import { countryName, findAssignedCountry } from '@/integration/country-catalog';
 import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
+import { PASSPORT_ACCOUNT_NETWORK, passportNetworkLabel } from '@/views/app-runtime';
 import {
   type DocumentReadResult,
   DocumentVerificationJourney,
@@ -113,7 +115,9 @@ const copy = {
 
     // 1 · welcome
     welcomeTitle: 'midnight.vote',
-    welcomeSubtitle: 'Una nueva forma de votar',
+    welcomeSubtitle: 'Tu voz. Tu elección. Tu secreto.',
+    welcomeNote:
+      'Un recorrido corto para aprender sobre privacidad y probar una consulta no vinculante.',
     start: 'Comenzar',
     signIn: '¿Ya tenés Passport? Conectate',
 
@@ -221,7 +225,8 @@ const copy = {
     why: 'Why is this needed?',
 
     welcomeTitle: 'midnight.vote',
-    welcomeSubtitle: 'A new way of voting',
+    welcomeSubtitle: 'Your voice. Your choice. Your secret.',
+    welcomeNote: 'A short journey to learn about privacy and try a non-binding consultation.',
     start: 'Get started',
     signIn: 'Already have Passport? Connect',
 
@@ -324,7 +329,9 @@ const copy = {
     why: 'Pourquoi est-ce nécessaire ?',
 
     welcomeTitle: 'midnight.vote',
-    welcomeSubtitle: 'Une nouvelle façon de voter',
+    welcomeSubtitle: 'Votre voix. Votre choix. Votre secret.',
+    welcomeNote:
+      'Un court parcours pour découvrir la confidentialité et essayer une consultation non contraignante.',
     start: 'Commencer',
     signIn: 'Vous avez déjà Passport ? Connectez-vous',
 
@@ -505,7 +512,7 @@ export function UnifiedPassportOnboarding({
         if (!passportPort) throw new Error(t.error);
         next = await passportPort.connect({
           origin: window.location.origin,
-          network: 'preview',
+          network: PASSPORT_ACCOUNT_NETWORK,
           requestedCapabilities: ['session', 'profile'],
         });
       } else {
@@ -520,10 +527,10 @@ export function UnifiedPassportOnboarding({
       }
       if (mode !== 'demo' && passportPort) {
         const holderBindingPort = passportHolderBindingPort(passportPort);
-        if (holderBindingPort) {
+        if (holderBindingPort && next.network !== 'mainnet') {
           const result = await holderBindingPort.getHolderBinding({
             session: next,
-            network: 'preview',
+            network: next.network,
           });
           setHolderBinding(result);
         }
@@ -550,7 +557,7 @@ export function UnifiedPassportOnboarding({
   const localizedLocale = locale === 'es' ? 'es' : 'en';
 
   return (
-    <main className="page-content passport-journey-page unified-onboarding">
+    <main className="page-content passport-journey-page unified-onboarding" data-stage={stage}>
       <JourneyTopBar
         locale={locale}
         onLocaleChange={setLanguage}
@@ -571,11 +578,23 @@ export function UnifiedPassportOnboarding({
           className="journey-screen journey-welcome"
           aria-labelledby="onboarding-welcome-title"
         >
-          <CapybaraMascot variant="waving" alt={t.mascotWaving} size={190} priority />
-          <h1 className="journey-screen__title" id="onboarding-welcome-title" ref={headingRef}>
+          <div className="journey-mascot-scene">
+            <span className="journey-mascot-scene__moon" aria-hidden="true" />
+            <CapybaraMascot variant="waving" alt={t.mascotWaving} size={230} priority />
+            <span className="journey-mascot-scene__seal" aria-hidden="true">
+              <Lock size={20} />
+            </span>
+          </div>
+          <h1
+            className="journey-screen__title"
+            id="onboarding-welcome-title"
+            ref={headingRef}
+            tabIndex={-1}
+          >
             {t.welcomeTitle}
           </h1>
           <p className="journey-welcome__subtitle">{t.welcomeSubtitle}</p>
+          <p className="journey-welcome__note">{t.welcomeNote}</p>
           <div className="journey-screen__actions">
             <button
               className="passport-action-button primary"
@@ -601,9 +620,15 @@ export function UnifiedPassportOnboarding({
       {stage === 'privacy' ? (
         <section className="journey-screen" aria-labelledby="onboarding-privacy-title">
           <CapybaraMascot variant="reading" alt={t.mascotReading} size={150} />
-          <h1 className="journey-screen__title" id="onboarding-privacy-title" ref={headingRef}>
+          <h1
+            className="journey-screen__title"
+            id="onboarding-privacy-title"
+            ref={headingRef}
+            tabIndex={-1}
+          >
             {t.privacyTitle}
           </h1>
+          <ProofPlayground locale={locale} />
           {/* The paragraph that used to sit here summarised the three items
               below it in one sentence, so the reader read the same idea twice
               before reaching either. The items are the explanation. */}
@@ -632,7 +657,13 @@ export function UnifiedPassportOnboarding({
 
       {stage === 'passport' ? (
         <section className="journey-screen" aria-labelledby="onboarding-passport-title">
-          <h1 className="journey-screen__title" id="onboarding-passport-title" ref={headingRef}>
+          <CapybaraMascot variant={connecting ? 'waiting' : 'thinking'} decorative size={140} />
+          <h1
+            className="journey-screen__title"
+            id="onboarding-passport-title"
+            ref={headingRef}
+            tabIndex={-1}
+          >
             {t.passportTitle}
           </h1>
           <p className="journey-screen__body">{t.passportBody}</p>
@@ -677,7 +708,15 @@ export function UnifiedPassportOnboarding({
 
       {stage === 'consent-return' ? (
         <section className="journey-screen" aria-labelledby="onboarding-consent-title">
-          <h1 className="journey-screen__title" id="onboarding-consent-title" ref={headingRef}>
+          <div className="journey-consent-seal" aria-hidden="true">
+            <CheckCircle size={48} weight="thin" />
+          </div>
+          <h1
+            className="journey-screen__title"
+            id="onboarding-consent-title"
+            ref={headingRef}
+            tabIndex={-1}
+          >
             {t.consentTitle}
           </h1>
           <p className="journey-screen__body">{t.consentBody}</p>
@@ -685,7 +724,10 @@ export function UnifiedPassportOnboarding({
             <CheckCircle size={22} />
             <span>
               <strong>{t.connected}</strong>
-              <small>{session?.profile?.displayName ?? 'Passport'}</small>
+              <small>
+                {session?.profile?.displayName ?? 'Passport'}
+                {session ? ` · Passport ${passportNetworkLabel(session.network, locale)}` : ''}
+              </small>
             </span>
           </div>
           {/* Only the half that changed. The "not requested" row was identical
@@ -739,7 +781,12 @@ export function UnifiedPassportOnboarding({
           ) : (
             <>
               <CapybaraMascot variant="passport" alt={t.mascotPassport} size={140} />
-              <h1 className="journey-screen__title" id="onboarding-evidence-title" ref={headingRef}>
+              <h1
+                className="journey-screen__title"
+                id="onboarding-evidence-title"
+                ref={headingRef}
+                tabIndex={-1}
+              >
                 {t.eligibilityTitle}
               </h1>
               <p className="journey-screen__body">{t.eligibilityBody}</p>
@@ -807,7 +854,12 @@ export function UnifiedPassportOnboarding({
             <CapybaraMascot variant="achievement" alt={t.mascotAchievement} size={168} />
             <SuccessMark label={t.successMark} size="sm" />
           </div>
-          <h1 className="journey-screen__title" id="onboarding-success-title" ref={headingRef}>
+          <h1
+            className="journey-screen__title"
+            id="onboarding-success-title"
+            ref={headingRef}
+            tabIndex={-1}
+          >
             {t.successTitle}
           </h1>
           <p className="journey-screen__body">{t.successBody}</p>

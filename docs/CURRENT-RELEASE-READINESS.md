@@ -1,9 +1,11 @@
 # Current release readiness
 
-Status: working readiness snapshot for the checkout reviewed on 31 August
-2026, revised the same day after a full user-action audit and a journey
-rebuild. This is not a release approval or a Midnight Preview transaction
-record. A static demo URL exists (below); no Preview release SHA is assigned.
+Status: working readiness snapshot reconciled on 13 September 2026. This is
+not a release approval and does not claim that current source is deployed. A
+static demo URL exists. Preserved 2 September evidence records an earlier-SHA
+Preview registry/referendum deployment, issuance, and root attestation, but no
+citizen vote, reveal, final tally, or citizen receipt. See the [dated release
+record](releases/2026-09-13-current-state.md).
 
 Two companion documents carry the detail this page summarises:
 
@@ -14,8 +16,11 @@ Two companion documents carry the detail this page summarises:
 
 ## Release boundary
 
-The current release is a voting-first, passport-aware civic consultation with
-an honest synthetic fallback. It can explain the privacy model and exercise a
+The current local source is a pulse-first, passport-aware civic consultation
+with an honest synthetic fallback. The mascot-led first-run journey explains
+the privacy model before the dashboard. The civic-priorities demo is launched
+from Discover, retains answers only in component memory, and does not submit
+them. The referendum workspace can exercise a
 simulated enrollment and vote without a wallet, funds, Passport credential,
 Rarimo device, hosted issuer, relayer, or Preview network. Every simulated
 credential, vote, and receipt must be labelled as simulated.
@@ -30,7 +35,9 @@ uses the older frozen-before-deploy model and is not current release evidence.
 
 | Capability | Current release position | Evidence needed before a live claim |
 | --- | --- | --- |
-| Passport | Session, consent, and optional display profile only. A real profile/session handshake is evidenced; profile fields never authorize eligibility or a vote. | Fresh approved-origin/network transcript if the deployment changes, plus independent privacy review. |
+| Civic pulse | Local human-lane demo only; answers are held in memory and completion explicitly reports `submitted: false`. | Independently reviewed secure aggregation, consent/retention, operator trust, and publication policy before any real response is accepted. |
+| Synthetic agents | Future lane only; no integration is enabled and no synthetic result can fall back into the human fixture. | Separate identity, authorization audience, storage/result namespace, audit trail, and public label. |
+| Passport | Stagenet session, consent, and optional display profile only. The bridge accepts additive official response fields, consumes only its allowlist, and profile fields never authorize eligibility or a vote. | Fresh approved-origin/network transcript if the deployment changes, plus independent privacy review. |
 | Rarimo | Temporary NFC evidence adapter behind `cico-service`; only minimal issuer-bound claims cross the boundary. | Pinned self-hosted verifier, authenticated callback, physical-device NFC transcript, deletion/retention inspection, and replay tests. |
 | Eligibility | Synthetic fallback is available and labelled. A real credential requires a trusted provider result and issuer receipt. | Fresh Preview issuance transcript tied to the exact release SHA and registry. |
 | Voting | Primary product action. The browser owns choice, voter secret, opening, and witness; confirmed receipts come from the indexer. | Fresh Preview cast/reveal/finalize transcript, relay authorization review, and independent indexer reconciliation. |
@@ -41,12 +48,12 @@ uses the older frozen-before-deploy model and is not current release evidence.
 
 | Gate | Current state | Release rule |
 | --- | --- | --- |
-| Static web artifact | **Current synthetic jury demo deployed 1 September 2026** at `https://lightskyblue-emu-103266.hostingersite.com/`. Archive SHA-256: `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`; all 79 files match `ui/dist`; HTTPS render and first-action smoke checks passed without browser errors. | Publish only the reviewed artifact with an exact SHA, HTTPS, interaction smoke test, and privacy/network check. |
+| Static web artifact | **Synthetic jury demo deployed 1 September 2026** at `https://lightskyblue-emu-103266.hostingersite.com/`. On 13 September its HTML, main JS, and main CSS matched archive `ui_jury-demo_20260901_231135.zip` (SHA-256 `6BDCEEA1F87E5AD817F3D30A41B30C522408BD8F40F4EE1BBE3D6CBEC4DF9828`). This verifies those three entry assets, not current-source equivalence. | Publish only the reviewed artifact with an exact source SHA and artifact digest, HTTPS, interaction smoke test, and privacy/network check. |
 | Host topology | Target is Hostinger static web plus isolated Hostinger VPS stateful services. | Static hosting never receives service secrets; issuer, verifier, database, and relayer remain isolated on stateful infrastructure. |
 | Synthetic fallback | Intended and required when live dependencies are absent. | Fallback is explicit and cannot emit live credential, vote, or canonical-receipt wording. |
 | Passport session | A live profile/session handshake is evidenced at [`evidence/passport-live/2026-08-31-first-real-session.md`](evidence/passport-live/2026-08-31-first-real-session.md). The observed flow required the person's consent sheet, not origin allowlisting; it returned no Preview address or credential. | Request only the approved profile/session capabilities; reject wrong origin, network, nonce, or schema, and rerun for any changed release origin. |
-| Rarimo/NFC | Adapter boundary exists; physical evidence and hosted verifier are unverified. | Never describe fixtures or source adapters as genuine NFC verification. |
-| Preview contracts | No current Preview deployment or receipt is asserted. | Require a fresh manifest/transcript for the exact release SHA and network. |
+| Rarimo/NFC | A digest-pinned Hostinger staging topology and cleanup checks were recorded on 2 September; physical NFC remains unverified. | Never describe staging, fixtures, or source adapters as a physical NFC/ePassport run. |
+| Preview contracts | Earlier-SHA evidence records Registry V1 and Referendum V2 deployment, issuance, and root attestation. No citizen vote or receipt is recorded. | Require a fresh manifest/transcript tied to the release SHA, including citizen cast/reveal/finalize and independent indexer reconciliation. |
 | Stateful action relay | Source path exists; hosted operations and Preview evidence are unverified. | Require authenticated, idempotent, allowlisted actions and indexer confirmation before calling a receipt confirmed. |
 | Privacy/security review | Design constraints are documented; independent audit is pending. | Scan logs, bundle, storage, and network behavior before any invited pilot. |
 | Citizen-journey honesty | Audited 31 August 2026 against every CTA. One correctness defect (simulated receipts overwrote each other) and three misleading states were found and fixed; four gaps remain open. | No screen may report a failure for a capability the build does not use, or present fixture material as runtime material. |
@@ -97,10 +104,12 @@ would be visible to a participant in a pilot:
 The current synthetic fallback was built with `VITE_APP_MODE=demo` and packaged
 with `index.html` at the ZIP root:
 
-- local path: `deploy/hostinger/artifacts/ui_jury-demo.zip`;
-- SHA-256: `99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`;
+- local path: `deploy/hostinger/artifacts/ui_jury-demo_20260901_231135.zip`;
+- SHA-256: `6BDCEEA1F87E5AD817F3D30A41B30C522408BD8F40F4EE1BBE3D6CBEC4DF9828`;
 - privacy scan: `npm run verify:showcase` passed;
-- archive comparison: all 79 files match the reviewed `ui/dist`;
+- live comparison on 13 September: HTML, main JS, and main CSS match the
+  archive byte-for-byte; no claim is made for every archive file or an exact
+  deployed-source SHA;
 - hosted verification: HTTPS 200, expected rendered jury copy, SPA fallback,
   and first interactions at 320/390/tablet/desktop passed without horizontal
   overflow, page errors, or console errors;

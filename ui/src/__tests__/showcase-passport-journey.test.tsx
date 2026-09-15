@@ -26,7 +26,7 @@ describe('Passport-first public showcase', () => {
     const connect = vi.fn().mockResolvedValue({
       sessionId: 'passport-request-1',
       origin: 'http://localhost:3000',
-      network: 'preview',
+      network: 'stagenet',
       status: 'connected',
       profile: { displayName: 'alice.night' },
       capabilities: ['session', 'profile'],
@@ -48,7 +48,8 @@ describe('Passport-first public showcase', () => {
     expect(connect).toHaveBeenCalledWith(
       expect.objectContaining({ requestedCapabilities: ['session', 'profile'] }),
     );
-    expect(await screen.findByText('alice.night')).toBeTruthy();
+    expect((await screen.findByRole('status')).textContent).toContain('alice.night');
+    expect(screen.getByRole('status').textContent).toContain('Passport Stagenet');
     await user.click(screen.getByRole('button', { name: /Continue/i }));
     await user.click(screen.getByRole('button', { name: /Create my simulated pass/i }));
     expect(screen.getByRole('heading', { name: 'Your eligibility pass is ready' })).toBeTruthy();

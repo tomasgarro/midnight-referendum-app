@@ -41,7 +41,7 @@ test('submits a browser vote through the local sponsored relayer', async ({ page
     `,
   });
 
-  await page.goto('/');
+  await page.goto('/#app');
   await page.getByRole('button', { name: /Votá ahora/i }).waitFor();
   await page.evaluate(() => {
     window.__cicoInjectFixtureSecret = true;

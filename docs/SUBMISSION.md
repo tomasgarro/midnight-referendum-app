@@ -1,30 +1,33 @@
 # Referéndum Cívico — jury submission brief
 
-**Snapshot:** 1 September 2026 · **Product:** a non-binding civic
+**Snapshot:** reconciled 13 September 2026 · **Product:** a non-binding civic
 consultation prototype for Midnight
 
 This page is the shortest honest route through the repository for a jury. It
 describes what can be demonstrated from source, what is independently
 observed, and what remains a target. It is not a release approval, an official
-election, a human-uniqueness claim, or a Midnight Preview deployment record.
+election or a human-uniqueness claim. Deployment statements are limited to the
+[dated release record](releases/2026-09-13-current-state.md).
 
 ## The idea in one minute
 
-People should be able to understand and answer a civic consultation without
+People should be able to reflect on civic priorities and understand a consultation without
 publishing a profile, document, ballot choice, or voter secret. Referéndum
 Cívico makes that boundary visible:
 
-1. a person explores a consultation in plain language;
-2. Passport can provide consented profile/session display data;
-3. a separate evidence provider can eventually attest minimal eligibility;
-4. the browser keeps the voter secret, credential opening, witness, and choice
+1. a person learns the privacy and zero-knowledge model through the mascot-led onboarding;
+2. a person can explore a referendum and optionally open a local, non-submitting civic-priorities pulse from Discover;
+3. Passport can provide consented profile/session display data;
+4. a separate evidence provider can eventually attest minimal eligibility;
+5. the browser keeps the voter secret, credential opening, witness, and choice
    private;
-5. a live Midnight action would be relayed only after authorization and would
+6. a live Midnight action would be relayed only after authorization and would
    become a canonical receipt only after indexer confirmation.
 
-The current demo exercises this story with synthetic eligibility, a simulated
-vote, and a visibly simulated receipt. It does not turn a fixture into a real
-credential or transaction.
+The current local source leads with a human-lane pulse whose answers stay in
+memory, followed by the existing synthetic eligibility, simulated vote, and
+visibly simulated receipt workspace. Fixed example aggregates are labelled as
+synthetic fixtures and are never derived from the person's choices.
 
 ## What a juror can run today
 
@@ -43,35 +46,39 @@ $env:VITE_APP_MODE='demo'
 npm run dev -- --host localhost --port 4173 --strictPort
 ```
 
-Open `http://localhost:4173`. A short path through the product is:
+Open `http://localhost:4173`. The first path is:
 
 `Get started` → privacy explanation → `Use demo Passport` → `Continue` →
 choose a country → `Create my simulated pass` / `Crear mi pase simulado` →
 `See the consultations` → `Read proposal` → `Vote now` → choose an answer →
 `Review` → create the simulated receipt.
 
+From Discover, open `Try the civic pulse` → `Try the civic pulse demo` →
+choose priorities → optionally describe values and explanation needs → private
+review → local completion. No answer is sent or persisted.
+
 The simulated badge/disclosure is part of the product contract. A simulated
 receipt is local demonstration state, not a canonical chain receipt.
 
 The current synthetic jury demo is live at
 [`lightskyblue-emu-103266.hostingersite.com`](https://lightskyblue-emu-103266.hostingersite.com/).
-The deployed archive was privacy-scanned, its 79 files match the reviewed
-`ui/dist`, and its SHA-256 is
-`99FC4EAE91F4B6E8249D5EDEED6FBDC5936651B31CD7026B01D6DF231DE35529`.
-HTTPS rendering, SPA fallback, and 320/390/tablet/desktop first interactions
-were externally verified on 1 September 2026 without browser errors or
-horizontal overflow. This is current **synthetic UI**
-evidence; it is not a claim of a Preview contract deployment, real NFC proof,
-Rarimo verification, or canonical on-chain receipt.
+On 13 September its HTML, main JS, and main CSS matched
+`deploy/hostinger/artifacts/ui_jury-demo_20260901_231135.zip` byte-for-byte.
+That archive's SHA-256 is
+`6BDCEEA1F87E5AD817F3D30A41B30C522408BD8F40F4EE1BBE3D6CBEC4DF9828`.
+This verifies three live entry assets, not every archive file or an exact
+deployed-source SHA. It is synthetic UI evidence; it is not the newly
+implemented local pulse, a physical NFC run, or a canonical citizen receipt.
 
 ## Evidence matrix
 
 | Surface | What is evidenced | What is not evidenced |
 | --- | --- | --- |
-| Synthetic journey | Local demo path, source tests, and explicit simulated labels | A real credential, real vote, or canonical receipt |
+| Civic pulse | Versioned local flow, human-lane port, cap/skip/review/reset behavior, and non-submitting completion | Real collection, secure aggregation, stored responses, or representativeness |
+| Synthetic journey | Separate local referendum demo path, source tests, and explicit simulated labels | A real credential, real vote, or canonical receipt |
 | Passport profile/session | A human-observed live handshake returning only the requested profile field; see [`evidence/passport-live/2026-08-31-first-real-session.md`](evidence/passport-live/2026-08-31-first-real-session.md) | Passport credential, wallet, recovery, holder binding, Preview address, or Passport-to-contract authority |
-| Contract policy and ports | Checked-in Compact contracts, provider-neutral ports, simulator/unit coverage, and a historical local lifecycle | A current Preview deployment, funded action, or current release manifest |
-| Rarimo/NFC | Temporary adapter boundary, minimal-claim design, and source/conformance tests | Hosted verifier, authenticated callback, real proof, or a physical NFC/ePassport run |
+| Contract policy and ports | Checked-in Compact contracts, provider-neutral ports, simulator/unit coverage, historical local lifecycle, and earlier-SHA Preview deployment/issuance/attestation evidence | A current-source citizen vote, reveal, final tally, or canonical citizen receipt |
+| Rarimo/NFC | Temporary adapter boundary, minimal-claim design, source/conformance tests, and recorded digest-pinned Hostinger staging/cleanup checks | A physical NFC/ePassport run or complete participant journey |
 | Historical Undeployed v2 | Exact source SHA, tree, manifest digest, and preserved local transcript at [`evidence/undeployed-v2/abdd0a2/`](evidence/undeployed-v2/abdd0a2/) | Evidence for this checkout, Preview, Passport approval, or NFC |
 | Document journey | Real camera access with per-cause recovery, check-digit-verified TD3 parsing tested against the ICAO specimen, EN/FR/ES copy, and an explicit RariMe handoff where the browser cannot proceed | A physical ePassport chip read in this browser, an NFC-backed credential issued end to end, or a recorded walkthrough video |
 | Static public artifact | Current Hostinger synthetic demo, exact archive SHA, privacy scan, 79-file build match, HTTPS render, SPA fallback, 320/390/tablet/desktop first interactions, and green release CI | Response-header hardening and re-verification before public-release certification |

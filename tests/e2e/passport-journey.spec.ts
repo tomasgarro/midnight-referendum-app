@@ -4,6 +4,55 @@ import { PassportJourneyPage } from './pages/PassportJourneyPage';
 const showcase = process.env.CICO_E2E_MODE === 'showcase';
 const runtime = process.env.CICO_E2E_MODE === 'runtime';
 
+test('completes the civic pulse without submitting or persisting answers', async ({ page }) => {
+  test.setTimeout(120_000);
+  test.skip(showcase, 'The deployed artifact predates the local civic pulse implementation.');
+  const externalRequests: string[] = [];
+  page.on('request', (request) => {
+    const target = new URL(request.url());
+    if (target.origin !== 'http://localhost:4173') externalRequests.push(request.url());
+  });
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
+  });
+  await page.goto('/#app');
+  const pulseLauncher = page.getByRole('button', {
+    name: /Try the civic pulse|Probar el pulso cívico|Essayer le pouls civique/i,
+  });
+  await expect(pulseLauncher).toBeVisible({ timeout: 60_000 });
+  const storageBeforePulse = await page.evaluate(() => ({
+    local: Object.keys(window.localStorage),
+    session: Object.keys(window.sessionStorage),
+  }));
+  await pulseLauncher.click();
+  await page.getByRole('button', { name: /Try the civic pulse demo/i }).click();
+  await page.getByRole('button', { name: /^Begin/i }).click();
+  await page.getByRole('button', { name: /Cost of living/i }).click();
+  await page.getByRole('button', { name: /Healthcare/i }).click();
+  await page.getByRole('button', { name: /^Continue/i }).click();
+  await page.getByRole('button', { name: /^Skip$/i }).click();
+  await page.getByRole('button', { name: /^Skip$/i }).click();
+  await page.getByRole('button', { name: /Complete local demo/i }).click();
+
+  await expect(page.getByRole('heading', { name: 'Your answers stayed private' })).toBeVisible();
+  expect(externalRequests).toEqual([]);
+  expect(
+    await page.evaluate(() => ({
+      local: Object.keys(window.localStorage),
+      session: Object.keys(window.sessionStorage),
+    })),
+  ).toEqual(storageBeforePulse);
+
+  await page.reload();
+  await expect(
+    page.getByRole('button', {
+      name: /Try the civic pulse|Probar el pulso cívico|Essayer le pouls civique/i,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText('2 of 3 selected')).toHaveCount(0);
+});
+
 test('completes Passport onboarding, then creates a choice-free simulated receipt', async ({
   page,
 }) => {
@@ -70,7 +119,7 @@ test('keeps the multilingual journey accessible and unclipped at all jury widths
     window.localStorage.setItem('cico-locale', 'es');
   });
   await page.setViewportSize({ width: 390, height: 720 });
-  await page.goto('/');
+  await page.goto('/#app');
   for (const locale of ['en', 'es', 'fr'] as const) {
     await page.getByRole('combobox', { name: /Language|Idioma|Langue/i }).selectOption(locale);
     for (const width of [320, 390, 768, 1280]) {
@@ -82,6 +131,10 @@ test('keeps the multilingual journey accessible and unclipped at all jury widths
       const box = await cta.boundingBox();
       expect(box).not.toBeNull();
       expect((box?.x ?? -1) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+      // Enter keyboard modality before programmatic focus so :focus-visible is
+      // evaluated as it would be for a keyboard user after the pointer click
+      // that opened the lazy referendum workspace.
+      await page.keyboard.press('Tab');
       await cta.focus();
       const focusVisible = await cta.evaluate((element) => {
         const style = getComputedStyle(element);
@@ -183,7 +236,7 @@ test('wallet approval appears only at the live-action boundary and groups duplic
     });
   });
 
-  await page.goto('/');
+  await page.goto('/#app');
   await page.evaluate(() => window.sessionStorage.clear());
   await page.reload();
   await expect(page.getByRole('button', { name: 'Wallet' })).toHaveCount(0);
@@ -232,7 +285,7 @@ test('completes the deployed showcase without contacting private runtimes', asyn
     if (privateRuntime) forbiddenRequests.push(request.url());
   });
 
-  await page.goto('/');
+  await page.goto('/#app');
   await page.evaluate(() => window.sessionStorage.clear());
   await page.reload();
   await expect(page.getByRole('button', { name: 'Wallet' })).toHaveCount(0);
@@ -260,7 +313,7 @@ test('keeps the deployed showcase within the viewport at 320px and 390px', async
 
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 720 });
-    await page.goto('/');
+    await page.goto('/#app');
     await page.evaluate(() => window.sessionStorage.clear());
     await page.reload();
     await expect(page.getByRole('button', { name: 'Wallet' })).toHaveCount(0);
@@ -309,7 +362,7 @@ test('completes the Passport popup handshake with a real browser WindowProxy', a
     });
   });
 
-  await page.goto('/');
+  await page.goto('/#app');
   await page.evaluate(() => window.sessionStorage.clear());
   await page.reload();
   await page.getByRole('button', { name: /Get started/i }).click();
