@@ -1,0 +1,38 @@
+.civic-landing .landing-action-arrow {
+  flex-shrink: 0;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform 220ms ease;
+}
+.civic-landing :where(a, button):is(:hover, :focus-visible) .landing-action-arrow {
+  transform: rotate(45deg);
+}
+.civic-landing .midnight-hero__learn {
+  transition:
+    gap 200ms,
+    color 200ms;
+}
+.civic-landing .midnight-hero__learn:is(:hover, :focus-visible) {
+  gap: 20px;
+  color: #3535ca;
+}
+.civic-landing .how-action:focus-visible {
+  gap: 36px;
+  color: #3535ca;
+}
+.civic-landing :where(a, button):focus-visible {
+  outline: 2px solid #8b7bb6;
+  outline-offset: 5px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .civic-landing .landing-action-arrow,
+  .civic-landing .midnight-hero__learn,
+  .civic-landing .how-action,
+  .civic-landing .midnight-cta,
+  .civic-landing .midnight-cta > span {
+    transition: none;
+  }
+  .civic-landing :where(a, button):is(:hover, :focus-visible) .landing-action-arrow {
+    transform: none;
+  }
+}

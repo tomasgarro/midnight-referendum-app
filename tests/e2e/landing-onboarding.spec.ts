@@ -10,7 +10,7 @@ for (const width of [320, 390]) {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Your voice.Your choice.Your secret.',
     );
-    await page.screenshot({ path: `outputs/design-20260915/landing-${width}.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`landing-${width}.png`), fullPage: true });
     const noOverflow = async () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
@@ -33,24 +33,24 @@ for (const width of [320, 390]) {
     await expect(page.getByRole('heading', { name: /A little less exposure/ })).toBeInViewport();
     await page.getByRole('button', { name: 'Explore Passport', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'midnight.vote', exact: true })).toBeVisible();
-    await page.screenshot({ path: `outputs/design-20260915/welcome-${width}.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`welcome-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Get started', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'What protects your vote' })).toBeVisible();
     await page.getByRole('button', { name: 'Try a zero-knowledge proof', exact: true }).click();
     await noOverflow();
-    await page.screenshot({ path: `outputs/design-20260915/privacy-${width}.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`privacy-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Connect your Passport' })).toBeVisible();
     await page.getByRole('button', { name: 'Previous step' }).click();
     await expect(page.getByRole('heading', { name: 'What protects your vote' })).toBeVisible();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await page.screenshot({
-      path: `outputs/design-20260915/passport-${width}.png`,
+      path: test.info().outputPath(`passport-${width}.png`),
       fullPage: true,
     });
     await page.getByRole('button', { name: 'Use demo Passport', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'This is what Passport shared' })).toBeVisible();
-    await page.screenshot({ path: `outputs/design-20260915/consent-${width}.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`consent-${width}.png`), fullPage: true });
     await noOverflow();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Create your eligibility pass' })).toBeVisible();
@@ -58,7 +58,7 @@ for (const width of [320, 390]) {
     await page.getByText('Argentina', { exact: true }).click();
     await expect(page.getByRole('radio', { name: /Argentina/ })).toBeChecked();
     await page.screenshot({
-      path: `outputs/design-20260915/eligibility-${width}.png`,
+      path: test.info().outputPath(`eligibility-${width}.png`),
       fullPage: true,
     });
     await page.getByRole('button', { name: 'Create my simulated pass', exact: true }).click();
@@ -66,7 +66,7 @@ for (const width of [320, 390]) {
       page.getByRole('heading', { name: 'Your eligibility pass is ready' }),
     ).toBeVisible();
     await noOverflow();
-    await page.screenshot({ path: `outputs/design-20260915/success-${width}.png`, fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(`success-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'See the consultations', exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Try the civic pulse', exact: true }),
@@ -89,11 +89,12 @@ test('reduced motion keeps the proof interaction and landing navigation function
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect(
     await page
-      .locator('.midnight-eclipse__halo')
-      .evaluate((el) => getComputedStyle(el).animationName),
+      .locator('.passport-art__pose')
+      .first()
+      .evaluate((el) => getComputedStyle(el).transform),
   ).toBe('none');
   await expect(page.getByRole('button', { name: 'Pause background animation' })).toBeHidden();
-  await page.screenshot({ path: 'outputs/design-20260915/landing-desktop.png', fullPage: true });
+  await page.screenshot({ path: test.info().outputPath('landing-desktop.png'), fullPage: true });
   await page
     .getByRole('navigation', { name: 'Main navigation' })
     .getByRole('link', { name: 'Our purpose', exact: true })
@@ -111,6 +112,20 @@ test('desktop story advances, reverses, and keeps the stage in place', async ({ 
   const track = page.locator('.how-track');
   const stage = page.locator('.how-stage');
   await expect(track).toHaveAttribute('data-pinned', 'true');
+  const intro = page.locator('.how-intro');
+  for (const fraction of [0, 1, 0]) {
+    await intro.evaluate((el, fraction) => {
+      const top = scrollY + el.getBoundingClientRect().top - 110;
+      scrollTo({
+        top: top + (el.clientHeight - (innerHeight - 110)) * fraction,
+        behavior: 'instant',
+      });
+    }, fraction);
+    await expect
+      .poll(() => intro.evaluate((el) => Number(el.style.getPropertyValue('--headline-progress'))))
+      .toBe(fraction);
+    await page.screenshot({ path: test.info().outputPath(`headline-${fraction}.png`) });
+  }
   const move = async (fraction: number) => {
     await track.evaluate((el, fraction) => {
       const stage = el.querySelector('.how-stage') as HTMLElement;
@@ -132,7 +147,11 @@ test('desktop story advances, reverses, and keeps the stage in place', async ({ 
     await expect(track).toHaveAttribute('data-step', step);
     await expect.poll(async () => Math.round((await stage.boundingBox())?.y ?? -1)).toBe(110);
     await expect(page.locator('.how-panel:not([inert])')).toHaveCount(1);
-    await page.screenshot({ path: `outputs/design-20260915/story-step-${step}.png` });
+    const navigation = await page.locator('.how-progress').boundingBox();
+    const artwork = await page.locator('.how-panel:not([inert]) .how-art').boundingBox();
+    expect(navigation && artwork && navigation.y + navigation.height <= artwork.y).toBeTruthy();
+    await expect(page.locator('.how-panel:not([inert])')).toHaveCSS('opacity', '1');
+    await page.screenshot({ path: test.info().outputPath(`story-step-${step}.png`) });
   }
   await page.getByRole('button', { name: '03 Participate' }).click();
   await expect(track).toHaveAttribute('data-step', '3');
@@ -181,7 +200,7 @@ for (const width of [390, 1440]) {
       page.getByText('It is not available in this demo.', { exact: false }),
     ).toBeVisible();
     await page.screenshot({
-      path: `outputs/design-20260915/finale-agents-${width}.png`,
+      path: test.info().outputPath(`finale-agents-${width}.png`),
       fullPage: true,
     });
     await toggle.getByRole('button', { name: 'Humans', exact: true }).click();

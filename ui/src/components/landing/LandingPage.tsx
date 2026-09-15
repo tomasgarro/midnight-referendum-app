@@ -5,6 +5,7 @@ import { HowItWorks } from './HowItWorks';
 import { LandingFinale, LandingFooter } from './LandingFinale';
 import './landing.css';
 import { LandingHero } from './LandingHero';
+import './landing-actions.css';
 
 export function LandingPage() {
   useEffect(() => {

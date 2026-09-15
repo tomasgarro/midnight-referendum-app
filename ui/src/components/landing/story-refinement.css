@@ -7,7 +7,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
-  padding: 28px 34px;
+  padding: 48px 34px;
   border: 1px solid #fffdf5;
   border-radius: 22px;
   background: #faf7f0f2;
@@ -17,10 +17,12 @@
 .landing-bridge > div {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 .landing-bridge svg {
   color: #716592;
+  width: 58px;
+  height: 58px;
   flex-shrink: 0;
 }
 .landing-bridge strong {

@@ -33,10 +33,14 @@ export default defineConfig({
   webServer: externalBaseUrl
     ? undefined
     : {
-        command: 'npm run dev -- --mode demo --host localhost --port 4173 --strictPort',
+        // Test the shipped bundle. A cold Vite dev server transforms the lazy
+        // WASM/runtime graph after the first click and can exhaust the assertion
+        // deadline before onboarding mounts (PR #29's 320px failure).
+        command:
+          'npm run build --workspace midnight-referendum-ui -- --mode demo && npm run preview --workspace midnight-referendum-ui -- --host localhost --port 4173 --strictPort',
         url: 'http://localhost:4173',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        reuseExistingServer: false,
+        timeout: 180_000,
         env: {
           VITE_APP_MODE: 'demo',
           VITE_PASSPORT_ORIGIN: 'https://midnightpassport.com',

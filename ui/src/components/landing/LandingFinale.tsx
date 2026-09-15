@@ -1,9 +1,7 @@
 import {
-  ArrowRight,
   ArrowUpRight,
   ChatCircle,
   Check,
-  Fingerprint,
   LockKey,
   Moon,
   Robot,
@@ -12,6 +10,7 @@ import {
 } from '@phosphor-icons/react';
 import { useState } from 'react';
 import './landing-finale.css';
+import { SelectiveDisclosureScene } from './SelectiveDisclosureScene';
 
 export function LandingFinale({ onStart }: { onStart: () => void }) {
   const [audience, setAudience] = useState<'humans' | 'agents'>('humans');
@@ -19,70 +18,41 @@ export function LandingFinale({ onStart }: { onStart: () => void }) {
   return (
     <>
       <section className="future-section" id="discover" aria-labelledby="future-title">
-        <div className="future-heading">
-          <p className="how-kicker">ROOM FOR DIFFERENT FUTURES</p>
-          <h2 id="future-title">
-            Better conversations.
-            <br />
-            <span>New possibilities.</span>
-          </h2>
-          <p>Privacy gives participation room to grow.</p>
+        <div className="future-header">
+          <div className="future-heading">
+            <p className="how-kicker">ROOM FOR DIFFERENT FUTURES</p>
+            <h2 id="future-title">
+              Better conversations.
+              <br />
+              <span>New possibilities.</span>
+            </h2>
+            <p>Privacy gives participation room to grow.</p>
+          </div>
+          <fieldset
+            className="future-switch"
+            aria-label="Explore participation for humans or agents"
+          >
+            <button type="button" aria-pressed={human} onClick={() => setAudience('humans')}>
+              <UsersThree size={19} /> Humans
+            </button>
+            <button type="button" aria-pressed={!human} onClick={() => setAudience('agents')}>
+              <Robot size={19} /> Agents <small>Looking ahead</small>
+            </button>
+          </fieldset>
         </div>
-        <fieldset className="future-switch" aria-label="Explore participation for humans or agents">
-          <button type="button" aria-pressed={human} onClick={() => setAudience('humans')}>
-            <UsersThree size={19} /> Humans
-          </button>
-          <button type="button" aria-pressed={!human} onClick={() => setAudience('agents')}>
-            <Robot size={19} /> Agents <small>Looking ahead</small>
-          </button>
-        </fieldset>
         <div className="future-panel" key={audience}>
           <div className={`future-art future-art--${audience}`}>
             {human ? (
-              <div className="future-human-scene" aria-hidden="true">
-                <div className="future-orbit future-orbit--outer" />
-                <div className="future-orbit" />
-                <div className="future-person future-person--one">
-                  <UsersThree size={35} weight="thin" />
-                </div>
-                <div className="future-person future-person--two">
-                  <ChatCircle size={32} weight="thin" />
-                </div>
-                <div className="future-person future-person--three">
-                  <Fingerprint size={36} weight="thin" />
-                </div>
-                <div className="future-person future-person--four">
-                  <Sparkle size={31} weight="thin" />
-                </div>
-                <div className="future-core">
-                  <LockKey size={46} weight="thin" />
-                  <span>
-                    Your voice.
-                    <br />
-                    Your boundaries.
-                  </span>
-                </div>
-                <div className="future-art-note">
-                  <Check size={16} /> People at the centre.
-                </div>
-              </div>
+              <SelectiveDisclosureScene />
             ) : (
-              <>
-                <img
-                  className="future-city-image"
-                  src="/brand/midnight-city.png"
-                  alt="Pixel-art streets and residents of Midnight City"
-                  loading="lazy"
-                  width="1920"
-                  height="1080"
-                />
-                <div className="future-city-note">
-                  <Robot size={28} weight="thin" />
-                  <span>
-                    A city of possibilities.<small>Agent participation · concept exploration</small>
-                  </span>
-                </div>
-              </>
+              <img
+                className="future-city-image"
+                src="/art/city/midnight-city-without-button.webp"
+                alt="Two explorers and a robot overlooking Midnight City beneath a luminous night sky"
+                loading="lazy"
+                width="1122"
+                height="1402"
+              />
             )}
           </div>
           <div className="future-copy" aria-live="polite">
@@ -106,7 +76,7 @@ export function LandingFinale({ onStart }: { onStart: () => void }) {
             </h3>
             <p>
               {human
-                ? 'Make sense of the questions that shape your community. Participate with more context and greater control over what you share.'
+                ? 'Understand your community. Join the conversation with more context and control over what you share.'
                 : 'We’re exploring how agents could take part in the shared affairs of Midnight City — with clear rules for identity, participation, and accountability.'}
             </p>
             <ul>
@@ -122,8 +92,17 @@ export function LandingFinale({ onStart }: { onStart: () => void }) {
                   <li>
                     <Sparkle size={18} />
                     <span>
-                      <strong>On the horizon</strong>AI summaries, richer discussion, and proofs
-                      that reveal only the attributes a consultation needs.
+                      <strong>On the horizon · Selective disclosure</strong>Prove citizenship — in
+                      Argentina, Italy, or elsewhere — without sharing identity details. Join
+                      verified-citizen conversations or opt-in consultations using attributes like
+                      gender.
+                    </span>
+                  </li>
+                  <li>
+                    <ChatCircle size={18} />
+                    <span>
+                      <strong>On the horizon · AI for civic understanding</strong>Sourced summaries,
+                      presentations, and research on local politicians and national issues.
                     </span>
                   </li>
                 </>
@@ -148,7 +127,8 @@ export function LandingFinale({ onStart }: { onStart: () => void }) {
             </ul>
             {human ? (
               <button type="button" className="how-action" onClick={onStart}>
-                Start with the human journey <ArrowUpRight size={19} />
+                Start with the human journey{' '}
+                <ArrowUpRight className="landing-action-arrow" size={19} />
               </button>
             ) : (
               <a
@@ -157,7 +137,7 @@ export function LandingFinale({ onStart }: { onStart: () => void }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Explore Midnight City <ArrowUpRight size={19} />
+                Explore Midnight City <ArrowUpRight className="landing-action-arrow" size={19} />
               </a>
             )}
           </div>
@@ -175,30 +155,27 @@ export function LandingFinale({ onStart }: { onStart: () => void }) {
       </section>
       <section className="finale-invitation" aria-labelledby="invitation-title">
         <div>
-          <p className="how-kicker">A SMALL BEGINNING</p>
           <h2 id="invitation-title">
             Be part of a<br />
             <span>bigger conversation.</span>
           </h2>
-          <p>
-            A little curiosity is all you need. Start with a privacy lesson, then explore a demo
-            consultation.
-          </p>
           <button type="button" className="midnight-cta" onClick={onStart}>
             Get started{' '}
             <span>
-              <ArrowRight size={22} />
+              <ArrowUpRight className="landing-action-arrow" size={22} />
             </span>
           </button>
           <small>Non-binding demo · simulated eligibility</small>
         </div>
-        <div className="finale-guide-space" data-art-slot="future-mascot" aria-hidden="true">
-          <div className="finale-guide-halo" />
-          <div className="finale-guide-orbit" />
-          <div className="finale-guide-symbol">
-            <Moon size={80} weight="thin" />
-          </div>
-          <span className="finale-guide-spark">✦</span>
+        <div className="finale-landscape" aria-hidden="true">
+          <img
+            src="/art/landscape/midnight-mountains.webp"
+            alt=""
+            loading="lazy"
+            width="1536"
+            height="1024"
+          />
+          <div className="finale-guide-space" data-art-slot="future-mascot" />
         </div>
       </section>
     </>
@@ -231,10 +208,10 @@ export function LandingFooter() {
           <div>
             <strong>Explore</strong>
             <a href="https://midnight.network" target="_blank" rel="noreferrer">
-              Midnight <ArrowUpRight size={14} />
+              Midnight <ArrowUpRight className="landing-action-arrow" size={14} />
             </a>
             <a href="https://www.midnight.city/" target="_blank" rel="noreferrer">
-              Midnight City <ArrowUpRight size={14} />
+              Midnight City <ArrowUpRight className="landing-action-arrow" size={14} />
             </a>
           </div>
         </nav>
@@ -245,7 +222,7 @@ export function LandingFooter() {
           <br />A participation prototype, not an official Midnight product or a binding election.
         </p>
         <a href="#landing-main">
-          Back to top <ArrowUpRight size={16} />
+          Back to top <ArrowUpRight className="landing-action-arrow" size={16} />
         </a>
       </div>
     </footer>

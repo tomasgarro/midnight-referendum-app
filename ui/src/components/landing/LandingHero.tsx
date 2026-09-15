@@ -1,10 +1,12 @@
 import { ArrowDown, ArrowUpRight, List, Moon, X } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
+import { PassportHeroArt } from './PassportHeroArt';
 import './landing-hero.css';
 
 export function LandingHero({ onStart }: { onStart: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -40,11 +42,11 @@ export function LandingHero({ onStart }: { onStart: () => void }) {
           <a href="#discover">Discover</a>
           <a href="#our-purpose">Our purpose</a>
           <a href="https://midnight.network" target="_blank" rel="noreferrer">
-            Explore Midnight <ArrowUpRight size={14} />
+            Explore Midnight <ArrowUpRight className="landing-action-arrow" size={14} />
           </a>
         </nav>
         <button type="button" className="midnight-nav__start" onClick={onStart}>
-          Get started <ArrowUpRight size={17} />
+          Get started <ArrowUpRight className="landing-action-arrow" size={17} />
         </button>
         <button
           ref={menuButton}
@@ -98,11 +100,16 @@ export function LandingHero({ onStart }: { onStart: () => void }) {
               setMenuOpen(false);
             }}
           >
-            Explore Midnight <ArrowUpRight size={18} />
+            Explore Midnight <ArrowUpRight className="landing-action-arrow" size={18} />
           </a>
         </nav>
       </header>
-      <section className="midnight-hero" aria-labelledby="landing-title" data-motion="intro">
+      <section
+        ref={heroRef}
+        className="midnight-hero"
+        aria-labelledby="landing-title"
+        data-motion="intro"
+      >
         <div className="midnight-atmosphere" aria-hidden="true">
           <div />
           <span />
@@ -132,42 +139,20 @@ export function LandingHero({ onStart }: { onStart: () => void }) {
               <button type="button" className="midnight-cta" onClick={onStart}>
                 Get started{' '}
                 <span>
-                  <ArrowUpRight size={22} />
+                  <ArrowUpRight className="landing-action-arrow" size={22} />
                 </span>
               </button>
-              <a className="midnight-hero__learn" href="#how-it-works">
-                See how it works <ArrowDown size={18} />
+              <a
+                className="midnight-hero__learn"
+                href="https://midnight.network"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Explore Midnight <ArrowUpRight className="landing-action-arrow" size={18} />
               </a>
             </div>
           </div>
-          <a
-            className="midnight-eclipse"
-            href="https://midnight.network"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Explore the Midnight network (opens in a new tab)"
-          >
-            <div className="midnight-eclipse__halo" />
-            <div className="midnight-eclipse__orb">
-              <div className="midnight-eclipse__face">
-                <img src="/brand/midnight-symbol-white.svg" alt="" width="160" height="160" />
-              </div>
-            </div>
-            <div className="midnight-eclipse__caption">
-              <span>Privacy opens possibilities.</span>
-              <span>
-                Explore Midnight <ArrowUpRight size={16} />
-              </span>
-            </div>
-          </a>
-        </div>
-        <div className="midnight-hero__base">
-          <p>
-            An independent civic experiment.<span> Built on Midnight.</span>
-          </p>
-          <a href="#how-it-works" aria-label="Scroll to how it works">
-            <ArrowDown size={20} />
-          </a>
+          <PassportHeroArt heroRef={heroRef} />
         </div>
       </section>
     </>

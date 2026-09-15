@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Landing Editorial";
+  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 .how-section {
   background: #f4f0e8;
   color: #1c2030;
@@ -5,48 +12,54 @@
   padding: 100px 0 0;
 }
 .how-intro {
-  max-width: 1280px;
+  --headline-progress: 0;
   margin: auto;
-  padding: 0 6vw 48px;
-}
-.how-kicker {
-  color: #68605a;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  margin: 0 0 22px;
+  padding: 40px 6vw 100px;
+  text-align: center;
 }
 .civic-landing .how-intro h2 {
   font:
-    450 clamp(40px, 4.5vw, 68px) / 1.07 Outfit,
+    450 clamp(42px, 6.5vw, 96px) / 1.07 Outfit,
     sans-serif;
   letter-spacing: -0.045em;
   margin: 0;
 }
 .how-intro :where(h2) span {
+  display: block;
+}
+.how-intro__second {
   color: #7c776f;
 }
-.how-intro > p:last-child {
-  color: #655f59;
-  font-size: 18px;
-  margin: 24px 0 0;
+.how-intro[data-pinned="true"] {
+  height: 180svh;
+  padding: 0 6vw;
+}
+.how-intro[data-pinned="true"] .how-intro__sticky {
+  position: sticky;
+  top: 110px;
+  height: calc(100svh - 110px);
+  display: grid;
+  place-items: center;
+}
+.how-intro[data-pinned="true"] h2 {
+  display: grid;
+  width: 100%;
+}
+.how-intro[data-pinned="true"] h2 span {
+  grid-area: 1 / 1;
+}
+.how-intro[data-pinned="true"] .how-intro__first {
+  opacity: calc(1 - var(--headline-progress));
+  transform: translateY(calc(var(--headline-progress) * -90px));
+}
+.how-intro[data-pinned="true"] .how-intro__second {
+  opacity: var(--headline-progress);
+  transform: translateY(calc((1 - var(--headline-progress)) * 90px));
 }
 .how-stage {
   max-width: 1280px;
   padding: 26px 5vw 24px;
   margin: auto;
-}
-.how-stage__top {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  font-size: 11px;
-  letter-spacing: 0.07em;
-  color: #746d64;
-  border-top: 1px solid #d8d1c5;
-  padding-top: 20px;
-}
-.how-stage__top > span:last-child {
-  letter-spacing: 0;
 }
 .how-panels {
   display: grid;
@@ -501,10 +514,13 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border-top: 1px solid #dfd8cc;
   padding: 32px 24px;
   color: #726a60;
-  font-size: 15px;
+  font:
+    italic 350 clamp(21px, 2vw, 26px) / 1.5 "Landing Editorial",
+    serif;
+  letter-spacing: -0.025em;
+  transform: translateY(-6px);
   text-align: center;
 }
 .how-outro p {
@@ -577,9 +593,6 @@
   }
   .how-stage {
     padding: 0 6vw;
-  }
-  .how-stage__top {
-    display: none;
   }
   .how-panel {
     grid-template-columns: 1fr;

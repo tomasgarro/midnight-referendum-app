@@ -10,7 +10,10 @@ test('completes the civic pulse without submitting or persisting answers', async
   const externalRequests: string[] = [];
   page.on('request', (request) => {
     const target = new URL(request.url());
-    if (target.origin !== 'http://localhost:4173') externalRequests.push(request.url());
+    if (
+      target.origin !== new URL(test.info().project.use.baseURL ?? 'http://localhost:4173').origin
+    )
+      externalRequests.push(request.url());
   });
 
   await page.addInitScript(() => {

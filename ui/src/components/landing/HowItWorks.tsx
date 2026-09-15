@@ -84,7 +84,7 @@ function PassportScene() {
           <LockKey size={15} /> Your vote is a separate step.
         </div>
         <div className="how-ui-button">
-          Review connection <ArrowUpRight size={16} />
+          Review connection <ArrowUpRight className="landing-action-arrow" size={16} />
         </div>
       </div>
       <span className="how-art__badge">
@@ -195,6 +195,7 @@ const scenes = [PassportScene, ProofScene, VoteScene];
 
 export function HowItWorks({ onStart }: { onStart: () => void }) {
   const track = useRef<HTMLDivElement>(null);
+  const intro = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [pinned, setPinned] = useState(false);
 
@@ -213,6 +214,16 @@ export function HowItWorks({ onStart }: { onStart: () => void }) {
     let frame = 0;
     const update = () => {
       frame = 0;
+      const heading = intro.current;
+      if (heading) {
+        const rect = heading.getBoundingClientRect();
+        const progress = Math.max(
+          0,
+          Math.min(1, (110 - rect.top) / Math.max(1, rect.height - (window.innerHeight - 110))),
+        );
+        const blend = Math.max(0, Math.min(1, (progress - 0.2) / 0.6));
+        heading.style.setProperty('--headline-progress', String(blend));
+      }
       const element = track.current;
       if (!element) return;
       const rect = element.getBoundingClientRect();
@@ -245,23 +256,32 @@ export function HowItWorks({ onStart }: { onStart: () => void }) {
 
   return (
     <section className="how-section" id="how-it-works" aria-labelledby="landing-how-title">
-      <div className="how-intro">
-        <p className="how-kicker">HOW IT WORKS</p>
-        <h2 id="landing-how-title">
-          A little less exposure.
-          <br />
-          <span>A lot more possibility.</span>
-        </h2>
-        <p>Three steps towards a more private public life.</p>
+      <div className="how-intro" ref={intro} data-pinned={pinned}>
+        <div className="how-intro__sticky">
+          <h2 id="landing-how-title">
+            <span className="how-intro__first">A little less exposure.</span>
+            <span className="how-intro__second">A lot more possibility.</span>
+          </h2>
+        </div>
       </div>
       <div className="how-track" ref={track} data-pinned={pinned} data-step={active + 1}>
         <div className="how-stage">
-          <div className="how-stage__top">
-            <span>YOUR PATH TO PARTICIPATION</span>
-            <span>
-              {pinned ? 'Scroll to explore · or choose a step' : 'Connect. Prove. Participate.'}
-            </span>
-          </div>
+          {pinned && (
+            <nav className="how-progress" aria-label="How it works steps">
+              {steps.map((step, index) => (
+                <button
+                  type="button"
+                  key={step.label}
+                  onClick={() => goTo(index)}
+                  aria-current={active === index ? 'step' : undefined}
+                >
+                  <span>0{index + 1}</span>
+                  {step.label}
+                  <i />
+                </button>
+              ))}
+            </nav>
+          )}
           <div className="how-panels">
             {steps.map((step, index) => {
               const Scene = scenes[index] ?? PassportScene;
@@ -305,29 +325,13 @@ export function HowItWorks({ onStart }: { onStart: () => void }) {
                     )}
                     <button type="button" className="how-action" onClick={onStart}>
                       {step.action}
-                      <ArrowUpRight size={19} />
+                      <ArrowUpRight className="landing-action-arrow" size={19} />
                     </button>
                   </div>
                 </article>
               );
             })}
           </div>
-          {pinned && (
-            <nav className="how-progress" aria-label="How it works steps">
-              {steps.map((step, index) => (
-                <button
-                  type="button"
-                  key={step.label}
-                  onClick={() => goTo(index)}
-                  aria-current={active === index ? 'step' : undefined}
-                >
-                  <span>0{index + 1}</span>
-                  {step.label}
-                  <i />
-                </button>
-              ))}
-            </nav>
-          )}
         </div>
       </div>
       <div className="how-outro">
