@@ -49,6 +49,7 @@ function renderVotes(polls: readonly Poll[], onStartVote = vi.fn()) {
       onStartVote={onStartVote}
       onOpenPolicy={vi.fn()}
       onOpenPassportJourney={vi.fn()}
+      onOpenPulse={vi.fn()}
       locale="en"
     />,
   );

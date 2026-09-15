@@ -25,7 +25,7 @@ export class PassportJourneyPage {
   }
 
   async open(): Promise<void> {
-    await this.page.goto('/');
+    await this.page.goto('/#app');
     await this.page.evaluate(() => window.sessionStorage.clear());
     await this.page.reload({ waitUntil: 'domcontentloaded' });
     // Vite can finish the document navigation while the app is still

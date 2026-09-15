@@ -14,9 +14,13 @@ export type PassportCapability =
   | 'transaction-authorization';
 
 export type PassportSessionStatus = 'connected' | 'expired' | 'disconnected';
-export type PassportNetwork = 'preview' | 'devnet' | 'mainnet';
-/** Chain runtime labels; local Undeployed is not a Passport account network. */
-export type MidnightRuntimeNetwork = PassportNetwork | 'undeployed';
+/** Passport account environments. Stagenet is the public Passport test surface. */
+export type PassportNetwork = 'preview' | 'devnet' | 'stagenet' | 'mainnet';
+/**
+ * Contract runtimes remain separate from the Passport account environment.
+ * This codebase does not yet execute ledger-9 Stagenet contracts.
+ */
+export type MidnightRuntimeNetwork = 'preview' | 'devnet' | 'mainnet' | 'undeployed';
 
 /** Display/session data only; never a credential or nullifier input. */
 export interface PassportProfile {

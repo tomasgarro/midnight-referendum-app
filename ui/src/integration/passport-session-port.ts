@@ -260,7 +260,7 @@ function assertNetwork(network: PassportNetwork): void {
   if (network === 'mainnet') {
     throw new CivicCredentialError(
       'CAPABILITY_UNAVAILABLE',
-      'CICO Passport is restricted to Preview or local devnet',
+      'CICO Passport is restricted to Stagenet, Preview or local devnet',
     );
   }
 }

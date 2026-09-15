@@ -5,6 +5,8 @@
  * Extracted from App.tsx unchanged so views can read them without importing
  * the app itself.
  */
+
+import type { PassportNetwork } from 'midnight-referendum-api';
 import { resolveAppMode } from '@/integration/app-mode';
 import type { CicoLocale } from '@/integration/locale';
 
@@ -74,6 +76,26 @@ export function networkLabel(locale: CicoLocale): string {
 }
 export const PASSPORT_ORIGIN =
   import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com';
+const configuredPassportNetwork = import.meta.env.VITE_PASSPORT_NETWORK?.trim();
+export const PASSPORT_ACCOUNT_NETWORK: Exclude<PassportNetwork, 'mainnet'> =
+  APP_MODE === 'demo'
+    ? 'devnet'
+    : configuredPassportNetwork === 'preview' ||
+        configuredPassportNetwork === 'devnet' ||
+        configuredPassportNetwork === 'stagenet'
+      ? configuredPassportNetwork
+      : 'stagenet';
+
+export function passportNetworkLabel(network: PassportNetwork, locale: CicoLocale): string {
+  if (network === 'stagenet') return 'Stagenet';
+  if (network === 'preview') return 'Preview';
+  if (network === 'mainnet') return 'Mainnet';
+  return locale === 'es'
+    ? 'Desarrollo local'
+    : locale === 'fr'
+      ? 'Développement local'
+      : 'Local development';
+}
 export const ONBOARDING_SESSION_KEY = 'cico-wave1-onboarding-complete';
 
 export function shouldShowFirstRunOnboarding(): boolean {

@@ -1,34 +1,42 @@
 # Referéndum Cívico
 
-**A Passport-first civic consultation prototype for Midnight.**
+**A human-first civic consultation prototype for Midnight.**
 
-Referéndum Cívico makes the privacy boundary understandable: a person can
-explore a consultation, present eligibility evidence, cast a ballot, and
-receive a receipt without publishing their profile or ballot choice. It is a
-non-binding prototype for research and demonstration. It is not an official
-election, a production service, or a claim of human uniqueness.
+Referéndum Cívico starts with mascot-led privacy and zero-knowledge onboarding,
+then opens the Passport, eligibility, ballot, and receipt workspace. A local
+civic-priorities pulse is available inside Discover without replacing that
+first-run teaching journey. The product makes each privacy boundary
+understandable. It is a non-binding prototype for research and demonstration.
+It is not an official election, a production service, or a claim of human
+uniqueness.
 
 ## Current status
 
-The table below describes this checkout as of 31 August 2026. It is a source
-and product status summary, not a release approval or a Preview deployment
-attestation. For the jury-facing narrative and evidence checklist, start with
+The table below describes this checkout as of 13 September 2026. It is a source
+and product status summary, not a release approval or a claim that current source
+is deployed. For the jury-facing narrative and evidence checklist, start with
 [`docs/SUBMISSION.md`](docs/SUBMISSION.md).
 
 | Surface | Status | Honest interpretation |
 | --- | --- | --- |
 | Synthetic demo | **Runnable** | The complete journey is simulated and must remain labelled as simulated. |
+| Civic pulse v1 | **Local-only demo** | A person can choose priorities, optional values/tradeoffs, explanation needs, and privately review them. Answers stay in component memory and are never submitted or persisted. |
 | Enrollment model | **Open in the current source** | A registry can admit credentials while a consultation is in its enrollment window; the referendum can accept separately attested later roots. |
-| Passport | **Profile/session boundary only** | A real profile/session handshake is evidenced, while consent and display fields remain separate from eligibility and voting authority. No Passport credential, wallet, recovery, or Preview address is claimed. |
-| Rarimo | **Temporary evidence adapter** | Rarimo is intended to provide temporary NFC-based eligibility evidence behind the CICO issuer boundary. Physical-device verification and a hosted verifier are not evidenced here. |
+| Passport | **Stagenet profile/session boundary only** | The bridge accepts the official Stagenet account/profile response, including a consented `.night` display name, while those fields remain separate from eligibility and voting authority. No Passport credential, wallet, recovery, `.night`-claim transaction, or Preview address is claimed. |
+| Rarimo | **Staging evidence, physical NFC unverified** | A digest-pinned Hostinger staging topology and cleanup behavior were recorded on 2 September. No physical-device NFC/ePassport transcript or complete participant journey is evidenced. |
 | Voting | **Primary product action** | The product prioritizes understanding and participating in a consultation; wallet, recovery, biometric, and ETH features are optional post-Preview Profile/Vault work. |
 | Historical Undeployed v2 run | **Preserved, historical** | The committed artifact at [`docs/evidence/undeployed-v2/abdd0a2/`](docs/evidence/undeployed-v2/abdd0a2/) is a SHA-specific local run of the older frozen-enrollment model. It is not evidence for this branch head or a Preview deployment. |
-| Preview / public release | **Not released** | A static demo URL exists, but its bundle predates the current journey rebuild. No Preview transaction, current public release SHA, physical NFC transcript, or Passport credential is asserted. |
+| Preview contracts | **Recorded deployment, incomplete journey** | The 2 September evidence records Registry V1 and Referendum V2 deployment, issuance, and root attestation on Preview. It records no citizen vote, reveal, final tally, or citizen receipt and is tied to an earlier source SHA. |
+| Public web demo | **Static demo live** | Three live entry assets matched the saved 1 September archive on 13 September. Exact deployed source SHA, restrictive CSP, and current local changes are not deployed. |
 
 The deployment target is a Hostinger static web surface plus isolated,
 stateful Hostinger VPS services for any future issuer and relayer. When those
 services or credentials are unavailable, the product falls back to an honest
 synthetic journey; it must not silently turn fixtures into live evidence.
+
+See the dated [release and deployment record](docs/releases/2026-09-13-current-state.md)
+and [ADR-008](docs/adr/ADR-008-civic-pulse-and-actor-lanes.md) for the reconciled
+facts and the local pulse/human-agent separation decision.
 
 ## What the product means by Passport and Rarimo
 

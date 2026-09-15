@@ -22,6 +22,7 @@ import {
   savePassportAttempt,
 } from '@/integration/passport-enrollment-state';
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
+import { PASSPORT_ACCOUNT_NETWORK } from '@/views/app-runtime';
 import './journey.css';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
 import { CredentialJourneyTutorial } from './CredentialJourneyTutorial';
@@ -243,15 +244,15 @@ export function PreviewPassportJourney({
     run(async () => {
       const connected = await ports.passport.connect({
         origin: window.location.origin,
-        network: 'preview',
+        network: PASSPORT_ACCOUNT_NETWORK,
         requestedCapabilities: ['session', 'profile'],
       });
       setSession(connected);
       const holderBindingPort = passportHolderBindingPort(ports.passport);
-      if (holderBindingPort) {
+      if (holderBindingPort && connected.network !== 'mainnet') {
         const result = await holderBindingPort.getHolderBinding({
           session: connected,
-          network: 'preview',
+          network: connected.network,
         });
         setHolderBinding(result);
       }

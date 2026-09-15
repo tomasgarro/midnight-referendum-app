@@ -3,11 +3,12 @@
 This document is the ownership map for the active product and target runtime.
 It deliberately separates account consent, civic eligibility, action authority,
 and public receipt resolution. A value crossing one boundary is not authority
-in another. The current review checkout has no verified Undeployed v2 runtime
-transcript for its current source. The preserved `abdd0a2` transcript belongs to
-an older frozen-enrollment implementation; this map is not deployment or
-Preview evidence. See [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md)
-for the current open-enrollment decision.
+in another. Recorded 2 September evidence establishes an earlier-SHA Preview
+registry and referendum deployment, issuance, and root attestation, but no
+citizen vote or current-source runtime transcript. The preserved `abdd0a2`
+transcript remains older frozen-enrollment evidence. See the [dated release
+record](releases/2026-09-13-current-state.md), [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md),
+and [ADR-008](adr/ADR-008-civic-pulse-and-actor-lanes.md).
 
 ```text
 Official Midnight Passport PWA
@@ -34,11 +35,26 @@ browser encrypted vault <- private holder material <- Registry V1 leaf
  atomic walletless relay -> Midnight node -> indexer -> canonical receipt
 ```
 
+The local v1 civic pulse is launched from Discover after the first-run teaching
+journey. It remains outside the credential and contract runtime:
+
+```text
+mascot-led onboarding -> Discover -> local priorities -> optional values/explanation needs
+                                      |
+                                      +-> private review -> component memory only
+                                                            -> local completion marker
+                                                               (submitted: false)
+
+human result lane ------------------------------------------X synthetic-agent lane
+```
+
 ## Package and service ownership
 
 | Boundary | Owner | May receive | Must never receive |
 | --- | --- | --- | --- |
 | Web product | `ui/` | consented Passport display fields, public catalog/state, encrypted local holder state, local proof result | Passport recovery secret, raw MRZ/NFC/provider evidence |
+| Local civic pulse | `ui/src/pulse/`, `api/src/pulse/` | fixed questionnaire and in-memory human-lane draft | network submission, browser persistence, ballot calls, credentials, synthetic-agent answers |
+| Consultation results | `api/src/consultation/` | aggregate-only snapshot with lane, mode, version, status, and provenance | raw responses or cross-lane fallback |
 | Domain and Midnight adapters | `api/` | provider-neutral port requests, public contract state, witness material inside the local boundary | UI presentation policy or relay fee keys |
 | CICO issuer | `cico-service/` | opaque verified evidence authorization, minimum claims, private holder commitment | ballot choice, holder secret/blind, Passport profile, raw document payload |
 | Walletless relay | `relayer/` | one-time action capability, proved transaction, allowlisted runtime identifiers | unproved witness, Passport profile, eligibility claims, ballot choice, MRZ/NFC data |
@@ -57,6 +73,10 @@ browser encrypted vault <- private holder material <- Registry V1 leaf
   source of receipt truth.
 - `RuntimeManifest` pins network, artifact versions, contracts, policies, and
   service endpoints for one reproducible environment.
+- `PriorityPulsePort` is separate from ballot/action ports and v1 has only a
+  non-persistent local demo adapter.
+- `ConsultationResultPort` requires actor lane, evidence mode, and provenance;
+  missing or cross-lane data fails closed.
 
 ## Active and compatibility paths
 

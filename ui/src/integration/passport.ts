@@ -39,7 +39,7 @@ export interface PassportBridgeSession {
   readonly requestId: string;
   readonly nonce: string;
   readonly origin: string;
-  readonly network: 'preview' | 'devnet';
+  readonly network: 'preview' | 'devnet' | 'stagenet';
   readonly displayName?: string;
   readonly passportContract?: { readonly address: string; readonly network: string };
   readonly midnightAddresses?: {
@@ -49,7 +49,7 @@ export interface PassportBridgeSession {
   };
 }
 
-type BridgeNetwork = Extract<PassportNetwork, 'preview' | 'devnet'>;
+type BridgeNetwork = Extract<PassportNetwork, 'preview' | 'devnet' | 'stagenet'>;
 type HandshakePair = { requestId: string; nonce: string; network?: BridgeNetwork };
 
 type ProfileReady = {
@@ -159,19 +159,14 @@ function boundedString(value: unknown, max = 512): value is string {
   );
 }
 
-function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
-  const allowed = new Set(keys);
-  return Object.keys(value).every((key) => allowed.has(key));
-}
-
 function isBridgeNetwork(value: unknown): value is BridgeNetwork {
-  return value === 'preview' || value === 'devnet';
+  return value === 'preview' || value === 'devnet' || value === 'stagenet';
 }
 
 function assertBridgeNetworkValue(value: PassportNetwork): asserts value is BridgeNetwork {
   if (!isBridgeNetwork(value)) {
     throw new PassportBridgeError(
-      'Passport profile consent is restricted to Preview or local devnet',
+      'Passport profile consent is restricted to Stagenet, Preview or local devnet',
       'wrong_network',
     );
   }
@@ -206,7 +201,6 @@ function isReady(value: unknown): value is ProfileReady {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const message = value as Record<string, unknown>;
   return (
-    hasOnlyKeys(message, ['protocol', 'type', 'requestId', 'nonce', 'network']) &&
     message.protocol === PASSPORT_PROFILE_PROTOCOL &&
     message.type === 'passport.profile.ready' &&
     boundedString(message.requestId, 256) &&
@@ -218,7 +212,6 @@ function isReady(value: unknown): value is ProfileReady {
 function parseProfile(value: unknown): PassportProfile | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const input = value as Record<string, unknown>;
-  if (!hasOnlyKeys(input, ['displayName', 'passportContract', 'midnightAddresses'])) return null;
   const profile: PassportProfile = {};
 
   if (input.displayName !== undefined) {
@@ -233,7 +226,6 @@ function parseProfile(value: unknown): PassportProfile | null {
     )
       return null;
     const contract = input.passportContract as Record<string, unknown>;
-    if (!hasOnlyKeys(contract, ['address', 'network'])) return null;
     if (!boundedString(contract.address) || !boundedString(contract.network, 256)) return null;
     profile.passportContract = {
       address: contract.address,
@@ -248,7 +240,6 @@ function parseProfile(value: unknown): PassportProfile | null {
     )
       return null;
     const addresses = input.midnightAddresses as Record<string, unknown>;
-    if (!hasOnlyKeys(addresses, ['unshielded', 'shielded', 'dust'])) return null;
     if (!boundedString(addresses.unshielded)) return null;
     const parsed: NonNullable<PassportProfile['midnightAddresses']> = {
       unshielded: addresses.unshielded,
@@ -268,16 +259,6 @@ function parseResponse(value: unknown): ProfileResponse | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const message = value as Record<string, unknown>;
   if (
-    !hasOnlyKeys(message, [
-      'protocol',
-      'type',
-      'requestId',
-      'nonce',
-      'approved',
-      'network',
-      'profile',
-      'error',
-    ]) ||
     message.protocol !== PASSPORT_PROFILE_PROTOCOL ||
     message.type !== 'passport.profile.response' ||
     !boundedString(message.requestId, 256) ||
