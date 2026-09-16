@@ -38,6 +38,6 @@ describe('PulseExperience', () => {
     expect(screen.getByText('Up to 1% of GDP')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /finish reflection/iu }));
     expect(await screen.findByRole('heading', { name: 'A little more clarity.' })).toBeTruthy();
-    expect(screen.getByText(/No answer was submitted or saved/iu)).toBeTruthy();
+    expect(screen.getByText(/No answers were sent/iu)).toBeTruthy();
   });
 });

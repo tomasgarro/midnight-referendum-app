@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   ArrowRight,
   Camera,
   Info,
@@ -279,21 +280,24 @@ export function DocumentVerificationJourney({
     setStep('chip');
   };
 
+  const backButton = (
+    <button
+      type="button"
+      className="verify-journey__back"
+      aria-label={ONBOARDING_COPY[locale].back}
+      onClick={() => {
+        stopCamera();
+        journey.back();
+      }}
+    >
+      <ArrowLeft size={22} weight="bold" />
+    </button>
+  );
   const explainIndex = EXPLAIN_STEPS.indexOf(step);
   const isExplain = explainIndex >= 0;
 
   return (
     <div className="verify-journey">
-      <button
-        type="button"
-        className="verify-journey__back"
-        onClick={() => {
-          stopCamera();
-          journey.back();
-        }}
-      >
-        {ONBOARDING_COPY[locale].back}
-      </button>
       {isExplain ? (
         <section className="verify-journey__screen" aria-labelledby={`${formId}-explain`}>
           <p className="verify-journey__eyebrow">{copy.processTitle}</p>
@@ -327,6 +331,7 @@ export function DocumentVerificationJourney({
           ) : null}
 
           <div className="verify-journey__footer">
+            {backButton}
             <ol className="verify-journey__progress" aria-label={copy.stepOf(explainIndex + 1, 3)}>
               {EXPLAIN_STEPS.map((item, index) => (
                 <li key={item} data-done={index <= explainIndex} />
@@ -368,6 +373,7 @@ export function DocumentVerificationJourney({
             <PassportScanTutorial locale={locale} />
           </div>
           <div className="verify-journey__actions">
+            {backButton}
             <button
               type="button"
               className="verify-journey__primary"
@@ -394,6 +400,7 @@ export function DocumentVerificationJourney({
           </div>
           <p className="verify-journey__body">{copy.analysisBody}</p>
           <div className="verify-journey__actions">
+            {backButton}
             <button
               type="button"
               className="verify-journey__primary"
@@ -418,6 +425,24 @@ export function DocumentVerificationJourney({
           <p className="verify-journey__body">
             {cameraError ? messageForCameraFailure(cameraError, copy).body : copy.permissionBody}
           </p>
+          {!recognitionAvailable && (
+            <p className="verify-journey__note">
+              {locale === 'es'
+                ? 'Este navegador puede mostrar la cámara, pero no leer el texto automáticamente. Podés continuar con carga manual sin abrir la cámara.'
+                : locale === 'fr'
+                  ? 'Ce navigateur peut afficher la caméra, mais ne lit pas le texte automatiquement. Vous pouvez saisir les données sans ouvrir la caméra.'
+                  : 'This browser can show the camera, but cannot read the text automatically. You can use manual entry without opening the camera.'}
+            </p>
+          )}
+          {!chipHandoff && (
+            <p className="verify-journey__note">
+              {locale === 'es'
+                ? 'En esta demo, la lectura no genera una prueba ni un pase verificado. La conexión NFC con RariMe todavía no está activada aquí.'
+                : locale === 'fr'
+                  ? 'Dans cette démo, la lecture ne crée ni preuve ni justificatif vérifié. La connexion NFC avec RariMe n’est pas encore active ici.'
+                  : 'In this demo, reading does not generate a proof or a verified pass. The NFC connection with RariMe is not active here yet.'}
+            </p>
+          )}
           {/* Stated before the prompt appears, not after: a browser permission
               sheet gives no room to explain why the camera is wanted. */}
           <p className="verify-journey__boundary">
@@ -427,6 +452,7 @@ export function DocumentVerificationJourney({
             </span>
           </p>
           <div className="verify-journey__actions">
+            {backButton}
             {cameraUnavailableReason() === null ? (
               <button
                 type="button"
@@ -496,6 +522,7 @@ export function DocumentVerificationJourney({
           ) : null}
 
           <div className="verify-journey__actions">
+            {backButton}
             <button
               type="button"
               className="verify-journey__secondary"
@@ -572,6 +599,7 @@ export function DocumentVerificationJourney({
             <p className="verify-journey__note">{copy.manualAssurance}</p>
 
             <div className="verify-journey__actions">
+              {backButton}
               <button type="submit" className="verify-journey__primary">
                 {copy.manualValidate}
               </button>
@@ -616,6 +644,7 @@ export function DocumentVerificationJourney({
 
           {onCancel ? (
             <div className="verify-journey__actions">
+              {backButton}
               <button type="button" className="verify-journey__secondary" onClick={onCancel}>
                 {copy.close}
               </button>

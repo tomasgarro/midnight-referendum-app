@@ -21,6 +21,12 @@ import { OnboardingMascot } from '@/components/passport-v2/OnboardingMascot';
 import { useJourneyHistory } from '@/components/passport-v2/useJourneyHistory';
 import type { CicoLocale } from '@/integration/locale';
 import { BUDGET_COPY } from './budget-copy';
+import {
+  eraseReflection,
+  REFLECTION_COPY,
+  readReflection,
+  saveReflection,
+} from './local-reflection';
 import { PULSE_COPY } from './pulse-copy';
 import './pulse-experience.css';
 import './pulse-reflection.css';
@@ -59,15 +65,22 @@ export interface PulseExperienceProps {
   readonly onExit?: () => void;
   readonly embedded?: boolean;
   readonly locale?: CicoLocale;
+  readonly onDiscuss?: (summary: string) => void;
 }
 export function PulseExperience({
   onExploreReferenda,
   onExit,
   embedded = false,
   locale = 'en',
+  onDiscuss,
 }: PulseExperienceProps) {
   const t = PULSE_COPY[locale];
   const budgetCopy = BUDGET_COPY[locale];
+  const reflectionCopy = REFLECTION_COPY[locale];
+  const [saved, setSaved] = useState(readReflection);
+  const [savedThisRun, setSavedThisRun] = useState(false);
+  const [storageError, setStorageError] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   // Optional reflection stays in component memory, separate from the legacy pulse adapter.
   const [budget, setBudget] = useState<string | null>(null);
   const [funding, setFunding] = useState<string | null>(null);
@@ -90,6 +103,7 @@ export function PulseExperience({
     }
   }, [stage]);
   const reset = () => {
+    setSavedThisRun(false);
     setBudget(null);
     setFunding(null);
     setPriorities([]);
@@ -99,6 +113,14 @@ export function PulseExperience({
     setEditing(false);
     if (onExit) onExit();
     else go('home');
+  };
+  const eraseAndReset = () => {
+    if (!eraseReflection()) {
+      setStorageError(true);
+      return;
+    }
+    setSaved(null);
+    reset();
   };
   const next = (target: Stage) => {
     go(editing ? 'review' : target);
@@ -135,6 +157,8 @@ export function PulseExperience({
     };
     try {
       await adapter.completeLocalDemo(draft);
+      setSavedThisRun(false);
+      setCopyState('idle');
       go('complete');
     } catch {
       setError(t.cap);
@@ -188,6 +212,37 @@ export function PulseExperience({
       labels: explanationAreas.map((id) => t.information[INFORMATION.indexOf(id)]),
     },
   ];
+  const summary = reviewGroups
+    .map((group) => `${group.name}: ${group.labels.join(' · ') || t.skipped}`)
+    .join('\n');
+  const discussionPrompt = `${reflectionCopy.prompt}\n\n${summary}`;
+  const persist = () => {
+    const snapshot = {
+      version: 1 as const,
+      savedAt: new Date().toISOString(),
+      priorities,
+      tradeoffs,
+      explanationAreas,
+      budget,
+      funding,
+    };
+    const ok = saveReflection(snapshot);
+    setStorageError(!ok);
+    if (ok) {
+      setSaved(snapshot);
+      setSavedThisRun(true);
+    }
+  };
+  const restore = () => {
+    if (!saved) return;
+    setPriorities(saved.priorities);
+    setTradeoffs(saved.tradeoffs);
+    setExplanationAreas(saved.explanationAreas);
+    setBudget(saved.budget);
+    setFunding(saved.funding);
+    setEditing(false);
+    go('review');
+  };
   return (
     <div className={`pulse-v4 ${embedded ? 'pulse-v4--embedded' : ''}`}>
       <header className="pulse-v4__header">
@@ -238,6 +293,23 @@ export function PulseExperience({
             <p>{t.homeBody}</p>
             <span className="pulse-v4__duration">{budgetCopy.duration}</span>
             <div className="pulse-v4__actions">
+              {saved && (
+                <>
+                  {primary(reflectionCopy.resume, restore)}
+                  <button
+                    type="button"
+                    className="pulse-v4__skip"
+                    onClick={() => {
+                      const ok = eraseReflection();
+                      setStorageError(!ok);
+                      if (ok) setSaved(null);
+                    }}
+                  >
+                    {reflectionCopy.remove}
+                  </button>
+                </>
+              )}
+              {storageError && <p role="alert">{reflectionCopy.failed}</p>}
               {primary(t.start, () => go('intro'))}
               <small>{t.homeNote}</small>
             </div>
@@ -460,7 +532,7 @@ export function PulseExperience({
           </section>
         ) : null}
         {stage === 'complete' ? (
-          <section className="pulse-v4__welcome">
+          <section className="pulse-v4__welcome pulse-v4__complete">
             <div className="pulse-v4__art">
               <Plant size={76} weight="duotone" />
             </div>
@@ -468,9 +540,67 @@ export function PulseExperience({
             <p>{t.completeBody}</p>
             <p className="pulse-v4__privacy">
               <LockKey size={20} />
-              {t.completeNote}
+              {savedThisRun ? reflectionCopy.saved : t.completeNote}
             </p>
-            <div className="pulse-v4__actions">{primary(t.erase, reset)}</div>
+            <div className="pulse-reflection-summary">
+              {reviewGroups.map((group) => (
+                <section key={group.target}>
+                  <h2>{group.name}</h2>
+                  <p>{group.labels.join(' · ') || t.skipped}</p>
+                </section>
+              ))}
+            </div>
+            <div className="pulse-v4__actions">
+              <p className="pulse-local-note">{reflectionCopy.note}</p>
+              <button
+                type="button"
+                className="pulse-button pulse-button--primary"
+                disabled={savedThisRun}
+                onClick={persist}
+              >
+                {savedThisRun ? reflectionCopy.saved : reflectionCopy.save}
+              </button>
+              {storageError && <p role="alert">{reflectionCopy.failed}</p>}
+              <p className="pulse-local-note">{reflectionCopy.handoff}</p>
+              {onDiscuss && primary(reflectionCopy.discuss, () => onDiscuss(summary))}
+              <button
+                type="button"
+                className="pulse-v4__skip"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(discussionPrompt);
+                    setCopyState('copied');
+                  } catch {
+                    setCopyState('failed');
+                  }
+                }}
+              >
+                {reflectionCopy.copy}
+              </button>
+              {copyState !== 'idle' && (
+                <p role="status">
+                  {copyState === 'copied' ? reflectionCopy.copied : reflectionCopy.copyFailed}
+                </p>
+              )}
+              {copyState === 'failed' && (
+                <textarea
+                  readOnly
+                  aria-label={reflectionCopy.copy}
+                  value={discussionPrompt}
+                  rows={8}
+                />
+              )}
+              <button
+                type="button"
+                className="pulse-v4__skip"
+                onClick={() => (onExit ?? (() => go('home')))()}
+              >
+                {reflectionCopy.return}
+              </button>
+              <button type="button" className="pulse-v4__skip" onClick={eraseAndReset}>
+                {t.erase}
+              </button>
+            </div>
           </section>
         ) : null}
       </main>

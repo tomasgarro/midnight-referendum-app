@@ -6,7 +6,9 @@ import type { DemoCredentialSummary } from '@/integration/cico-passport-journey'
 import type { OnboardingStage } from '@/integration/civic-state';
 import { countryName } from '@/integration/country-catalog';
 import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
+import { passportErrorCopy } from '@/integration/passport-error-copy';
 import { PASSPORT_ACCOUNT_NETWORK } from '@/views/app-runtime';
+import { ConnectionStatus } from './ConnectionStatus';
 import { DocumentVerificationJourney } from './DocumentVerificationJourney';
 import { OnboardingMascot } from './OnboardingMascot';
 import { ONBOARDING_COPY } from './onboarding-copy';
@@ -56,6 +58,7 @@ export function UnifiedPassportOnboarding({
   const history = useJourneyHistory<OnboardingStage>(entry);
   const { stage, go, back, canBack } = history;
   const [session, setSession] = useState(initialSession);
+  const demoSelected = session?.sessionId === 'local-demo-explicit';
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [country, setCountry] = useState('FR');
@@ -130,8 +133,8 @@ export function UnifiedPassportOnboarding({
       if (id !== attempt.current) return;
       setSession(next);
       onPassportConnected?.(next);
-    } catch {
-      if (id === attempt.current) setError(t.error);
+    } catch (cause) {
+      if (id === attempt.current) setError(passportErrorCopy(cause, locale));
     } finally {
       if (id === attempt.current) {
         busy.current = false;
@@ -352,27 +355,66 @@ export function UnifiedPassportOnboarding({
             </li>
           </ul>
           {session ? (
-            <div className="onboarding-connected" role="status">
-              <CheckCircle size={24} />
+            <div className="onboarding-connected" data-demo={demoSelected} role="status">
+              {demoSelected ? (
+                <span className="onboarding-demo-badge">DEMO</span>
+              ) : (
+                <ConnectionStatus state="success" />
+              )}
               <div>
-                <strong>{t.connected}</strong>
-                <span>{session.profile?.displayName ?? 'Passport'}</span>
+                <strong>
+                  {demoSelected
+                    ? locale === 'es'
+                      ? 'Perfil de prueba seleccionado'
+                      : locale === 'fr'
+                        ? 'Profil de démo sélectionné'
+                        : 'Demo profile selected'
+                    : t.connected}
+                </strong>
+                <span>
+                  {demoSelected
+                    ? locale === 'es'
+                      ? 'No se conectó ninguna cuenta real.'
+                      : locale === 'fr'
+                        ? 'Aucun compte réel n’est connecté.'
+                        : 'No real account has been connected.'
+                    : (session.profile?.displayName ?? 'Passport')}
+                </span>
               </div>
             </div>
           ) : null}
           {connecting && (
             <div className="onboarding-waiting" role="status">
-              <OnboardingMascot pose="waiting" motion />
+              <ConnectionStatus state="waiting" />
               <p>{t.waiting}</p>
             </div>
           )}
           {error && (
             <div className="onboarding-error" role="alert">
-              <OnboardingMascot pose="reassure" />
+              <ConnectionStatus state="error" />
               <p>{error}</p>
             </div>
           )}
           <div className="onboarding-actions">
+            {demoSelected && (
+              <button
+                type="button"
+                className="onboarding-secondary"
+                onClick={() => {
+                  cancel();
+                  setSession(null);
+                  setCreatedDemo(null);
+                  setError(null);
+                  onPassportConnected?.(null);
+                }}
+              >
+                {locale === 'es'
+                  ? 'Usar mi Passport real'
+                  : locale === 'fr'
+                    ? 'Utiliser mon vrai Passport'
+                    : 'Use my real Passport'}
+              </button>
+            )}
             <button
               className="onboarding-primary"
               type="button"
@@ -559,7 +601,14 @@ export function UnifiedPassportOnboarding({
           className="onboarding-screen onboarding-success"
           aria-labelledby="onboarding-success-title"
         >
-          <OnboardingMascot pose="success" motion />
+          <div className="onboarding-pass-confirmation" aria-hidden="true">
+            <div className="onboarding-pass-confirmation__card">
+              <img src="/brand/midnight-symbol-black.svg" alt="" />
+              <span>DEMO</span>
+              <ConnectionStatus state="success" />
+            </div>
+            <OnboardingMascot pose="success" motion priority />
+          </div>
           <p className="onboarding-eyebrow">DEMO</p>
           {title(t.success, 'onboarding-success-title')}
           <p className="onboarding-body">

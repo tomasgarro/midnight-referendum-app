@@ -10,7 +10,7 @@ Wave 1 presents a working simulated civic experience, reviewable Compact contrac
 | --- | --- | --- |
 | Discover, review and simulated participation | Implemented frontend; PR #31 merged | Demonstrate with clear demo labels. |
 | Ask Midnight | Authored catalogue explanations | Describe as a bounded guide, not a connected LLM. |
-| Civic Pulse | Optional reflection held in memory | No answers submitted; no population insight claimed. |
+| Civic Pulse | Optional reflection held in memory, with explicit device-only save/review/delete in PR #34 | No answers submitted; no population insight claimed. AI prompt copying is visitor-controlled; the catalogue guide is not a connected LLM. |
 | Compact contracts | Compilation and simulator tests in the supplied CI run | Reviewable contract logic, not a production security audit. |
 | Passport | Earlier consent/session/profile handshake | Account access is separate from eligibility. |
 | Preview deployment | Earlier revision deployed, with issuance and root attestation evidence | Historical evidence; no citizen cast/reveal/finalize lifecycle established. |

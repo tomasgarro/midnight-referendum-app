@@ -694,6 +694,14 @@
   padding-block: 18px max(12px, env(safe-area-inset-bottom));
   background: var(--onboarding-ground);
 }
+/* Recovery text must not disappear underneath the multi-button action block. */
+.onboarding-v3[data-stage="passport"] .onboarding-actions {
+  position: static;
+}
+[data-theme="dark"] .onboarding-v3 .onboarding-primary:hover {
+  background: var(--onboarding-ink);
+  color: var(--onboarding-ground);
+}
 .onboarding-screen {
   padding-top: 24px;
   animation: onboarding-enter 240ms ease-out;
@@ -716,5 +724,172 @@
   }
   .onboarding-primary {
     transition: none;
+  }
+}
+
+/* Outcome feedback uses one quiet motion vocabulary and never slices the mascot. */
+.onboarding-mascot[data-motion="true"] .onboarding-mascot__image {
+  animation: mascot-arrive 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes mascot-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.connection-status {
+  display: block;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  color: var(--onboarding-ink);
+}
+.connection-status svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.connection-status__track {
+  fill: var(--onboarding-panel);
+  stroke: var(--onboarding-line);
+  stroke-width: 1.5;
+}
+.connection-status__spinner {
+  transform-origin: 32px 32px;
+  animation: status-turn 1s linear infinite;
+}
+.connection-status__check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: status-check 280ms ease-out both;
+}
+.connection-status[data-state="error"] {
+  color: var(--onboarding-orange);
+  animation: status-settle 240ms ease-out;
+}
+@keyframes status-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes status-check {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes status-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.onboarding-error,
+.onboarding-waiting {
+  padding: 16px;
+  border: 1px solid var(--onboarding-line);
+  border-radius: 16px;
+  background: var(--onboarding-panel);
+  color: var(--onboarding-ink);
+}
+.onboarding-error p,
+.onboarding-waiting p {
+  margin: 0;
+  line-height: 1.5;
+}
+.onboarding-connected .connection-status {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+}
+.onboarding-connected[data-demo="true"] {
+  background: var(--onboarding-panel);
+  border: 1px solid var(--onboarding-line);
+  color: var(--onboarding-ink);
+}
+.onboarding-connected .onboarding-demo-badge {
+  flex: none;
+  padding: 6px 9px;
+  border: 1px solid var(--onboarding-line);
+  border-radius: 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.onboarding-v3 .verify-journey .verify-journey__back {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  color: var(--onboarding-ink);
+  background: var(--onboarding-panel);
+}
+.onboarding-pass-confirmation {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 180px;
+  margin: 8px auto 24px;
+  width: min(100%, 320px);
+}
+.onboarding-pass-confirmation__card {
+  width: 180px;
+  height: 124px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  border: 1px solid var(--onboarding-line);
+  border-radius: 20px;
+  background: var(--onboarding-panel);
+  box-shadow: 0 8px 24px #27233308;
+  animation: mascot-arrive 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.onboarding-pass-confirmation__card > img {
+  width: 22px;
+  height: 22px;
+}
+.onboarding-pass-confirmation__card > span:not(.connection-status) {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--onboarding-muted);
+}
+.onboarding-pass-confirmation__card .connection-status {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+.onboarding-pass-confirmation > .onboarding-mascot {
+  width: 100px;
+  height: 150px;
+  overflow: visible;
+}
+[data-theme="dark"] .onboarding-pass-confirmation__card > img {
+  filter: invert(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-mascot[data-motion="true"] .onboarding-mascot__image,
+  .connection-status,
+  .connection-status__check,
+  .connection-status__spinner,
+  .onboarding-pass-confirmation__card {
+    animation: none;
   }
 }

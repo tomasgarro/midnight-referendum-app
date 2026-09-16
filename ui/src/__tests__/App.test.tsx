@@ -172,7 +172,10 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Abrir feedback' }));
     expect(screen.getByRole('heading', { name: 'Ayuda y feedback' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Tu mensaje' })).toBeTruthy();
-    expect(screen.getByText(/no envía feedback a un servidor/i)).toBeTruthy();
+    expect(screen.getByText(/Tu mensaje llega a contact@midnight.vote/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Enviar feedback' }).hasAttribute('disabled')).toBe(
+      true,
+    );
   });
 
   /**

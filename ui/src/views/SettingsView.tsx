@@ -23,6 +23,7 @@ import { Button, Card, Display, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
 import type { ThemePreference } from '@/integration/theme';
 import { APP_MODE, networkLabel } from '@/views/app-runtime';
+import { FeedbackForm } from './FeedbackForm';
 import { PASSPORT_HELP, passportDisplay } from './passport-display';
 import './settings-view.css';
 
@@ -97,12 +98,6 @@ const COPY = {
     ],
     feedbackTitle: 'Ayuda y feedback',
     feedbackLead: 'Contanos dónde te trabaste o qué haría más clara esta experiencia.',
-    feedbackLabel: 'Tu mensaje',
-    feedbackPlaceholder: 'Escribí tu comentario…',
-    feedbackCopy: 'Copiar feedback',
-    feedbackCopied: 'Feedback copiado',
-    feedbackNote:
-      'Este prototipo no envía feedback a un servidor; podés copiarlo y compartirlo por tu canal habitual.',
     recoveryTitle: 'Recuperación y backup',
     recoveryLead:
       'La recuperación de secretos necesita una implementación revisada. Mostramos las opciones sin fingir que ya están disponibles.',
@@ -199,12 +194,6 @@ const COPY = {
     ],
     feedbackTitle: 'Help and feedback',
     feedbackLead: 'Tell us where you got stuck or what would make this experience clearer.',
-    feedbackLabel: 'Your message',
-    feedbackPlaceholder: 'Write your feedback…',
-    feedbackCopy: 'Copy feedback',
-    feedbackCopied: 'Feedback copied',
-    feedbackNote:
-      'This prototype does not send feedback to a server; copy it and share it through your usual channel.',
     recoveryTitle: 'Recovery and backup',
     recoveryLead:
       'Secret recovery needs a reviewed implementation. We show the options without pretending they are available yet.',
@@ -309,12 +298,6 @@ const COPY = {
     ],
     feedbackTitle: 'Aide et retours',
     feedbackLead: 'Dites-nous où vous avez hésité ou ce qui rendrait cette expérience plus claire.',
-    feedbackLabel: 'Votre message',
-    feedbackPlaceholder: 'Écrivez votre retour…',
-    feedbackCopy: 'Copier le retour',
-    feedbackCopied: 'Retour copié',
-    feedbackNote:
-      'Ce prototype n’envoie pas les retours à un serveur ; copiez-les et partagez-les par votre canal habituel.',
     recoveryTitle: 'Récupération et sauvegarde',
     recoveryLead:
       'La récupération des secrets nécessite une implémentation revue. Nous affichons les options sans prétendre qu’elles sont disponibles.',
@@ -494,17 +477,8 @@ export function SettingsView({
 }: SettingsViewProps) {
   const copy = COPY[locale];
   const [panel, setPanel] = useState<SettingsPanel>(initialPanel);
-  const [feedback, setFeedback] = useState('');
-  const [feedbackCopied, setFeedbackCopied] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const displayName = passportDisplay(passportSession, locale);
-
-  const copyFeedback = async () => {
-    if (!feedback.trim() || !navigator.clipboard) return;
-    await navigator.clipboard.writeText(feedback.trim());
-    setFeedbackCopied(true);
-    window.setTimeout(() => setFeedbackCopied(false), 1500);
-  };
 
   if (panel === 'privacy') {
     return (
@@ -537,26 +511,8 @@ export function SettingsView({
           onBack={() => setPanel('root')}
         />
         <p className="settings__lead">{copy.feedbackLead}</p>
-        <Card className="settings__feedback">
-          <label htmlFor="settings-feedback">{copy.feedbackLabel}</label>
-          <textarea
-            id="settings-feedback"
-            value={feedback}
-            onChange={(event) => setFeedback(event.target.value)}
-            placeholder={copy.feedbackPlaceholder}
-            rows={7}
-          />
-          <Button
-            block
-            variant="secondary"
-            disabled={!feedback.trim()}
-            onClick={() => void copyFeedback()}
-          >
-            {feedbackCopied ? <CheckCircle size={17} /> : <ChatCircleText size={17} />}{' '}
-            {feedbackCopied ? copy.feedbackCopied : copy.feedbackCopy}
-          </Button>
-          <p>{copy.feedbackNote}</p>
-        </Card>
+        <FeedbackForm locale={locale} />
+        <a href="/feedback">midnight.vote/feedback ↗</a>
       </main>
     );
   }

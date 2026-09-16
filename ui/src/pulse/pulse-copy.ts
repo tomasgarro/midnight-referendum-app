@@ -28,7 +28,7 @@ export const PULSE_COPY = {
     introBody:
       'Think about your everyday life and the people around you. There is no right answer, score, or political label.',
     privacy:
-      'Your answers stay in this open page. Nothing is sent or saved. You can skip optional questions or erase everything.',
+      'Your answers stay in this page unless you choose to save them on this device at the end. Nothing is sent. You can skip optional questions or erase everything.',
     titles: [
       'Where would meaningful change make the biggest difference?',
       'When priorities compete, what should guide a decision?',
@@ -67,7 +67,7 @@ export const PULSE_COPY = {
     completeBody:
       'You have made space for your priorities and questions. Keep that perspective as you explore the consultations.',
     completeNote:
-      'No answer was submitted or saved. This is your reflection, not an assessment of your beliefs.',
+      'No answers were sent. Saving on this device is optional. This is your reflection, not an assessment of your beliefs.',
   },
   es: {
     name: 'Pulso cívico',
@@ -98,7 +98,7 @@ export const PULSE_COPY = {
     introBody:
       'Pensá en tu vida cotidiana y en quienes te rodean. No hay respuestas correctas, puntajes ni etiquetas políticas.',
     privacy:
-      'Tus respuestas quedan en esta página abierta. Nada se envía ni se guarda. Podés omitir preguntas opcionales o borrar todo.',
+      'Tus respuestas quedan en esta página salvo que elijas guardarlas en este dispositivo al terminar. Nada se envía. Podés omitir preguntas opcionales o borrar todo.',
     titles: [
       '¿Dónde podría un cambio mejorar más la vida cotidiana?',
       'Cuando las prioridades compiten, ¿qué debería orientar una decisión?',
@@ -137,7 +137,7 @@ export const PULSE_COPY = {
     completeBody:
       'Le diste espacio a tus prioridades y preguntas. Llevá esa perspectiva a las consultas que explores.',
     completeNote:
-      'No se envió ni se guardó ninguna respuesta. Es tu reflexión, no una evaluación de tus creencias.',
+      'No se enviaron respuestas. Guardarlas en este dispositivo es opcional. Es tu reflexión, no una evaluación de tus creencias.',
   },
   fr: {
     name: 'Pouls civique',
@@ -168,7 +168,7 @@ export const PULSE_COPY = {
     introBody:
       'Pensez à votre quotidien et aux personnes autour de vous. Il n’y a ni bonne réponse, ni score, ni étiquette politique.',
     privacy:
-      'Vos réponses restent dans cette page ouverte. Rien n’est envoyé ni enregistré. Vous pouvez passer les questions facultatives ou tout effacer.',
+      'Vos réponses restent dans cette page sauf si vous choisissez de les enregistrer sur cet appareil à la fin. Rien n’est envoyé. Vous pouvez passer les questions facultatives ou tout effacer.',
     titles: [
       'Où un changement améliorerait-il le plus le quotidien ?',
       'Quand les priorités se confrontent, que faut-il privilégier ?',
@@ -207,6 +207,6 @@ export const PULSE_COPY = {
     completeBody:
       'Vous avez pris le temps de réfléchir à vos priorités et questions. Gardez cette perspective en explorant les consultations.',
     completeNote:
-      'Aucune réponse n’a été envoyée ni enregistrée. C’est votre réflexion, pas une évaluation de vos convictions.',
+      'Aucune réponse n’a été envoyée. L’enregistrement sur cet appareil est facultatif. C’est votre réflexion, pas une évaluation de vos convictions.',
   },
 } as const;

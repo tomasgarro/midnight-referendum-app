@@ -35,8 +35,13 @@ export default defineConfig({
     ].map(({ name, device }) => ({
       name,
       use: { ...devices[device] },
-      testMatch: '**/passport-journey.spec.ts',
-      grep: /completes the civic pulse|completes Passport onboarding, then creates/,
+      testMatch: [
+        '**/passport-journey.spec.ts',
+        '**/feedback.spec.ts',
+        '**/connection-status.spec.ts',
+        '**/mobile-refinements.spec.ts',
+      ],
+      grep: /completes the civic pulse|completes Passport onboarding, then creates|feedback route|connection status|mobile refinements/,
     })),
   ],
   webServer: externalBaseUrl
