@@ -1,6 +1,6 @@
 # Product specification — midnight.vote
 
-Version 0.1 · 16 September 2026 · Baseline: merged PR #31, `origin/main` at `1884a3a` (PR revision `ac15785`).
+Version 0.2 · 16 September 2026 · Application baseline: merged PR #35, `8184f70`. Includes PR #34 explicit local-reflection consent and the PR #36 documentation route.
 Status: specification extracted from implemented behavior, with future requirements explicitly marked. It is a baseline for future spec-first changes, not a claim that earlier code was developed from this document.
 
 ## Purpose and scope
@@ -21,9 +21,9 @@ Non-goals: binding elections; audited ballot secrecy; physical NFC completion in
 | UX-02 | Country browsing MUST NOT create a credential or voting authorization. | [ui/src/__tests__/App.test.tsx](../../ui/src/__tests__/App.test.tsx); [ui/src/__tests__/votes-view.test.tsx](../../ui/src/__tests__/votes-view.test.tsx) | Implemented |
 | DEMO-01 | A simulated pass and receipt MUST remain explicitly simulated. | [ui/src/views/VoteFlow.tsx](../../ui/src/views/VoteFlow.tsx); [ui/src/__tests__/App.test.tsx](../../ui/src/__tests__/App.test.tsx); [tests/e2e/passport-journey.spec.ts](../../tests/e2e/passport-journey.spec.ts) | Implemented |
 | DEMO-02 | Participation MUST apply age, expiry, country and consultation availability checks. | [ui/src/CivicRuntime.tsx](../../ui/src/CivicRuntime.tsx); [tests/e2e/discovery-demo.spec.ts](../../tests/e2e/discovery-demo.spec.ts) | Implemented; simulation only |
-| RECEIPT-01 | UI completion MUST follow asynchronous receipt creation; Activity MUST retain distinct receipts. | [ui/src/integration/receipt-store.ts](../../ui/src/integration/receipt-store.ts); [ui/src/__tests__/App.test.tsx](../../ui/src/__tests__/App.test.tsx); [ui/src/__tests__/receipt-store.test.ts](../../ui/src/__tests__/receipt-store.test.ts) | Implemented; asynchronous test correction is separate and unpublished |
+| RECEIPT-01 | UI completion MUST follow asynchronous receipt creation; Activity MUST retain distinct receipts. | [ui/src/integration/receipt-store.ts](../../ui/src/integration/receipt-store.ts); [ui/src/__tests__/App.test.tsx](../../ui/src/__tests__/App.test.tsx); [ui/src/__tests__/receipt-store.test.ts](../../ui/src/__tests__/receipt-store.test.ts) | Implemented; asynchronous correction merged |
 | AI-01 | Ask Midnight MUST identify authored catalogue responses and keep unsupported requests bounded. | [ui/src/__tests__/catalogue-guide.test.tsx](../../ui/src/__tests__/catalogue-guide.test.tsx); [ui/src/__tests__/catalogue-revision.test.tsx](../../ui/src/__tests__/catalogue-revision.test.tsx); [tests/e2e/catalogue-revision.spec.ts](../../tests/e2e/catalogue-revision.spec.ts) | Implemented; no LLM |
-| PULSE-01 | Guided reflection MUST support skip/edit and MUST NOT submit or persist answers. | [ui/src/__tests__/pulse-experience.test.tsx](../../ui/src/__tests__/pulse-experience.test.tsx); [tests/e2e/passport-journey.spec.ts](../../tests/e2e/passport-journey.spec.ts) | Implemented demo |
+| PULSE-01 | Guided reflection MUST support skip/edit and MUST NOT automatically submit or persist answers. Device-only save/review/delete requires explicit user action; external AI prompt export must disclose sharing. | [ui/src/__tests__/pulse-experience.test.tsx](../../ui/src/__tests__/pulse-experience.test.tsx); [tests/e2e/passport-journey.spec.ts](../../tests/e2e/passport-journey.spec.ts) | Implemented demo |
 | AUTH-01 | Passport session/profile MUST NOT become credential or vote authority. | [api/src/provider-boundaries.test.ts](../../api/src/provider-boundaries.test.ts); [api/src/passport-v2/conformance.test.ts](../../api/src/passport-v2/conformance.test.ts) | Source and test boundary |
 | ZK-01 | Credential claims and blinded holder binding MUST determine the leaf. | [contracts/credential-registry-v1/credential-registry-v1.compact](../../contracts/credential-registry-v1/credential-registry-v1.compact); [contracts/passport-v2-contracts.test.ts](../../contracts/passport-v2-contracts.test.ts) | Compiled/simulator tested |
 | ZK-02 | Votes MUST prove accepted-root membership, policy and holder binding; repeat nullifiers MUST fail. | [contracts/referendum-v2/referendum-v2.compact](../../contracts/referendum-v2/referendum-v2.compact); [contracts/passport-v2-contracts.test.ts](../../contracts/passport-v2-contracts.test.ts) | Compiled/simulator tested |
@@ -31,7 +31,7 @@ Non-goals: binding elections; audited ballot secrecy; physical NFC completion in
 | ROOT-01 | The service MUST check registry attestation before publishing later roots; the contract MUST authorize the root publisher. | V2 contract; [cico-service/src/credential-root-publisher.test.ts](../../cico-service/src/credential-root-publisher.test.ts) | Off-chain attestation policy; no cross-contract provenance check; live evidence pending |
 | CHAIN-01 | A relay acknowledgement MUST remain pending until canonical reconciliation. | [api/src/receipts/canonical.test.ts](../../api/src/receipts/canonical.test.ts); [relayer/src/v2-indexer.test.ts](../../relayer/src/v2-indexer.test.ts) | Service tests; live current-SHA lifecycle pending |
 | NFC-01 | Real eligibility MUST originate in authenticated, verified provider evidence with replay and retention controls. | [cico-service/src/rarimo-http-gateway.test.ts](../../cico-service/src/rarimo-http-gateway.test.ts); [api/src/passport-v2/rarimo-credential-adapter.test.ts](../../api/src/passport-v2/rarimo-credential-adapter.test.ts) | Adapter source; physical end-to-end acceptance pending |
-| RELEASE-01 | Published claims MUST identify mode, source revision, evidence date and artifact. | [Candidate record](../releases/2026-09-16-submission-candidate.md) | Release gate |
+| RELEASE-01 | Published claims MUST identify mode, source revision, evidence date and artifact. | [Release record](../releases/2026-09-16-final-documentation.md) | Release gate |
 
 ## Observable acceptance scenarios
 
@@ -43,7 +43,7 @@ These scenarios define expected behaviour; they are not a new test-run report. T
 | Honest demonstration · DEMO-01 | A person uses the demo pass and confirms a response. | Both the pass and receipt remain visibly simulated; no live submission is implied. |
 | Respect the rule · DEMO-02 | The simulated holder is underage, expired or outside a restricted consultation's country rule. | Restricted participation is blocked; browsing does not override the check. |
 | Wait for completion · RECEIPT-01 | Receipt creation has started but storage has not resolved. | The test waits for the completion state. Activity retains separate records after separate successful actions. |
-| Reflection is optional · PULSE-01 | A person skips, edits or completes the guided reflection. | No answers are submitted or persisted, and no ballot is cast. |
+| Reflection is optional · PULSE-01 | A person skips, edits or completes the guided reflection. | No answers are automatically submitted or persisted, and no ballot is cast. Explicit local saving and deletion are separate actions. |
 | No invented answer · AI-01 | A question falls outside the authored catalogue. | The guide explains its limit instead of inventing facts or pretending to call an AI model. |
 | Reject repeated use · ZK-02 | An accepted event-scoped nullifier is submitted again. | The contract rejects the repeat; this proves uniqueness of that bound secret in that event, not of all humans. |
 | Pending is not confirmed · CHAIN-01 | A relay acknowledges work without canonical network observation. | The receipt remains pending until independently reconciled. |
@@ -78,8 +78,8 @@ Compact lifecycle: COMMIT → REVEAL → FINALIZED. The source time-gates castin
 | --- | --- | --- |
 | Session/display profile | Consented browser session | Not eligibility or holder authority |
 | Simulated country/age class | Demo credential | Never real document evidence |
-| Civic Pulse answers | Component memory in the guided demo | No backend submission or persistence |
-| Catalogue conversation | Runtime memory | No LLM request or document/pulse context |
+| Civic Pulse answers | Component memory by default; explicit localStorage save | No automatic upload; saved reflections are readable within the browser profile and deletable. User-controlled external AI sharing is disclosed |
+| Catalogue conversation | Runtime memory | No LLM request or document evidence; a reflection can be explicitly shown as local context |
 | Receipt | Local encrypted IndexedDB where supported; memory fallback | Contains identifier/status/network, not ballot choice; same-origin code is outside this encryption protection |
 | Voter secret, opening, proof witness | Browser private state and configured local proof-server boundary | Not logging, analytics, public assets or relay payload |
 | Raw document/provider proof | Restricted verification boundary for the live target | Not public assets or ballot authorization transport; physical lifecycle not verified |

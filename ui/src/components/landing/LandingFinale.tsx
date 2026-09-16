@@ -204,6 +204,7 @@ export function LandingFooter() {
             <a href="#how-it-works">How it works</a>
             <a href="#discover">Humans & agents</a>
             <a href="#our-purpose">Our purpose</a>
+            <a href="/docs">Docs</a>
           </div>
           <div>
             <strong>Explore</strong>
@@ -212,6 +213,16 @@ export function LandingFooter() {
             </a>
             <a href="https://www.midnight.city/" target="_blank" rel="noreferrer">
               Midnight City <ArrowUpRight className="landing-action-arrow" size={14} />
+            </a>
+            <a
+              href="https://discord.com/invite/midnightnetwork?utm_source=midnight.vote&utm_medium=referral&utm_campaign=community&utm_content=footer"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Midnight Discord <ArrowUpRight className="landing-action-arrow" size={14} />
+            </a>
+            <a href="https://t.me/midnightswitzerland" target="_blank" rel="noreferrer">
+              Midnight Switzerland <ArrowUpRight className="landing-action-arrow" size={14} />
             </a>
           </div>
         </nav>

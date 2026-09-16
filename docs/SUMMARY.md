@@ -1,0 +1,18 @@
+# Table of contents
+
+* [Welcome](README.md)
+* [Project vision](VISION.md)
+* [Submission and demo walkthrough](SUBMISSION.md)
+* [Passport, NFC and selective disclosure](PASSPORT-AND-PROOFS.md)
+* [AI and deliberation](AI-AND-DELIBERATION.md)
+* [How it works](HOW-IT-WORKS.md)
+* [Run locally](QUICKSTART.md)
+* [Architecture](ARCHITECTURE.md)
+* [Product specification](specs/PRODUCT-SPEC.md)
+* [Privacy and contract review](COMPACT-REVIEW-2026-09-16.md)
+* [Deployment](DEPLOYMENT.md)
+* [Compatibility](COMPATIBILITY-MATRIX.md)
+* [Live lifecycle acceptance](NEXT-SPRINT-LIVE-LIFECYCLE.md)
+* [Roadmap](SUBMISSION-PLAN.md)
+* [Glossary](GLOSSARY.md)
+* [Documentation publishing](PUBLISHING.md)

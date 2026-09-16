@@ -1,14 +1,23 @@
 # Documentation
 
-**midnight.vote: informed civic participation with explicit privacy boundaries.**
+**Understand more. Disclose less. Participate as yourself.**
 
 This is the canonical documentation in GitHub. Start with the product story, then follow the implementation and evidence as deeply as you need. The current submission is a simulated experience plus reviewable Compact and service source.
+
+## Start with the project
+
+1. [Vision](VISION.md): Midnight Passport at the core and the four product pillars.
+2. [Passport, NFC and selective disclosure](PASSPORT-AND-PROOFS.md): intended claims, current boundaries and the Compact migration.
+3. [AI and deliberation](AI-AND-DELIBERATION.md): what the guide does today and what comes next.
+4. [Submission brief](SUBMISSION.md): contribution, walkthrough and evidence.
+
+Prefer a visual introduction? Open [midnight.vote/docs](https://midnight.vote/docs). For GitBook setup, see [documentation publishing](PUBLISHING.md); this repository includes a curated [table of contents](SUMMARY.md).
 
 ## Choose a reading path
 
 | If you want to… | Start here | Continue with |
 | --- | --- | --- |
-| Review the Wave 1 submission | [Submission brief](SUBMISSION.md) | [Evidence and release gates](releases/2026-09-16-submission-candidate.md) |
+| Review the submission | [Submission brief](SUBMISSION.md) | [Release evidence](releases/2026-09-16-final-documentation.md) |
 | Try the product | [Quick start](QUICKSTART.md) | [Participant and identity journey](HOW-IT-WORKS.md) |
 | Understand the privacy model | [How it works](HOW-IT-WORKS.md) | [Compact review](COMPACT-REVIEW-2026-09-16.md) |
 | Build or change a feature | [Product specification](specs/PRODUCT-SPEC.md) | [Contributing](../CONTRIBUTING.md) and [change template](specs/CHANGE-TEMPLATE.md) |

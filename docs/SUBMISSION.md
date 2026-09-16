@@ -1,13 +1,22 @@
 # midnight.vote — submission brief
 
-**16 September 2026 · Demonstration release candidate**
-Deployed application source: merged `main` at `43535872f9d1c48cc8380451bb95b7d35d9b2900` (PRs #31 and #32). Try the explicit demo at [midnight.vote](https://midnight.vote). [PR #33](https://github.com/tomasgarro/midnight-referendum-app/pull/33) contains test corrections and mobile coverage; the [mobile release record](releases/2026-09-16-mobile-release.md) identifies the artifact and hosted verification. Live network voting remains outside this demo.
+**16 September 2026 · Final project documentation**
+
+[Live demo](https://midnight.vote) · [Public Docs](https://midnight.vote/docs) · [Source](https://github.com/tomasgarro/midnight-vote) · [Release evidence](releases/2026-09-16-final-documentation.md)
+
+Application baseline: merged PR #35, source revision 8184f70. This submission packages the current product demonstration, source, architecture and evidence. It does not claim completion of a hackathon portal submission or enable live network voting.
 
 ## Project summary
 
-midnight.vote is a multilingual prototype for informed, non-binding civic participation. People can explore global and country-specific consultations, read authored context and sources, reflect privately on priorities, and complete a clearly labelled simulated voting journey. The interface separates a Midnight Passport account, a physical identity document, and an eligibility credential.
+**midnight.vote helps people understand more, disclose less and participate as themselves.** Midnight Passport is the core of the experience: the intended selective-disclosure model lets someone prove an age threshold without their name, or citizenship without their residential address. Passport remains in its stagenet-beta phase; current session/profile integration is distinct from eligibility proof.
 
-The technical contribution is a Compact credential registry and referendum design, with provider-neutral TypeScript adapters for issuance, authorization, relaying, and receipt reconciliation. The submission combines a working product demonstration with compiled and tested contract source. The demonstrated vote is simulated; a current-source, passport-backed end-to-end network vote remains future work.
+The intended human participation path starts with a real passport and NFC verification, produces minimal eligibility evidence, and uses private proving and Midnight contracts to enforce participation rules. The first evidence path uses Rarimo ZK Passport technology; moving passport verification toward Compact is future work. The credential registry and ballot contracts already use Compact.
+
+Informed participation also requires understanding dense public material. The product vision includes AI browsing, summarization and comparison of perspectives. Today's Ask Midnight is an authored catalogue guide, not a generative backend. AI-agent voting in Midnight.city remains exploratory and must stay separate from verified-human totals.
+
+The delivered contribution combines a multilingual mobile demo with Compact contracts and provider-neutral TypeScript interfaces for issuance, authorization, relaying and receipt reconciliation. The public vote is simulated. A current-release physical-passport-to-confirmed-network-vote journey is still pending.
+
+Read the [vision](VISION.md), [Passport and proof chapter](PASSPORT-AND-PROOFS.md), and [deliberation roadmap](AI-AND-DELIBERATION.md) for the complete product rationale.
 
 ## Problem and intended users
 
@@ -22,7 +31,7 @@ The first intended use is an invited, non-binding community consultation. Offici
 | Civic experience | Optional onboarding; global/country discovery; proposal details; English, Spanish and French; settings and activity | Demo UI; device and browser checks are scoped to their recorded runs |
 | Simulated participation | Explicit test country/age, eligibility restrictions, answer review, local simulated receipt | No network vote, document verification, or canonical receipt |
 | Ask Midnight | Contextual catalogue responses, follow-ups, uncertainty and source links | Authored deterministic retrieval; no generative AI backend |
-| Civic Pulse | Optional guided reflection, review/edit/skip, budget tradeoffs | Answers remain in component memory; no submission or population statistics |
+| Civic Pulse | Optional guided reflection, review/edit/skip, budget tradeoffs | Drafts in memory; optional explicit local save/review/delete and user-controlled AI prompt export; no automatic submission or population statistics |
 | Compact | Credential Registry V1, Referendum V2, and legacy referendum source/tests | CI compiled all three; legacy 3 and V2 28 simulator tests passed in the cited run |
 | Integration services | API/domain ports, CICO issuer adapter, sponsored relayer, canonical receipt checks | Unit/conformance evidence; not a completed current-release physical-passport journey |
 | Passport | Session/profile bridge | Historical real session evidence only; connection does not establish voting eligibility |
@@ -38,7 +47,7 @@ See the [product specification](specs/PRODUCT-SPEC.md) for requirements and trac
 4. Select an eligible consultation, choose an answer, review it, and create the simulated receipt.
 5. Show the simulated label and Activity. The receipt is not a transaction.
 6. Open Ask Midnight, ask about a catalogue topic, and show sources and the authored-answer disclosure.
-7. Optionally open Civic Pulse, edit or skip an answer, and finish. Explain that answers stay in memory.
+7. Optionally open Civic Pulse, edit or skip an answer, and finish. Explain the default in-memory draft, optional device-only save/delete, and disclosure involved in copying answers to an external AI service.
 
 Follow the [quick start](QUICKSTART.md) to build the demo from a clean checkout. It includes the pinned compiler prerequisite, explicit demo mode and the expected walkthrough. Use the chosen release artifact rather than an unverified public URL. Historical hosting evidence retains its [recorded scope](releases/2026-09-13-current-state.md).
 
@@ -51,7 +60,7 @@ flowchart LR
   S --> V[Review simulated vote]
   V --> R[Local simulated receipt]
   D --> A[Ask Midnight: authored catalogue]
-  D --> P[Civic Pulse: memory only]
+  D --> P[Civic Pulse: local reflection]
 ```
 
 The intended live architecture is separate:
@@ -83,9 +92,11 @@ The demo establishes none of document authenticity, citizenship, uniqueness, or 
 
 ## Evidence and release status
 
-The supplied [CI job](https://github.com/tomasgarro/midnight-referendum-app/actions/runs/35068664679/job/104704743304) compiled the contracts and passed the contract/API/CICO/relayer checks. Its UI stage had 251 passing tests and one asynchronous receipt assertion failure; the dependent browser job was skipped. That run must not be described as green.
+Start with the [final documentation release record](releases/2026-09-16-final-documentation.md). The records below are historical and retain their original source and scope.
 
-The [mobile release record](releases/2026-09-16-mobile-release.md) records the corrected tests, 252 passing local UI tests, artifact verification and four passing Android/iPhone journeys against the public demo. Historical [Preview evidence](evidence/preview-2026-09-02/README.md), [local lifecycle evidence](evidence/undeployed-v2/abdd0a2/), and [Passport session evidence](evidence/passport-live/2026-08-31-first-real-session.md) retain their original dates and scope. They are not evidence for a new live voting deployment.
+The merged application baseline has successful [test CI](https://github.com/tomasgarro/midnight-vote/actions/runs/35095816561) and [format/lint CI](https://github.com/tomasgarro/midnight-vote/actions/runs/35095816534). The documentation release has its own local build, UI, browser and privacy checks in the release record.
+
+Historical [Preview evidence](evidence/preview-2026-09-02/README.md), [local lifecycle evidence](evidence/undeployed-v2/abdd0a2/), and [Passport session evidence](evidence/passport-live/2026-08-31-first-real-session.md) retain their original dates and scope. They do not establish a new live voting deployment. Earlier CI incidents and mobile fixes remain in the dated release records.
 
 ## Next milestones
 

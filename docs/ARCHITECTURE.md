@@ -45,14 +45,14 @@ flowchart LR
   review --> done[Local completion: nothing submitted]
 ```
 
-Answers stay in component memory. This path does not issue credentials, call ballot contracts or publish results. Future agent experiments require a separate actor lane and cannot fall back into human results.
+Drafts stay in component memory by default. PR #34 adds explicit save/review/delete in browser localStorage through `ui/src/pulse/local-reflection.ts`; saved answers are readable within the same browser profile. A visitor may explicitly copy a reflection prompt and share it with an external AI service. This path does not issue credentials, call ballot contracts or publish results. Future agent experiments require a separate actor lane and cannot fall back into human results.
 
 ## Package and service ownership
 
 | Boundary | Owner | May receive | Must never receive |
 | --- | --- | --- | --- |
 | Web product | `ui/` | consented Passport display fields, public catalog/state, encrypted local holder state, local proof result | Passport recovery secret, raw MRZ/NFC/provider evidence |
-| Local civic pulse | `ui/src/pulse/`, `api/src/pulse/` | fixed questionnaire and in-memory human-lane draft | network submission, browser persistence, ballot calls, credentials, synthetic-agent answers |
+| Local civic pulse | `ui/src/pulse/`, `api/src/pulse/` | fixed questionnaire, in-memory human-lane draft and explicitly saved device-only reflection | automatic network submission or persistence, ballot calls, credentials, synthetic-agent answers |
 | Consultation results | `api/src/consultation/` | aggregate-only snapshot with lane, mode, version, status, and provenance | raw responses or cross-lane fallback |
 | Domain and Midnight adapters | `api/` | provider-neutral port requests, public contract state, witness material inside the local boundary | UI presentation policy or relay fee keys |
 | CICO issuer | `cico-service/` | opaque verified evidence authorization, minimum claims, private holder commitment | ballot choice, holder secret/blind, Passport profile, raw document payload |
@@ -73,7 +73,7 @@ Answers stay in component memory. This path does not issue credentials, call bal
 - `RuntimeManifest` pins network, artifact versions, contracts, policies, and
   service endpoints for one reproducible environment.
 - `PriorityPulsePort` is separate from ballot/action ports and v1 has only a
-  non-persistent local demo adapter.
+  local demo adapter; explicit device-only reflection storage is a separate UI action.
 - `ConsultationResultPort` requires actor lane, evidence mode, and provenance;
   missing or cross-lane data fails closed.
 

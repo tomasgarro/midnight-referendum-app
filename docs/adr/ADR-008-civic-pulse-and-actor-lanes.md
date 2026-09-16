@@ -4,6 +4,10 @@
 - Date: 13 September 2026
 - Scope: local civic-priorities demo and future participation boundaries
 
+## 16 September implementation update
+
+PR #34 extends the original memory-only UI with explicit device-only save/review/delete and a user-controlled copy-prompt action. See `ui/src/pulse/local-reflection.ts`. Nothing is automatically uploaded; saved reflections are stored in localStorage and readable within the browser profile. Pasting an exported prompt into an external service shares its contents with that service. The original v1 decision below remains as history; its blanket no-storage/no-export statements are superseded by this explicit-consent UI behavior. Actor-lane separation and no automatic submission remain in force.
+
 ## Context
 
 The product needs a low-friction way for a person to reflect on civic priorities before identity or voting machinery is introduced. The existing Referendum V2 contract is not suitable for collecting these answers: its reveal phase publishes each ballot choice while updating the tally. A stronger statement that individual pulse answers are never exposed therefore requires a separate, independently reviewed aggregation protocol.

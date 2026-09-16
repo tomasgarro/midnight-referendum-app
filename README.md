@@ -1,12 +1,25 @@
 # midnight.vote
 
-**Understand a public question. Prove the facts needed to participate. Keep control of your choice.**
+**Understand more. Disclose less. Participate as yourself.**
 
-midnight.vote is a mobile-first civic consultation prototype built around Midnight Passport and Midnight's Compact contracts. It brings proposal discovery, source-linked explanations, private reflection and an explicit review step into one experience.
+midnight.vote is a Passport-first civic participation project built on Midnight. Its vision brings together **selective disclosure**, **verified citizen participation** and **AI-assisted understanding**: prove that you meet a participation rule without handing over your whole identity, understand the proposal, then make your own choice.
 
-**Wave 1 delivers a working simulated experience and a reviewable contract implementation.** A complete physical-document-to-network-vote journey is the next integration milestone. Consultations are non-binding.
+**Submission status:** a working simulated product and reviewable Compact contracts and integration services. Midnight Passport is in its stagenet-beta phase; the physical NFC-to-counted-vote journey is an integration milestone, not a completed public deployment. Consultations are non-binding.
 
-[Submission brief](docs/SUBMISSION.md) · [Try the demo](https://midnight.vote) · [Run locally](docs/QUICKSTART.md) · [How it works](docs/HOW-IT-WORKS.md) · [Specification](docs/specs/PRODUCT-SPEC.md) · [Documentation](docs/README.md)
+[Try midnight.vote](https://midnight.vote) · [Public Docs](https://midnight.vote/docs) · [Submission brief](docs/SUBMISSION.md) · [Run locally](docs/QUICKSTART.md) · [All documentation](docs/README.md)
+
+## The four pillars
+
+| Pillar | What we are building | What exists today |
+| --- | --- | --- |
+| **Midnight Passport at the core** | Privacy on your own terms: prove 18+ without a name, or citizenship without a residential address. | Session/profile integration; selective-proof experience remains in progress. |
+| **Real passport → NFC → ZK attestation** | Count participation by real, eligible citizens while keeping identity evidence separate from ballots. | Rarimo evidence and issuer adapters; public participation is simulated. |
+| **AI for informed deliberation** | Browse sources, simplify dense proposals and understand different perspectives. | Authored, source-linked catalogue guidance; generative AI is planned. |
+| **Midnight.city exploration** | Research how AI agents might participate in civic experiments. | Exploratory; separate agent and human result lanes are a design requirement. |
+
+The registry and referendum contracts already use **Compact**. The future migration concerns passport verification now approached through Rarimo; it is a separate engineering challenge.
+
+Read the [project vision](docs/VISION.md), [Passport and proof model](docs/PASSPORT-AND-PROOFS.md), and [AI and deliberation plan](docs/AI-AND-DELIBERATION.md).
 
 ## The participant experience
 
@@ -21,11 +34,11 @@ flowchart LR
   understand -. Optional .-> pulse[Reflect privately with Civic Pulse]
 ```
 
-The demo works in English, Spanish and French. **Ask Midnight currently provides authored catalogue answers**, not generated AI responses. **Civic Pulse keeps answers in memory** and does not submit them. Demo credentials and receipts are explicitly labelled as simulated.
+The demo works in English, Spanish and French. **Ask Midnight currently provides authored catalogue answers**, not generated AI responses. **Civic Pulse keeps drafts in memory by default** and offers an explicit device-only save/review/delete action. Saving uses browser storage readable by others using that browser profile; answers are not uploaded. Demo credentials and receipts are explicitly labelled as simulated.
 
 ## What works today
 
-Status baseline: **16 September 2026**. The demo from merged source `4353587` is deployed at [midnight.vote](https://midnight.vote). See the [artifact and mobile verification record](docs/releases/2026-09-16-mobile-release.md).
+Status baseline: **16 September 2026**, application source from merged [PR #35](https://github.com/tomasgarro/midnight-vote/pull/35). The [documentation release record](docs/releases/2026-09-16-final-documentation.md) records this release separately from historical deployment evidence.
 
 | Capability | What you can inspect | Evidence level |
 | --- | --- | --- |
@@ -36,8 +49,6 @@ Status baseline: **16 September 2026**. The demo from merged source `4353587` is
 | Passport session | Account consent and display-profile integration | Source plus a dated [real-session record](docs/evidence/passport-live/2026-08-31-first-real-session.md) |
 | NFC verification and live participation | Provider, issuer, relay and receipt interfaces | Integration source; physical end-to-end acceptance pending |
 | Generative AI and Swiss parliamentary explanations | Proposed source-grounded research companion | Planned |
-
-The receipt synchronization and Civic Pulse browser corrections are included in [PR #33](https://github.com/tomasgarro/midnight-referendum-app/pull/33). All 252 UI tests pass locally, and all four Android/iPhone emulated journeys pass against the public demo. The [release record](docs/releases/2026-09-16-mobile-release.md) distinguishes local checks, CI and hosted evidence.
 
 ## Three things that should stay separate
 
@@ -66,7 +77,7 @@ For a submission review, follow this route:
 1. [Submission brief](docs/SUBMISSION.md): contribution, walkthrough and evidence.
 2. [Product specification](docs/specs/PRODUCT-SPEC.md): requirements and acceptance scenarios.
 3. [How it works](docs/HOW-IT-WORKS.md): participant journey and privacy boundaries.
-4. [Verification record](docs/releases/2026-09-16-submission-candidate.md): exactly what was checked.
+4. [Verification record](docs/releases/2026-09-16-final-documentation.md): exactly what was checked.
 5. [Roadmap and release plan](docs/SUBMISSION-PLAN.md): measurable next steps.
 
 ## Repository map
