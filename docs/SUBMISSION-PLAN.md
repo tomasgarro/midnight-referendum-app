@@ -6,12 +6,19 @@
 
 | Order | Work | Done means |
 | --- | --- | --- |
-| 1 | Correct receipt-test synchronization | Full UI suite passes; assertions still require actual receipt and simulated disclosure |
+| 1 | Correct Civic Pulse navigation and receipt-test synchronization | Full UI and browser suites pass; Pulse reaches review through all optional steps; receipt assertions require actual receipt and simulated disclosure |
 | 2 | Reconcile submission claims | Brief/spec/review separate demo, contract source, historical network evidence and future NFC |
 | 3 | Select the release candidate | PR #31 is merged; publish documentation and review the separate test corrections; record final candidate SHA |
 | 4 | Verify the artifact | Build demo, run browser journey, preserve test record and artifact digest |
 | 5 | Prepare portal material | Use the brief below; attach demo URL, repository revision, screenshots and short walkthrough as required by the event |
 | 6 | Check the submitted link | Confirm it serves the intended artifact; disclose any historical demo instead |
+
+Release acceptance also includes the complete reflection and simulated receipt journeys
+in Android Chrome and iPhone Safari emulation. Run `npm run test:e2e` for all
+projects, or `npx playwright test --project=mobile-chrome --project=mobile-safari`
+for the mobile subset. Browser emulation does not replace a physical-phone check:
+open the released HTTPS URL in Safari/Chrome, complete the demo, check navigation
+and scrolling, reload, and verify the simulation disclosures remain visible.
 
 The portal is Akindo Wave 1. [Prepared form copy and event requirements](AKINDO-WAVE-1.md) include the deadline observation and required deck/video. Public GitHub access and Apache-2.0 LICENSE were checked; the required `midnightntwrk` topic was added. The domain midnight.vote showed a parked page at the recorded 16 September check. PR #31 merged on 16 September. This documentation change does not deploy the product or submit the portal form.
 

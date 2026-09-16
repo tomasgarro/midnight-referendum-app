@@ -278,7 +278,8 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Revisar mi voto/i }));
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
     await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
-    expect(screen.getByRole('heading', { name: 'Gracias por participar' })).toBeTruthy();
+    // Confirmation awaits profile-key derivation and receipt storage before rendering.
+    expect(await screen.findByRole('heading', { name: 'Gracias por participar' })).toBeTruthy();
     expect(screen.getByText(/No representa una transacción/i)).toBeTruthy();
   });
 
@@ -302,7 +303,7 @@ describe('App', () => {
       await user.click(screen.getByRole('button', { name: answer }));
       await user.click(screen.getByRole('button', { name: /Revisar mi voto/i }));
       await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
-      await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
+      await user.click(await screen.findByRole('button', { name: /Ver mi comprobante/i }));
       await user.click(screen.getByRole('button', { name: 'Descubrir' }));
       await chooseCountry(user, 'Argentina');
     };
@@ -335,7 +336,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /^Sí/ }));
     await user.click(screen.getByRole('button', { name: /Revisar mi voto/i }));
     await user.click(screen.getByRole('button', { name: /Crear comprobante simulado/i }));
-    await user.click(screen.getByRole('button', { name: /Ver mi comprobante/i }));
+    await user.click(await screen.findByRole('button', { name: /Ver mi comprobante/i }));
 
     expect(screen.getByRole('heading', { name: /Comprobantes de participación/i })).toBeTruthy();
 
