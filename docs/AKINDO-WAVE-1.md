@@ -7,8 +7,8 @@ Prepared 16 September 2026 for [Build Privacy-First Apps on Midnight](https://ap
 | Field | Recommended value |
 | --- | --- |
 | Product title | midnight.vote |
-| Tagline | Understand the proposal. Prove eligibility. Participate on your terms. |
-| Deliverable URL | https://github.com/tomasgarro/midnight-referendum-app — ensure the selected revision and this documentation are accessible before submitting |
+| Tagline | Understand more. Disclose less. Participate as yourself. |
+| Deliverable URL | https://github.com/tomasgarro/midnight-vote — ensure the selected revision and this documentation are accessible before submitting |
 | Build with | Midnight |
 | Tags (10 maximum) | Compact, TypeScript, React, Vite, Node.js, Zero-Knowledge Proofs, Vitest, Playwright, Docker, Web Crypto |
 | Live demo | https://midnight.vote — verified demo from merged application source `4353587`; [artifact and mobile evidence](releases/2026-09-16-mobile-release.md). Votes and credentials are simulated. |
@@ -30,11 +30,13 @@ The page also states that entries must be submitted personally and automated ent
 
 ## What it does
 
-**midnight.vote makes civic participation easier to understand while keeping identity and participation as separate concerns.**
+**midnight.vote is a Passport-first civic participation project: selective disclosure, verified citizen participation and informed deliberation.**
+
+The vision is to prove 18+ without a name or citizenship without an address. Midnight Passport remains in stagenet beta. The first physical-passport evidence path uses Rarimo ZK Passport; Compact-native passport verification is a future direction, while the registry and ballot contracts already use Compact. AI browsing and summarization are planned; Midnight.city agent participation is exploratory and separate from human totals.
 
 People can explore global and country-specific consultations, read proposal context and sources, reflect privately on their priorities, and complete a clearly labelled simulated voting journey in English, Spanish or French.
 
-The Wave 1 experience includes optional Passport onboarding, eligibility explanations, consultation discovery, answer review, simulated receipts, and Activity. Ask Midnight provides authored catalogue guidance with sources and follow-up questions. Civic Pulse lets people explore priorities and budget tradeoffs without sending or persisting their answers.
+The Wave 1 experience includes optional Passport onboarding, eligibility explanations, consultation discovery, answer review, simulated receipts, and Activity. Ask Midnight provides authored catalogue guidance with sources and follow-up questions. Civic Pulse lets people explore priorities and budget tradeoffs with drafts in memory by default, optional explicit device-only save/delete, and user-controlled AI prompt export. No automatic upload occurs; pasting an exported prompt into an external AI service shares those answers there.
 
 ## The problem it solves
 
@@ -46,7 +48,7 @@ Our initial use case is a non-binding consultation for an invited community. The
 
 The hardest work was aligning the interface with the actual guarantees. A Passport connection is not an eligibility credential; a document camera flow is not NFC verification; and a relay acknowledgement is not a confirmed transaction.
 
-We also had to separate generated contract execution, historical network evidence, and the current demo. A CI failure exposed an asynchronous receipt-test race: the assertion checked the completion screen before local receipt creation finished. A local synchronization correction was verified; it is not included in this documentation-only PR.
+We also had to separate generated contract execution, historical network evidence, and the current demo. A CI failure exposed an asynchronous receipt-test race: the assertion checked the completion screen before local receipt creation finished. The correction is now part of the merged application baseline.
 
 Our Compact review clarified a central privacy limitation: the current design hides the choice during commit, then publishes it during reveal. It does not provide permanent secret-ballot confidentiality. Accepted-root provenance also retains publisher trust.
 
@@ -62,9 +64,9 @@ We built the participant journey around understandable proposals, optional onboa
 
 The technical foundation includes a Compact credential registry with claim-bound commitments and a V2 referendum contract with membership/policy checks, referendum-specific nullifiers, committed ballots, reveal/tally and lifecycle controls. TypeScript services separate credential issuance, root publication, authorized relaying and canonical receipt reconciliation.
 
-Wave 1 progress is visible in the repository history: Compact/service implementation and historical local/Preview experiments, followed by the revised landing, Passport onboarding, discovery, catalogue guidance and reflection experience. Merged PR #31 contains the frontend baseline reviewed here. We have now established a versioned product specification linking requirements to implementation and tests.
+Wave 1 progress is visible in the repository history: Compact/service implementation and historical local/Preview experiments, followed by the revised landing, Passport onboarding, discovery, catalogue guidance and reflection experience. Merged PR #35 contains the application baseline reviewed here. We have now established a versioned product specification linking requirements to implementation and tests.
 
-Earlier CI exposed receipt synchronization and stale Civic Pulse navigation tests. The corrections and Android/iPhone browser coverage are in PR #33. All 252 UI tests pass locally; the production demo build and bundle privacy gate pass. The demo is now hosted at midnight.vote, with its artifact verified and all four emulated Android/iPhone journeys passing against the public URL. Consult the release record and PR checks for exact revision-specific CI status. Physical-phone acceptance and a complete current-source Preview lifecycle remain separate milestones.
+Earlier CI exposed receipt synchronization and stale Civic Pulse navigation tests. The corrections and Android/iPhone browser coverage are in PR #33. All 259 UI tests pass locally; the production demo build and bundle privacy gate pass. The demo is now hosted at midnight.vote, with its artifact verified and all four emulated Android/iPhone journeys passing against the public URL. Consult the release record and PR checks for exact revision-specific CI status. Physical-phone acceptance and a complete current-source Preview lifecycle remain separate milestones.
 
 ## What we learned
 

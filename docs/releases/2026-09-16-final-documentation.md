@@ -29,3 +29,11 @@ The application baseline has successful [test CI](https://github.com/tomasgarro/
 The public application is an explicit demo. The physical NFC-to-confirmed-network-vote journey remains pending. Passport session evidence, earlier Preview deployment and local lifecycle transcripts retain their original scope. Ask Midnight uses authored catalogue responses; generative browsing and summarization are planned. Midnight.city agent participation is exploratory.
 
 GitBook configuration is included; no GitBook space is claimed as published. Repository documentation is the canonical source and the public overview links to it.
+
+## Published artifact and public checks
+
+Documentation/UI source: initial commit 19c0a75 in [PR #36](https://github.com/tomasgarro/midnight-vote/pull/36); subsequent changes correct documentation only. Static archive: midnight-vote_20260916_145100.zip. SHA-256: `77d6ddec9bf33f5d7178b179c9743dd2c9e5e92fd8f6b65efe93afcae559867b`.
+
+Hostinger accepted the deployment to midnight.vote. All five browser configurations above then passed against the public HTTPS site, including direct /docs reload, landing navigation and community links. The archive contains prebuilt assets with index.html and .htaccess at its root. 135 relative documentation links passed local existence checks before the follow-up documentation corrections.
+
+The final source review also corrected stale memory-only Civic Pulse descriptions: explicit device-only save/review/delete and user-controlled AI prompt export were introduced in PR #34. These are now reflected in the submission, specification and architecture.

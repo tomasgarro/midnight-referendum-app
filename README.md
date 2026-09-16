@@ -34,7 +34,7 @@ flowchart LR
   understand -. Optional .-> pulse[Reflect privately with Civic Pulse]
 ```
 
-The demo works in English, Spanish and French. **Ask Midnight currently provides authored catalogue answers**, not generated AI responses. **Civic Pulse keeps answers in memory** and does not submit them. Demo credentials and receipts are explicitly labelled as simulated.
+The demo works in English, Spanish and French. **Ask Midnight currently provides authored catalogue answers**, not generated AI responses. **Civic Pulse keeps drafts in memory by default** and offers an explicit device-only save/review/delete action. Saving uses browser storage readable by others using that browser profile; answers are not uploaded. Demo credentials and receipts are explicitly labelled as simulated.
 
 ## What works today
 

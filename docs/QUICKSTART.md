@@ -41,7 +41,7 @@ For compiler installation and Linux setup, use [DEVELOPMENT.md](../DEVELOPMENT.m
 | 4 | Choose a response and open review | You can change your response before confirming. |
 | 5 | Create the simulated receipt and open Activity | The local record is simulated, not a transaction receipt. |
 | 6 | Open Ask Midnight | Answers come from authored catalogue material. No generative model is connected. |
-| 7 | Try or skip Civic Pulse | Reflection is optional and answers remain in component memory. |
+| 7 | Try or skip Civic Pulse | Drafts stay in memory by default; saving on this device is explicit and can be deleted. Copying a prompt to an external AI service shares the selected answers there. |
 
 ## Troubleshooting
 

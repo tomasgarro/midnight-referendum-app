@@ -8,7 +8,7 @@ Deliberative democracy requires more than recording a preference. People need to
 
 Ask Midnight currently returns authored answers from the published consultation catalogue, with contextual suggestions and source links. It does not browse the web or call a generative model. PR #35 improves conversation scrolling and proposal context; it does not introduce an AI backend.
 
-Civic Pulse is an optional reflection experience. Its answers stay in component memory. It is not a submitted ballot, a public opinion poll or a training-data collection feature.
+Civic Pulse is an optional reflection experience. Drafts stay in component memory by default. Participants can explicitly save, review or delete a reflection in browser localStorage; anyone using that browser profile can read a saved reflection. A separate copy-prompt action lets the participant take answers to an external AI service, which shares those answers with that service if pasted there. The app does not upload them automatically. It is not a submitted ballot, a public opinion poll or a training-data collection feature.
 
 ## Planned: a research and summarization companion
 

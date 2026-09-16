@@ -31,7 +31,7 @@ The first intended use is an invited, non-binding community consultation. Offici
 | Civic experience | Optional onboarding; global/country discovery; proposal details; English, Spanish and French; settings and activity | Demo UI; device and browser checks are scoped to their recorded runs |
 | Simulated participation | Explicit test country/age, eligibility restrictions, answer review, local simulated receipt | No network vote, document verification, or canonical receipt |
 | Ask Midnight | Contextual catalogue responses, follow-ups, uncertainty and source links | Authored deterministic retrieval; no generative AI backend |
-| Civic Pulse | Optional guided reflection, review/edit/skip, budget tradeoffs | Answers remain in component memory; no submission or population statistics |
+| Civic Pulse | Optional guided reflection, review/edit/skip, budget tradeoffs | Drafts in memory; optional explicit local save/review/delete and user-controlled AI prompt export; no automatic submission or population statistics |
 | Compact | Credential Registry V1, Referendum V2, and legacy referendum source/tests | CI compiled all three; legacy 3 and V2 28 simulator tests passed in the cited run |
 | Integration services | API/domain ports, CICO issuer adapter, sponsored relayer, canonical receipt checks | Unit/conformance evidence; not a completed current-release physical-passport journey |
 | Passport | Session/profile bridge | Historical real session evidence only; connection does not establish voting eligibility |
@@ -47,7 +47,7 @@ See the [product specification](specs/PRODUCT-SPEC.md) for requirements and trac
 4. Select an eligible consultation, choose an answer, review it, and create the simulated receipt.
 5. Show the simulated label and Activity. The receipt is not a transaction.
 6. Open Ask Midnight, ask about a catalogue topic, and show sources and the authored-answer disclosure.
-7. Optionally open Civic Pulse, edit or skip an answer, and finish. Explain that answers stay in memory.
+7. Optionally open Civic Pulse, edit or skip an answer, and finish. Explain the default in-memory draft, optional device-only save/delete, and disclosure involved in copying answers to an external AI service.
 
 Follow the [quick start](QUICKSTART.md) to build the demo from a clean checkout. It includes the pinned compiler prerequisite, explicit demo mode and the expected walkthrough. Use the chosen release artifact rather than an unverified public URL. Historical hosting evidence retains its [recorded scope](releases/2026-09-13-current-state.md).
 
@@ -60,7 +60,7 @@ flowchart LR
   S --> V[Review simulated vote]
   V --> R[Local simulated receipt]
   D --> A[Ask Midnight: authored catalogue]
-  D --> P[Civic Pulse: memory only]
+  D --> P[Civic Pulse: local reflection]
 ```
 
 The intended live architecture is separate:
