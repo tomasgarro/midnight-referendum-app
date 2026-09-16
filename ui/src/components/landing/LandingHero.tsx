@@ -41,6 +41,7 @@ export function LandingHero({ onStart }: { onStart: () => void }) {
           <a href="#how-it-works">How it works</a>
           <a href="#discover">Discover</a>
           <a href="#our-purpose">Our purpose</a>
+          <a href="/docs">Docs</a>
           <a href="https://midnight.network" target="_blank" rel="noreferrer">
             Explore Midnight <ArrowUpRight className="landing-action-arrow" size={14} />
           </a>
@@ -73,6 +74,9 @@ export function LandingHero({ onStart }: { onStart: () => void }) {
             }}
           >
             Discover <ArrowDown size={18} />
+          </a>
+          <a href="/docs">
+            Docs <ArrowUpRight size={18} aria-hidden="true" />
           </a>
           {/* biome-ignore lint/a11y/useValidAnchor: Native section navigation also dismisses the menu. */}
           <a
