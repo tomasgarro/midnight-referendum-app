@@ -230,7 +230,7 @@ export function UnifiedPassportOnboarding({
           aria-labelledby="onboarding-welcome-title"
         >
           <div className="onboarding-brand">
-            <img src="/brand/midnight-symbol-black.svg" alt="" />
+            <img src="/brand/midnight-vote-d3-black.svg" alt="" />
             midnight<span>.vote</span>
           </div>
           <div className="onboarding-welcome-art">

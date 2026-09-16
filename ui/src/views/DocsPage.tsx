@@ -1,4 +1,4 @@
-import { ArrowUpRight, Moon } from '@phosphor-icons/react';
+import { ArrowUpRight } from '@phosphor-icons/react';
 import { useEffect } from 'react';
 import './docs-page.css';
 
@@ -58,7 +58,8 @@ export default function DocsPage() {
       </a>
       <header className="vote-docs__header">
         <a className="vote-docs__brand" href="/" aria-label="midnight.vote home">
-          <Moon size={24} weight="fill" aria-hidden="true" /> midnight<span>.vote</span>
+          <img src="/brand/midnight-vote-d3-black.svg" width="43" height="25" alt="" /> midnight
+          <span>.vote</span>
         </a>
         <nav aria-label="Documentation navigation">
           <a href={repository}>

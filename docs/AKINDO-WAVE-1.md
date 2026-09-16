@@ -1,5 +1,7 @@
 # Akindo Wave 1 — submission fields
 
+[Updated product submission copy and gallery guide](PRODUCT-SUBMISSION.md)
+
 Prepared 16 September 2026 for [Build Privacy-First Apps on Midnight](https://app.akindo.io/wave-hacks/jaMZjqPOBsLXvjdG). This is prepared copy, not confirmation of submission.
 
 ## Form values

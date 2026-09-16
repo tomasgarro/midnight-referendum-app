@@ -3,7 +3,6 @@ import {
   ChatCircle,
   Check,
   LockKey,
-  Moon,
   Robot,
   Sparkle,
   UsersThree,
@@ -188,7 +187,7 @@ export function LandingFooter() {
       <div className="finale-footer__top">
         <div>
           <a className="midnight-brand" href="#landing-main">
-            <Moon size={24} weight="fill" />
+            <img src="/brand/midnight-vote-d3-white.svg" width="43" height="25" alt="" />
             <span>
               midnight<span className="midnight-brand__suffix">.vote</span>
             </span>

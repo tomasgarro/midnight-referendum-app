@@ -42,7 +42,7 @@ export function App() {
       fallback={
         <main className="runtime-loading" aria-live="polite">
           <div className="runtime-loading__symbol" aria-hidden="true">
-            <img src="/brand/midnight-symbol-white.svg" alt="" />
+            <img src="/brand/midnight-vote-d3-white.svg" alt="" />
           </div>
           <p>A little privacy. A new possibility.</p>
           <small>Preparing your experience…</small>

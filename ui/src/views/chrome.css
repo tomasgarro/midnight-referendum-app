@@ -340,3 +340,15 @@
 .app-shell > .chrome-bar {
   flex: none;
 }
+
+/* Independent product identity occupies the top-right corner. */
+.chrome-header__identity {
+  order: 2;
+}
+.chrome-actions {
+  order: 1;
+}
+.dashboard-symbol.dashboard-symbol--product {
+  width: 40px;
+  height: 25px;
+}
