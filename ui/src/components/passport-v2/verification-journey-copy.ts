@@ -137,7 +137,7 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
     captureHintFill: 'Que la página llene el marco de lado a lado',
     captureScanning: 'Buscando la zona legible…',
     captureRecognitionOff:
-      'Este navegador no reconoce texto automáticamente. Sacá la foto y cargá los tres datos a mano.',
+      'Este navegador no reconoce texto automáticamente. Leé la página y cargá los tres datos a mano.',
     captureManual: 'Cargar los datos a mano',
     captureFrameLabel: 'Vista de la cámara para la página del pasaporte',
 

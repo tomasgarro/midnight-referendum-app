@@ -39,8 +39,9 @@ export default defineConfig({
         '**/passport-journey.spec.ts',
         '**/feedback.spec.ts',
         '**/connection-status.spec.ts',
+        '**/mobile-refinements.spec.ts',
       ],
-      grep: /completes the civic pulse|completes Passport onboarding, then creates|feedback route|connection status/,
+      grep: /completes the civic pulse|completes Passport onboarding, then creates|feedback route|connection status|mobile refinements/,
     })),
   ],
   webServer: externalBaseUrl

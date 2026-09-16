@@ -26,6 +26,30 @@ describe('Passport onboarding', () => {
     localStorage.clear();
     sessionStorage.clear();
   });
+  it('can leave the demo selection and reconnect a real Passport after navigating back', async () => {
+    const user = userEvent.setup();
+    const connect = vi.fn().mockResolvedValue(session);
+    const connected = vi.fn();
+    render(
+      <PassportJourney
+        mode="demo"
+        initialStage="passport"
+        initialLocale="en"
+        passportPort={port(connect)}
+        onClose={vi.fn()}
+        onPassportConnected={connected}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Use demo Passport' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Previous step' }));
+    await user.click(screen.getByRole('button', { name: 'Use my real Passport' }));
+    expect(connected).toHaveBeenLastCalledWith(null);
+    await user.click(screen.getByRole('button', { name: 'Connect Midnight Passport' }));
+    expect(connect).toHaveBeenCalledOnce();
+    expect(connected).toHaveBeenLastCalledWith(session);
+    expect(screen.queryByText('Demo profile selected')).toBeNull();
+  });
   it('creates a simulated pass only through the explicit demo path', async () => {
     const user = userEvent.setup();
     const onCredentialReady = vi.fn();
@@ -44,7 +68,7 @@ describe('Passport onboarding', () => {
     expect(screen.queryByText('Try a zero-knowledge proof')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Use demo Passport' }));
-    expect(screen.getByRole('status').textContent).toContain('Passport connected');
+    expect(screen.getByRole('status').textContent).toContain('Demo profile selected');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByText('Try with a simulated pass'));
     await user.click(screen.getByRole('radio', { name: /Argentina/ }));

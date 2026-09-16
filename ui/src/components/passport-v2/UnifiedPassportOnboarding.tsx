@@ -58,6 +58,7 @@ export function UnifiedPassportOnboarding({
   const history = useJourneyHistory<OnboardingStage>(entry);
   const { stage, go, back, canBack } = history;
   const [session, setSession] = useState(initialSession);
+  const demoSelected = session?.sessionId === 'local-demo-explicit';
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [country, setCountry] = useState('FR');
@@ -354,11 +355,31 @@ export function UnifiedPassportOnboarding({
             </li>
           </ul>
           {session ? (
-            <div className="onboarding-connected" role="status">
-              <ConnectionStatus state="success" />
+            <div className="onboarding-connected" data-demo={demoSelected} role="status">
+              {demoSelected ? (
+                <span className="onboarding-demo-badge">DEMO</span>
+              ) : (
+                <ConnectionStatus state="success" />
+              )}
               <div>
-                <strong>{t.connected}</strong>
-                <span>{session.profile?.displayName ?? 'Passport'}</span>
+                <strong>
+                  {demoSelected
+                    ? locale === 'es'
+                      ? 'Perfil de prueba seleccionado'
+                      : locale === 'fr'
+                        ? 'Profil de démo sélectionné'
+                        : 'Demo profile selected'
+                    : t.connected}
+                </strong>
+                <span>
+                  {demoSelected
+                    ? locale === 'es'
+                      ? 'No se conectó ninguna cuenta real.'
+                      : locale === 'fr'
+                        ? 'Aucun compte réel n’est connecté.'
+                        : 'No real account has been connected.'
+                    : (session.profile?.displayName ?? 'Passport')}
+                </span>
               </div>
             </div>
           ) : null}
@@ -375,6 +396,25 @@ export function UnifiedPassportOnboarding({
             </div>
           )}
           <div className="onboarding-actions">
+            {demoSelected && (
+              <button
+                type="button"
+                className="onboarding-secondary"
+                onClick={() => {
+                  cancel();
+                  setSession(null);
+                  setCreatedDemo(null);
+                  setError(null);
+                  onPassportConnected?.(null);
+                }}
+              >
+                {locale === 'es'
+                  ? 'Usar mi Passport real'
+                  : locale === 'fr'
+                    ? 'Utiliser mon vrai Passport'
+                    : 'Use my real Passport'}
+              </button>
+            )}
             <button
               className="onboarding-primary"
               type="button"

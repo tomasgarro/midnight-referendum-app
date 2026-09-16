@@ -60,5 +60,5 @@ test('budget reflection preserves choices on back and review editing', async ({ 
   await expect(page.getByRole('heading', { name: 'Take a moment to look back.' })).toBeVisible();
   await expect(page.getByText('Compare a mix of approaches', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Finish reflection' }).click();
-  await expect(page.getByText(/No answer was submitted or saved/)).toBeVisible();
+  await expect(page.getByText(/No answers were sent/)).toBeVisible();
 });

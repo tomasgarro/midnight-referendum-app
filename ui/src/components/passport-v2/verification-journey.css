@@ -133,6 +133,24 @@
   margin-top: auto;
   padding-top: var(--space-5);
 }
+.verify-journey .verify-journey__actions {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+}
+.verify-journey__actions > :not(.verify-journey__back) {
+  grid-column: 2;
+}
+.verify-journey__back {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+}
 .verify-journey__progress {
   display: flex;
   gap: 8px;

@@ -287,3 +287,31 @@
 .app-shell > .catalogue-chat {
   overflow: hidden;
 }
+.catalogue-chat__reflection {
+  padding: 20px;
+  margin: 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.catalogue-chat__reflection h2 {
+  font-size: 18px;
+}
+.catalogue-chat__reflection p {
+  white-space: pre-line;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.catalogue-chat__reflection small {
+  display: block;
+  line-height: 1.5;
+}
+.catalogue-chat__reflection button {
+  min-height: 44px;
+  margin-top: 12px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+}

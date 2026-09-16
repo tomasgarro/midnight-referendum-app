@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUp, Robot, Trash } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { countryName } from '@/integration/country-catalog';
 import type { CicoLocale } from '@/integration/locale';
+import { REFLECTION_COPY } from '@/pulse/local-reflection';
 import { answerCatalogue, GUIDE_COPY, type GuideAnswer } from './catalogue-guide';
 import { CHAT_PROMPTS } from './chat-prompts';
 import { localizePoll, type Poll, pollCountryCode } from './poll-model';
@@ -19,6 +20,8 @@ export function CatalogueChat({
   onOpenPolicy,
   initialMessages = [],
   onMessagesChange,
+  reflectionContext,
+  onClearReflection,
 }: {
   polls: readonly Poll[];
   locale: CicoLocale;
@@ -26,6 +29,8 @@ export function CatalogueChat({
   onOpenPolicy: (id: string) => void;
   initialMessages?: CatalogueMessage[];
   onMessagesChange?: (messages: CatalogueMessage[]) => void;
+  reflectionContext?: string | null;
+  onClearReflection?: () => void;
 }) {
   const t = GUIDE_COPY[locale];
   const prompts = CHAT_PROMPTS[locale];
@@ -88,6 +93,7 @@ export function CatalogueChat({
             pendingRef.current = null;
             setPending(null);
             updateMessages([]);
+            onClearReflection?.();
             setQuestion('');
             input.current?.focus();
           }}
@@ -96,6 +102,20 @@ export function CatalogueChat({
         </button>
       </header>
       <div className="catalogue-chat__scroll">
+        {reflectionContext && (
+          <section className="catalogue-chat__reflection">
+            <h2>{REFLECTION_COPY[locale].context}</h2>
+            <p>{reflectionContext}</p>
+            <small>{t.disclosure}</small>
+            <button type="button" onClick={onClearReflection}>
+              {locale === 'es'
+                ? 'Quitar del chat'
+                : locale === 'fr'
+                  ? 'Retirer du chat'
+                  : 'Remove from chat'}
+            </button>
+          </section>
+        )}
         {messages.length > 0 && <h1 className="sr-only">{t.name}</h1>}
         <section className="catalogue-chat__intro" hidden={messages.length > 0 || Boolean(pending)}>
           <div className="catalogue-chat__robot">

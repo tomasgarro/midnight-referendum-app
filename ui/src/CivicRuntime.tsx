@@ -110,6 +110,7 @@ function CivicApp() {
   const [theme, setTheme] = useState<ThemePreference>(detectThemePreference);
   const [tab, setTab] = useState<Tab>('discover');
   const [guideMessages, setGuideMessages] = useState<CatalogueMessage[]>([]);
+  const [reflectionContext, setReflectionContext] = useState<string | null>(null);
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
   const [pulseOpen, setPulseOpen] = useState(false);
@@ -507,11 +508,14 @@ function CivicApp() {
 
   const lockAndDisconnect = async () => {
     setGuideMessages([]);
+    setReflectionContext(null);
     await passportSessionPort.disconnect();
     setPassportSession(null);
     setPassportError(null);
   };
   const removeLocalData = async () => {
+    window.localStorage.removeItem('midnight-civic-reflection-v1');
+    setReflectionContext(null);
     setGuideMessages([]);
     const credentialPort = passportJourneyPorts.credential;
     if (credentialPort) await credentialPort.clearCredential();
@@ -527,6 +531,8 @@ function CivicApp() {
   const currentTabContent =
     tab === 'assistant' ? (
       <CatalogueChat
+        reflectionContext={reflectionContext}
+        onClearReflection={() => setReflectionContext(null)}
         initialMessages={guideMessages}
         onMessagesChange={setGuideMessages}
         polls={polls}
@@ -633,6 +639,11 @@ function CivicApp() {
           }
         >
           <PulseExperience
+            onDiscuss={(summary) => {
+              setReflectionContext(summary);
+              setPulseOpen(false);
+              setTab('assistant');
+            }}
             locale={locale}
             embedded
             onExit={() => setPulseOpen(false)}

@@ -8,6 +8,46 @@
   max-width: 760px;
   margin: auto;
 }
+.pulse-reflection-summary {
+  width: 100%;
+  text-align: left;
+  margin-top: 20px;
+}
+.pulse-reflection-summary section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pulse-reflection-summary h2 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.pulse-reflection-summary p {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+}
+.pulse-local-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.pulse-v4__actions textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+}
+.pulse-button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.pulse-v4 .pulse-v4__question-icon {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 4px;
+}
 .app-shell > .pulse-v4 {
   min-height: 0;
   flex: 1;

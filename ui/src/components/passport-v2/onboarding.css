@@ -816,6 +816,31 @@
   height: 40px;
   flex-basis: 40px;
 }
+.onboarding-connected[data-demo="true"] {
+  background: var(--onboarding-panel);
+  border: 1px solid var(--onboarding-line);
+  color: var(--onboarding-ink);
+}
+.onboarding-connected .onboarding-demo-badge {
+  flex: none;
+  padding: 6px 9px;
+  border: 1px solid var(--onboarding-line);
+  border-radius: 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.onboarding-v3 .verify-journey .verify-journey__back {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  color: var(--onboarding-ink);
+  background: var(--onboarding-panel);
+}
 .onboarding-pass-confirmation {
   position: relative;
   display: flex;
