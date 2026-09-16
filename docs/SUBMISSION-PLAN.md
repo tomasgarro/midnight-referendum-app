@@ -20,7 +20,7 @@ for the mobile subset. Browser emulation does not replace a physical-phone check
 open the released HTTPS URL in Safari/Chrome, complete the demo, check navigation
 and scrolling, reload, and verify the simulation disclosures remain visible.
 
-The portal is Akindo Wave 1. [Prepared form copy and event requirements](AKINDO-WAVE-1.md) include the deadline observation and required deck/video. Public GitHub access and Apache-2.0 LICENSE were checked; the required `midnightntwrk` topic was added. The domain midnight.vote showed a parked page at the recorded 16 September check. PR #31 merged on 16 September. This documentation change does not deploy the product or submit the portal form.
+The portal is Akindo Wave 1. [Prepared form copy and event requirements](AKINDO-WAVE-1.md) include the deadline observation and required deck/video. Public GitHub access and Apache-2.0 LICENSE were checked; the required `midnightntwrk` topic was added. PRs #31 and #32 are merged. The verified demo is now hosted at [midnight.vote](https://midnight.vote), with four passing public Android/iPhone emulated journeys; see the [release record](releases/2026-09-16-mobile-release.md). Test corrections are in PR #33. The portal form has not been submitted.
 
 ## Paste-ready short description
 

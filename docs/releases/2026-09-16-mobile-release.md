@@ -44,8 +44,18 @@ account `u665780279`, order `55519490`. Before this release, the root domain
 served a parked page; the older demo was on the Hostinger temporary hostname.
 The separate `cico` and `rarimo` subdomains target the existing VPS.
 
-Publish the reviewed demo on the existing plan, verify HTTPS and the exact
-hosted asset bytes, then run the mobile projects against the public URL.
+The demo was deployed to [midnight.vote](https://midnight.vote) on the existing
+plan at approximately 10:00 UTC. HTTPS works at both the apex and `www`, and
+SPA fallback returns the app. Hostinger connected the apex using
+`midnight.vote.cdn.hstgr.net` and `www` using `www.midnight.vote.cdn.hstgr.net`;
+the `cico` and `rarimo` VPS records are unchanged.
+
+All **four mobile browser journeys passed against the public URL** (1.2 minutes).
+Of the 33 public build files, 30 match the local artifact byte-for-byte through
+the CDN, including HTML, JavaScript, CSS, fonts and WASM. The CDN rewrites three
+PNGs; each of those matches the artifact byte-for-byte when fetched directly
+from the Hostinger origin. Security headers and SPA fallback were also checked.
+
 On a physical phone, check the landing menu, demo Passport, simulated pass,
 consultation/receipt, Civic Pulse, back navigation and reload in Safari or
 Chrome. Use synthetic information. Keep simulation labels visible.

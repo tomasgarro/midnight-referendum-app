@@ -1,7 +1,7 @@
 # midnight.vote — submission brief
 
 **16 September 2026 · Demonstration release candidate**
-Source baseline: PR [#31](https://github.com/tomasgarro/midnight-referendum-app/pull/31), `ac1578553629c2f0005737461474c635d3aa6a6a`, merged into `main` at `1884a3a`. This PR adds documentation only. The [release review](releases/2026-09-16-submission-candidate.md) distinguishes the failing CI from separately verified local test corrections, which are not included here. A candidate is not a deployed release.
+Deployed application source: merged `main` at `43535872f9d1c48cc8380451bb95b7d35d9b2900` (PRs #31 and #32). Try the explicit demo at [midnight.vote](https://midnight.vote). [PR #33](https://github.com/tomasgarro/midnight-referendum-app/pull/33) contains test corrections and mobile coverage; the [mobile release record](releases/2026-09-16-mobile-release.md) identifies the artifact and hosted verification. Live network voting remains outside this demo.
 
 ## Project summary
 
@@ -85,7 +85,7 @@ The demo establishes none of document authenticity, citizenship, uniqueness, or 
 
 The supplied [CI job](https://github.com/tomasgarro/midnight-referendum-app/actions/runs/35068664679/job/104704743304) compiled the contracts and passed the contract/API/CICO/relayer checks. Its UI stage had 251 passing tests and one asynchronous receipt assertion failure; the dependent browser job was skipped. That run must not be described as green.
 
-The [candidate record](releases/2026-09-16-submission-candidate.md) records local verification of separate test corrections, not included in this documentation-only PR. Historical [Preview evidence](evidence/preview-2026-09-02/README.md), [local lifecycle evidence](evidence/undeployed-v2/abdd0a2/), and [Passport session evidence](evidence/passport-live/2026-08-31-first-real-session.md) retain their original dates and scope. They are not evidence for a new deployment.
+The [mobile release record](releases/2026-09-16-mobile-release.md) records the corrected tests, 252 passing local UI tests, artifact verification and four passing Android/iPhone journeys against the public demo. Historical [Preview evidence](evidence/preview-2026-09-02/README.md), [local lifecycle evidence](evidence/undeployed-v2/abdd0a2/), and [Passport session evidence](evidence/passport-live/2026-08-31-first-real-session.md) retain their original dates and scope. They are not evidence for a new live voting deployment.
 
 ## Next milestones
 

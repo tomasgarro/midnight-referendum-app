@@ -11,7 +11,7 @@ Prepared 16 September 2026 for [Build Privacy-First Apps on Midnight](https://ap
 | Deliverable URL | https://github.com/tomasgarro/midnight-referendum-app — ensure the selected revision and this documentation are accessible before submitting |
 | Build with | Midnight |
 | Tags (10 maximum) | Compact, TypeScript, React, Vite, Node.js, Zero-Knowledge Proofs, Vitest, Playwright, Docker, Web Crypto |
-| Live demo | Do not use https://midnight.vote yet: a browser check on 16 September showed the Hostinger parked-domain page. Deploy and verify the selected candidate first, or use a separately verified demo URL. |
+| Live demo | https://midnight.vote — verified demo from merged application source `4353587`; [artifact and mobile evidence](releases/2026-09-16-mobile-release.md). Votes and credentials are simulated. |
 | Video | Public YouTube URL of an actual walkthrough or video pitch; add after recording/upload |
 | Product detail visibility | Public is recommended for an open-source submission; owner selects the final visibility |
 | Connect | Owner supplies X, Discord, Telegram and email |
@@ -64,7 +64,7 @@ The technical foundation includes a Compact credential registry with claim-bound
 
 Wave 1 progress is visible in the repository history: Compact/service implementation and historical local/Preview experiments, followed by the revised landing, Passport onboarding, discovery, catalogue guidance and reflection experience. Merged PR #31 contains the frontend baseline reviewed here. We have now established a versioned product specification linking requirements to implementation and tests.
 
-The supplied CI run compiled all three contracts and passed 31 contract simulator tests, 79 API tests, 63 CICO tests and 37 relayer tests; its UI stage exposed the timing race described above. In a separately corrected local working tree, all 252 UI tests passed. Those test changes are not included in this documentation-only PR, and the result is not a claim that its CI is green. The recorded local production demo build passed. Fresh candidate CI and hosted-artifact verification are still release gates.
+Earlier CI exposed receipt synchronization and stale Civic Pulse navigation tests. The corrections and Android/iPhone browser coverage are in PR #33. All 252 UI tests pass locally; the production demo build and bundle privacy gate pass. The demo is now hosted at midnight.vote, with its artifact verified and all four emulated Android/iPhone journeys passing against the public URL. Consult the release record and PR checks for exact revision-specific CI status. Physical-phone acceptance and a complete current-source Preview lifecycle remain separate milestones.
 
 ## What we learned
 
