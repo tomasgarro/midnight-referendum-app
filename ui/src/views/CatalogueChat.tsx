@@ -48,16 +48,23 @@ export function CatalogueChat({
     setMessages(next);
     onMessagesChange?.(next);
   };
-  const end = useRef<HTMLDivElement>(null);
-  const input = useRef<HTMLInputElement>(null);
+  const scroll = useRef<HTMLDivElement>(null);
   const id = useRef(initialMessages[initialMessages.length - 1]?.id ?? 0);
   const countries = [...new Set(polls.map(pollCountryCode).filter((c): c is string => Boolean(c)))];
   useEffect(() => {
-    if (messages.length)
-      end.current?.parentElement
-        ?.querySelector('.catalogue-chat__exchange:last-child')
-        ?.scrollIntoView?.({ block: 'start' });
-  }, [messages.length]);
+    const pane = scroll.current;
+    if (!messages.length && !pending?.id) {
+      if (pane) pane.scrollTop = 0;
+      return;
+    }
+    const exchanges = pane?.querySelectorAll<HTMLElement>('.catalogue-chat__exchange');
+    const exchange = exchanges?.[exchanges.length - 1];
+    if (pane && exchange) {
+      // Scroll only the conversation, never the page or the app frame.
+      pane.scrollTop +=
+        exchange.getBoundingClientRect().top - pane.getBoundingClientRect().top - 24;
+    }
+  }, [messages.length, pending?.id]);
   const reveal = (message: CatalogueMessage) => {
     clearTimeout(timer.current);
     pendingRef.current = null;
@@ -75,7 +82,6 @@ export function CatalogueChat({
       timer.current = setTimeout(() => reveal(message), 550);
     }
     setQuestion('');
-    input.current?.focus();
   };
   return (
     <main className="catalogue-chat">
@@ -95,13 +101,12 @@ export function CatalogueChat({
             updateMessages([]);
             onClearReflection?.();
             setQuestion('');
-            input.current?.focus();
           }}
         >
           <Trash size={19} />
         </button>
       </header>
-      <div className="catalogue-chat__scroll">
+      <div className="catalogue-chat__scroll" ref={scroll}>
         {reflectionContext && (
           <section className="catalogue-chat__reflection">
             <h2>{REFLECTION_COPY[locale].context}</h2>
@@ -189,20 +194,24 @@ export function CatalogueChat({
                 </div>
                 {m.answer.selectedId && (
                   <fieldset className="chat-followups" aria-label={prompts.follow}>
-                    {(['arguments', 'evidence', 'uncertainty', 'sources'] as const).map((kind) => (
-                      <button
-                        key={kind}
-                        type="button"
-                        disabled={Boolean(pending)}
-                        onClick={() => {
-                          const selected = polls.find((p) => p.id === m.answer.selectedId);
-                          if (selected)
-                            send(`${prompts[kind]}: ${localizePoll(selected, locale).title}`);
-                        }}
-                      >
-                        {prompts[kind]}
-                      </button>
-                    ))}
+                    {(['summary', 'arguments', 'evidence', 'uncertainty', 'sources'] as const).map(
+                      (kind) => (
+                        <button
+                          key={kind}
+                          type="button"
+                          disabled={Boolean(pending)}
+                          onClick={() => {
+                            const selected = polls.find((p) => p.id === m.answer.selectedId);
+                            if (selected)
+                              send(
+                                `${kind === 'summary' ? t.summary : prompts[kind]}: ${localizePoll(selected, locale).title}`,
+                              );
+                          }}
+                        >
+                          {kind === 'summary' ? t.summary : prompts[kind]}
+                        </button>
+                      ),
+                    )}
                   </fieldset>
                 )}
                 {m.answer.selectedId &&
@@ -232,10 +241,26 @@ export function CatalogueChat({
                           ? countryName(pollCountryCode(p) ?? '', locale)
                           : t.globalLabel}
                       </small>
+                      <details className="chat-proposal-preview">
+                        <summary>
+                          {locale === 'es'
+                            ? 'De qué trata'
+                            : locale === 'fr'
+                              ? 'De quoi s’agit-il ?'
+                              : 'What is proposed?'}
+                        </summary>
+                        <p>{p.description}</p>
+                      </details>
                       <div>
-                        <button type="button" onClick={() => send(`${t.summary} ${p.title}`)}>
-                          {t.summary}
-                        </button>
+                        {!m.answer.selectedId && (
+                          <button
+                            type="button"
+                            disabled={Boolean(pending)}
+                            onClick={() => send(`${t.summary} ${p.title}`)}
+                          >
+                            {t.summary}
+                          </button>
+                        )}
                         <button type="button" onClick={() => onOpenPolicy(p.id)}>
                           {t.read}
                           <ArrowRight size={14} />
@@ -264,7 +289,6 @@ export function CatalogueChat({
             </button>
           </section>
         )}
-        <div ref={end} />
       </div>
       <form
         className="catalogue-chat__composer"
@@ -278,7 +302,6 @@ export function CatalogueChat({
         </label>
         <div>
           <input
-            ref={input}
             id="catalogue-question"
             autoComplete="off"
             maxLength={1000}

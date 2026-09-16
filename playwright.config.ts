@@ -40,8 +40,9 @@ export default defineConfig({
         '**/feedback.spec.ts',
         '**/connection-status.spec.ts',
         '**/mobile-refinements.spec.ts',
+        '**/chat-stability.spec.ts',
       ],
-      grep: /completes the civic pulse|completes Passport onboarding, then creates|feedback route|connection status|mobile refinements/,
+      grep: /completes the civic pulse|completes Passport onboarding, then creates|feedback route|connection status|mobile refinements|suggestions keep/,
     })),
   ],
   webServer: externalBaseUrl

@@ -201,7 +201,7 @@ export function HowItWorks({ onStart }: { onStart: () => void }) {
 
   useEffect(() => {
     const query = window.matchMedia(
-      '(min-width: 960px) and (min-height: 800px) and (prefers-reduced-motion: no-preference)',
+      '(min-width: 960px) and (min-height: 650px) and (prefers-reduced-motion: no-preference)',
     );
     const sync = () => setPinned(query.matches);
     sync();

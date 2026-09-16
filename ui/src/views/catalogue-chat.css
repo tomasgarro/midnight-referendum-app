@@ -138,6 +138,42 @@
   min-height: 0;
   overflow: auto;
   padding: 24px;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scroll-behavior: auto;
+}
+.catalogue-chat__messages,
+.catalogue-chat__reflection {
+  width: min(100%, 680px);
+  margin-inline: auto;
+}
+.catalogue-chat__header,
+.catalogue-chat__composer {
+  flex-shrink: 0;
+}
+.catalogue-chat__composer > div,
+.catalogue-chat__composer > p {
+  max-width: 680px;
+  margin-inline: auto;
+}
+.catalogue-chat button:focus-visible,
+.catalogue-chat a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.catalogue-chat__source button,
+.chat-followups button {
+  transition:
+    background-color 160ms,
+    border-color 160ms;
+}
+.catalogue-chat__source button:hover,
+.chat-followups button:hover {
+  background: var(--accent-wash);
+  border-color: var(--line-strong);
+}
+.catalogue-chat__exchange {
+  scroll-margin-top: 24px;
 }
 .catalogue-chat__intro {
   text-align: center;
@@ -314,4 +350,26 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 8px 14px;
+}
+.chat-proposal-preview {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.chat-proposal-preview summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
+  color: var(--ink-muted);
+}
+.chat-proposal-preview p {
+  margin: 0 0 12px;
+}
+.chat-proposal-preview[open] p {
+  animation: chat-response-in 180ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-proposal-preview[open] p {
+    animation: none;
+  }
 }
