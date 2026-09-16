@@ -11,7 +11,7 @@ Prepared 16 September 2026 for [Build Privacy-First Apps on Midnight](https://ap
 | Deliverable URL | https://github.com/tomasgarro/midnight-vote — ensure the selected revision and this documentation are accessible before submitting |
 | Build with | Midnight |
 | Tags (10 maximum) | Compact, TypeScript, React, Vite, Node.js, Zero-Knowledge Proofs, Vitest, Playwright, Docker, Web Crypto |
-| Live demo | https://midnight.vote — verified demo from merged application source `4353587`; [artifact and mobile evidence](releases/2026-09-16-mobile-release.md). Votes and credentials are simulated. |
+| Live demo | https://midnight.vote — application baseline PR #35 with the public Docs release; [artifact and browser evidence](releases/2026-09-16-final-documentation.md). Votes and credentials are simulated. |
 | Video | Public YouTube URL of an actual walkthrough or video pitch; add after recording/upload |
 | Product detail visibility | Public is recommended for an open-source submission; owner selects the final visibility |
 | Connect | Owner supplies X, Discord, Telegram and email |
