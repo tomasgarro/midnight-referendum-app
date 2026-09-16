@@ -1,6 +1,6 @@
 # Current release readiness
 
-**Reviewed 16 September 2026 · source baseline `1884a3a` · documentation only.**
+**Updated 16 September 2026 · deployed demo source `4353587` · test corrections in PR #33.**
 
 Wave 1 presents a working simulated civic experience, reviewable Compact contracts and a documented integration plan. It does not present a completed NFC-to-Midnight voting service. This page states the release decision; the [candidate record](releases/2026-09-16-submission-candidate.md) records the evidence and the [13 September snapshot](releases/2026-09-13-current-state.md) preserves earlier findings.
 
@@ -15,13 +15,13 @@ Wave 1 presents a working simulated civic experience, reviewable Compact contrac
 | Passport | Earlier consent/session/profile handshake | Account access is separate from eligibility. |
 | Preview deployment | Earlier revision deployed, with issuance and root attestation evidence | Historical evidence; no citizen cast/reveal/finalize lifecycle established. |
 | Physical NFC | Adapter and staging source | Device-to-Midnight acceptance remains unverified. |
-| Public demo | Older Hostinger artifact previously checked; midnight.vote was parked at the recorded check | Verify and publish an exact candidate artifact before advertising a current demo URL. |
+| Public demo | [midnight.vote](https://midnight.vote) serves the verified demo artifact; four public Android/iPhone emulated journeys pass | Demonstrate the simulated experience; physical-phone acceptance remains separate. |
 
 ## Gates before calling this candidate ready
 
 | Gate | Evidence required | Current position |
 | --- | --- | --- |
-| Repository checks | Green checks against the exact submitted revision | Supplied PR #31 run failed one UI synchronization assertion and skipped the browser job. Local test corrections passed targeted checks but remain outside this documentation PR. |
+| Repository checks | 252 local UI tests pass; receipt/Pulse corrections and mobile coverage are in PR #33 | Check the exact PR revision's CI; distinguish historical failures from current verification in the [release record](releases/2026-09-16-mobile-release.md). |
 | Demo artifact | Build, source SHA, digest, HTTPS URL and interaction check | Production demo build recorded locally; current candidate deployment still needs verification. |
 | Honest copy | Demo labels; clear account, eligibility and receipt states | Maintained in the specification; verify on the exact published artifact. |
 | Submission fields | Repository, accurate About text and verified deliverable URLs | [Akindo draft](AKINDO-WAVE-1.md) prepared; portal submission is separate. |

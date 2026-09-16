@@ -6,7 +6,7 @@ midnight.vote is a mobile-first civic consultation prototype built around Midnig
 
 **Wave 1 delivers a working simulated experience and a reviewable contract implementation.** A complete physical-document-to-network-vote journey is the next integration milestone. Consultations are non-binding.
 
-[Submission brief](docs/SUBMISSION.md) · [Try the demo](docs/QUICKSTART.md) · [How it works](docs/HOW-IT-WORKS.md) · [Specification](docs/specs/PRODUCT-SPEC.md) · [Documentation](docs/README.md)
+[Submission brief](docs/SUBMISSION.md) · [Try the demo](https://midnight.vote) · [Run locally](docs/QUICKSTART.md) · [How it works](docs/HOW-IT-WORKS.md) · [Specification](docs/specs/PRODUCT-SPEC.md) · [Documentation](docs/README.md)
 
 ## The participant experience
 
@@ -25,7 +25,7 @@ The demo works in English, Spanish and French. **Ask Midnight currently provides
 
 ## What works today
 
-Status baseline: **16 September 2026**, after [PR #31](https://github.com/tomasgarro/midnight-referendum-app/pull/31) merged into `main` at `1884a3a`. Documentation does not establish deployment.
+Status baseline: **16 September 2026**. The demo from merged source `4353587` is deployed at [midnight.vote](https://midnight.vote). See the [artifact and mobile verification record](docs/releases/2026-09-16-mobile-release.md).
 
 | Capability | What you can inspect | Evidence level |
 | --- | --- | --- |
@@ -37,7 +37,7 @@ Status baseline: **16 September 2026**, after [PR #31](https://github.com/tomasg
 | NFC verification and live participation | Provider, issuer, relay and receipt interfaces | Integration source; physical end-to-end acceptance pending |
 | Generative AI and Swiss parliamentary explanations | Proposed source-grounded research companion | Planned |
 
-The supplied CI run passed contract and service checks but failed one asynchronous UI receipt assertion. Locally verified test corrections are **not included in this documentation-only change**. See the [verification record](docs/releases/2026-09-16-submission-candidate.md) before describing a candidate as green.
+The receipt synchronization and Civic Pulse browser corrections are included in [PR #33](https://github.com/tomasgarro/midnight-referendum-app/pull/33). All 252 UI tests pass locally, and all four Android/iPhone emulated journeys pass against the public demo. The [release record](docs/releases/2026-09-16-mobile-release.md) distinguishes local checks, CI and hosted evidence.
 
 ## Three things that should stay separate
 

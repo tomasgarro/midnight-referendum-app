@@ -29,6 +29,15 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    ...[
+      { name: 'mobile-chrome', device: 'Pixel 7' },
+      { name: 'mobile-safari', device: 'iPhone 13' },
+    ].map(({ name, device }) => ({
+      name,
+      use: { ...devices[device] },
+      testMatch: '**/passport-journey.spec.ts',
+      grep: /completes the civic pulse|completes Passport onboarding, then creates/,
+    })),
   ],
   webServer: externalBaseUrl
     ? undefined

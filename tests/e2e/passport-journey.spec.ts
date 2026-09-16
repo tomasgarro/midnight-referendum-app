@@ -37,6 +37,13 @@ test('completes the civic pulse without submitting or persisting answers', async
   await page.getByRole('button', { name: /^Continue/i }).click();
   await page.getByRole('button', { name: /^Skip$/i }).click();
   await page.getByRole('button', { name: /^Skip$/i }).click();
+  // The current journey includes optional funding and explanation steps.
+  await expect(
+    page.getByRole('heading', { name: 'How would you fund a new priority?' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: /^Skip$/i }).click();
+  await page.getByRole('button', { name: /^Skip$/i }).click();
+  await expect(page.getByRole('heading', { name: 'Take a moment to look back.' })).toBeVisible();
   await page.getByRole('button', { name: /Finish reflection/i }).click();
 
   await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible();

@@ -21,6 +21,7 @@ This is the canonical documentation in GitHub. Start with the product story, the
 - [Akindo form copy](AKINDO-WAVE-1.md): prepared fields; this is not a submission confirmation.
 - [Product specification](specs/PRODUCT-SPEC.md): requirements, states, privacy and acceptance scenarios.
 - [Submission plan](SUBMISSION-PLAN.md): immediate gates and proposed Swiss/AI direction.
+- [Next sprint acceptance](NEXT-SPRINT-LIVE-LIFECYCLE.md): ordered Preview lifecycle and recovery evidence.
 - [User action matrix](USER-ACTION-MATRIX.md): detailed action/dependency inventory; read its dated scope.
 - [Passport and NFC brief](BRIEF-PASSPORT-AND-NFC.md): forward-looking integration design.
 - [Release checklist](WAVE-1-SUBMISSION-CHECKLIST.md): operational worksheet, not evidence of completion.

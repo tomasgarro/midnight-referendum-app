@@ -63,6 +63,6 @@ npm run build
 CI=true npm run test:e2e
 ```
 
-Browser checks require Playwright browser dependencies; see [DEVELOPMENT.md](../DEVELOPMENT.md) and [CI](../.github/workflows/test.yml). Known test corrections from the 16 September investigation remain outside this documentation-only PR. Do not assume these commands are green on its base revision.
+Try the hosted demo at [midnight.vote](https://midnight.vote). Browser checks require Playwright Chromium and WebKit dependencies: `npx playwright install chromium webkit --with-deps`. See [CI](../.github/workflows/test.yml) and the [release record](releases/2026-09-16-mobile-release.md). For a separately served local build, use `localhost`, not `127.0.0.1`: the Passport bridge intentionally rejects the latter origin.
 
 Local-chain and Preview verification are separate exercises. Their requirements are in [environment acceptance](ENVIRONMENT-ACCEPTANCE.md). A successful demo does not satisfy those gates.
