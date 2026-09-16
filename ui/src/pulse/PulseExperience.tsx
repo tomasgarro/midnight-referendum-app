@@ -532,7 +532,7 @@ export function PulseExperience({
           </section>
         ) : null}
         {stage === 'complete' ? (
-          <section className="pulse-v4__welcome">
+          <section className="pulse-v4__welcome pulse-v4__complete">
             <div className="pulse-v4__art">
               <Plant size={76} weight="duotone" />
             </div>

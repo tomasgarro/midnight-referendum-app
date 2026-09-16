@@ -114,6 +114,18 @@
 .pulse-v4__welcome {
   text-align: center;
 }
+.pulse-v4__welcome .pulse-v4__actions {
+  position: static;
+}
+.pulse-v4__complete .pulse-v4__art {
+  width: 64px;
+  height: 64px;
+  margin: 8px auto;
+}
+.pulse-v4__complete .pulse-v4__art svg {
+  width: 34px;
+  height: 34px;
+}
 .pulse-v4__welcome > p:not(.sys-eyebrow) {
   font-size: 16px;
   line-height: 1.6;

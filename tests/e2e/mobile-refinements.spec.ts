@@ -50,6 +50,16 @@ test('mobile refinements: Pulse saves only on request, restores, shares locally 
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await page.getByRole('button', { name: 'Finish reflection', exact: true }).click();
+  const summaryChoice = page
+    .locator('.pulse-reflection-summary')
+    .getByText('Cost of living', { exact: true });
+  await summaryChoice.scrollIntoViewIfNeeded();
+  expect(
+    await summaryChoice.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return el.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    }),
+  ).toBe(true);
   expect(
     await page.evaluate(() => localStorage.getItem('midnight-civic-reflection-v1')),
   ).toBeNull();

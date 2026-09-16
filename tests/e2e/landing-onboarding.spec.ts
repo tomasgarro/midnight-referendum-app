@@ -56,7 +56,7 @@ for (const width of [320, 390]) {
       fullPage: true,
     });
     await page.getByRole('button', { name: 'Use demo Passport', exact: true }).click();
-    await expect(page.getByRole('status')).toContainText('Passport connected');
+    await expect(page.getByRole('status')).toContainText('Demo profile selected');
     await page.screenshot({ path: test.info().outputPath(`consent-${width}.png`), fullPage: true });
     await noOverflow();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
