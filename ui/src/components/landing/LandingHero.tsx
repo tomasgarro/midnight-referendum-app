@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUpRight, List, Moon, X } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUpRight, List, X } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { PassportHeroArt } from './PassportHeroArt';
 import './landing-hero.css';
@@ -32,7 +32,7 @@ export function LandingHero({ onStart }: { onStart: () => void }) {
             setMenuOpen(false);
           }}
         >
-          <Moon size={25} weight="fill" aria-hidden="true" />
+          <img src="/brand/midnight-vote-d3-black.svg" width="43" height="25" alt="" />
           <span>
             midnight<span className="midnight-brand__suffix">.vote</span>
           </span>

@@ -1,5 +1,7 @@
 # Documentation
 
+[Updated product submission copy and gallery guide](PRODUCT-SUBMISSION.md)
+
 **Understand more. Disclose less. Participate as yourself.**
 
 This is the canonical documentation in GitHub. Start with the product story, then follow the implementation and evidence as deeply as you need. The current submission is a simulated experience plus reviewable Compact and service source.

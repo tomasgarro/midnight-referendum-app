@@ -97,11 +97,11 @@ export function AppHeader({
       <div className="chrome-header__identity">
         <span className="dashboard-brand">
           <img
-            className="dashboard-symbol"
-            src="/brand/midnight-symbol-black.svg"
+            className="dashboard-symbol dashboard-symbol--product"
+            src="/brand/midnight-vote-d3-black.svg"
             alt="midnight.vote"
           />
-          <span>midnight.vote</span>
+          <span aria-hidden="true">midnight.vote</span>
         </span>
         <span className={`chrome-environment chrome-environment--${APP_MODE}`}>
           <span className="chrome-environment__dot" aria-hidden="true" />
