@@ -110,7 +110,12 @@ test('an unavailable agent image leaves the human intact and signup usable', asy
       .evaluate((el) => getComputedStyle(el).maskImage),
   ).toBe('none');
   await page.getByRole('button', { name: 'Get started', exact: true }).first().click();
-  await expect(page.getByRole('heading', { name: 'midnight.vote', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: /Your voice\.\s*Your choice\.|Tu voz\.\s*Tu elección\./,
+      exact: true,
+    }),
+  ).toBeVisible();
 });
 
 test('missing human artwork retains a fallback and usable navigation', async ({ page }) => {
@@ -120,5 +125,10 @@ test('missing human artwork retains a fallback and usable navigation', async ({ 
   await expect(page.locator('.passport-art__fallback')).toBeVisible();
   await expect(page.locator('.passport-art__window--agent')).toHaveCount(0);
   await page.getByRole('button', { name: 'Get started', exact: true }).first().click();
-  await expect(page.getByRole('heading', { name: 'midnight.vote', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: /Your voice\.\s*Your choice\.|Tu voz\.\s*Tu elección\./,
+      exact: true,
+    }),
+  ).toBeVisible();
 });

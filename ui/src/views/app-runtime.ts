@@ -10,7 +10,7 @@ import type { PassportNetwork } from 'midnight-referendum-api';
 import { resolveAppMode } from '@/integration/app-mode';
 import type { CicoLocale } from '@/integration/locale';
 
-export type Tab = 'discover' | 'credentials' | 'activity' | 'passport';
+export type Tab = 'discover' | 'credentials' | 'activity' | 'passport' | 'assistant';
 /**
  * `verify` and `eligible` are gone. Nothing ever set them: `startVote` sends a
  * credentialled user straight to `choose` and everyone else into the Passport

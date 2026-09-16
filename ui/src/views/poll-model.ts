@@ -12,10 +12,16 @@ import type { CicoLocale } from '@/integration/locale';
 import { countryPolicyCode, toPassportV2Catalog } from '@/integration/passport-v2-catalog';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
 import type { PassportReceiptRecord } from '@/integration/receipt-store';
+import { DISCOVERY_FIXTURES } from './discovery-fixtures';
+import { REAL_TOPIC_FIXTURES } from './real-topic-fixtures';
 
 export type Choice = VoteReveal['choice'];
 
 export interface Poll {
+  aliases?: string[];
+  subject?: 'mobility' | 'housing' | 'climate' | 'governance' | 'economy';
+  media?: { image: string; video?: string; captions?: string };
+  translations?: Partial<Record<CicoLocale, Partial<Poll>>>;
   id: string;
   title: string;
   description: string;
@@ -227,6 +233,7 @@ const EN_POLL_COPY: Record<string, Partial<Poll>> = {
 };
 
 export function localizePoll(poll: Poll, locale: CicoLocale): Poll {
+  if (poll.translations?.[locale]) return { ...poll, ...poll.translations[locale] };
   if (locale === 'es' || poll.runtimeContractAddress) return poll;
   return { ...poll, ...EN_POLL_COPY[poll.id] };
 }
@@ -540,6 +547,8 @@ export const POLLS: Poll[] = [
       },
     ],
   },
+  ...DISCOVERY_FIXTURES,
+  ...REAL_TOPIC_FIXTURES,
 ];
 export function requireDefaultPoll(polls: readonly Poll[]): Poll {
   const poll = polls.at(0);

@@ -134,13 +134,16 @@ describe('Passport v2 catalog and cross-device handoff', () => {
     const onCredentialReady = vi.fn();
     render(
       <PassportJourney
+        initialLocale="es"
+        initialStage="passport"
         mode="preview"
         onClose={vi.fn()}
         onCredentialReady={onCredentialReady}
         previewPorts={{ ...ports(requests), referenda: [runtimeEntry] }}
       />,
     );
-    await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
+    await user.click(screen.getByRole('button', { name: /Conectar Midnight Passport/i }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(screen.getByRole('button', { name: /Iniciar verificación documental/i }));
     expect(await screen.findByRole('heading', { name: 'Tu credencial está lista' })).toBeTruthy();
     expect(screen.queryByText('Presupuesto 2030')).toBeNull();

@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   Translate,
   Trash,
-  Wrench,
 } from '@phosphor-icons/react';
 import type { CivicPassportSession } from 'midnight-referendum-api';
 import { type ReactNode, useState } from 'react';
@@ -24,9 +23,10 @@ import { Button, Card, Display, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
 import type { ThemePreference } from '@/integration/theme';
 import { APP_MODE, networkLabel } from '@/views/app-runtime';
+import { PASSPORT_HELP, passportDisplay } from './passport-display';
 import './settings-view.css';
 
-type SettingsPanel = 'root' | 'privacy' | 'terms' | 'feedback' | 'recovery' | 'advanced';
+type SettingsPanel = 'help' | 'root' | 'privacy' | 'terms' | 'feedback' | 'recovery' | 'advanced';
 
 const COPY = {
   es: {
@@ -497,7 +497,7 @@ export function SettingsView({
   const [feedback, setFeedback] = useState('');
   const [feedbackCopied, setFeedbackCopied] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const displayName = passportSession?.profile?.displayName ?? copy.fallbackName;
+  const displayName = passportDisplay(passportSession, locale);
 
   const copyFeedback = async () => {
     if (!feedback.trim() || !navigator.clipboard) return;
@@ -614,6 +614,55 @@ export function SettingsView({
       </main>
     );
   }
+  if (panel === 'help') {
+    return (
+      <main className="settings">
+        <PanelHeader
+          title={PASSPORT_HELP[locale].title}
+          backLabel={copy.back}
+          onBack={() => setPanel('root')}
+        />
+        <Card className="settings__rows" flush>
+          <SettingsRow
+            icon={<Fingerprint size={19} />}
+            title={copy.reviewJourney}
+            hint={copy.reviewJourneyHint}
+            onClick={onReplayOnboarding}
+            trailing={<CaretRight size={18} />}
+          />
+          <a
+            className="settings-row"
+            href="https://midnight.domains/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="settings-row__icon">
+              <Moon size={19} />
+            </span>
+            <span className="settings-row__copy">
+              <strong>{PASSPORT_HELP[locale].night}</strong>
+              <small>{PASSPORT_HELP[locale].nightHint}</small>
+            </span>
+            <CaretRight size={18} />
+          </a>
+          <SettingsRow
+            icon={<ShieldCheck size={19} />}
+            title={copy.privacy}
+            hint={copy.privacyHint}
+            onClick={() => setPanel('privacy')}
+            trailing={<CaretRight size={18} />}
+          />
+          <SettingsRow
+            icon={<Key size={19} />}
+            title={copy.recovery}
+            hint={copy.recoveryHint}
+            onClick={() => setPanel('recovery')}
+            trailing={<CaretRight size={18} />}
+          />
+        </Card>
+      </main>
+    );
+  }
   if (panel === 'advanced') {
     return (
       <main className="settings">
@@ -647,13 +696,6 @@ export function SettingsView({
         </Card>
         <Eyebrow>{copy.session}</Eyebrow>
         <Card className="settings__rows" flush>
-          <SettingsRow
-            icon={<Wrench size={19} />}
-            title={copy.reviewJourney}
-            hint={copy.reviewJourneyHint}
-            onClick={onReplayOnboarding}
-            trailing={<CaretRight size={18} />}
-          />
           <SettingsRow
             icon={<Trash size={19} />}
             title={copy.remove}
@@ -698,6 +740,15 @@ export function SettingsView({
         </span>
       </Card>
 
+      <Card className="settings__rows" flush>
+        <SettingsRow
+          icon={<ShieldCheck size={19} />}
+          title={PASSPORT_HELP[locale].title}
+          hint={PASSPORT_HELP[locale].hint}
+          onClick={() => setPanel('help')}
+          trailing={<CaretRight size={18} />}
+        />
+      </Card>
       <section className="settings__section">
         <Eyebrow>{copy.preferences}</Eyebrow>
         <Card className="settings__rows" flush>

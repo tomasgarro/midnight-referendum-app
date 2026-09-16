@@ -41,18 +41,19 @@ describe('Passport-first public showcase', () => {
       />,
     );
 
-    expect(screen.getByText('Live Passport')).toBeTruthy();
+    expect(screen.getByText('Preview')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Get started/i }));
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
+    await user.click(screen.getByRole('button', { name: /Connect Midnight Passport/i }));
     expect(connect).toHaveBeenCalledWith(
       expect.objectContaining({ requestedCapabilities: ['session', 'profile'] }),
     );
     expect((await screen.findByRole('status')).textContent).toContain('alice.night');
-    expect(screen.getByRole('status').textContent).toContain('Passport Stagenet');
+    expect(screen.getByRole('status').textContent).toContain('Passport connected');
     await user.click(screen.getByRole('button', { name: /Continue/i }));
+    await user.click(screen.getByText('Try with a simulated pass'));
     await user.click(screen.getByRole('button', { name: /Create my simulated pass/i }));
-    expect(screen.getByRole('heading', { name: 'Your eligibility pass is ready' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your simulated pass is ready.' })).toBeTruthy();
     // Showcase may use live Passport consent and a clearly labelled synthetic
     // eligibility pass; it must never make that pass look provider-verified.
     expect(screen.getByText('Simulated pass')).toBeTruthy();
@@ -70,10 +71,10 @@ describe('Passport-first public showcase', () => {
     );
     await user.click(screen.getByRole('button', { name: /Get started/i }));
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    await user.click(screen.getByRole('button', { name: /Continue with Passport/i }));
-    expect((await screen.findByRole('alert')).textContent).toContain('Popup closed');
+    await user.click(screen.getByRole('button', { name: /Connect Midnight Passport/i }));
+    expect((await screen.findByRole('alert')).textContent).toContain('try again.');
     expect(screen.queryByRole('button', { name: /Explore without connecting/i })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Connect your Passport' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Meet your\s*Midnight Passport\./ })).toBeTruthy();
   });
 
   it('keeps the onboarding bilingual through the language switch', async () => {
@@ -81,8 +82,8 @@ describe('Passport-first public showcase', () => {
     render(<PassportJourney mode="showcase" passportPort={passportPort()} onClose={vi.fn()} />);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'es');
 
-    expect(screen.getByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
-    expect(screen.getByText('Passport en vivo')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Tu voz\.\s*Tu elección\./ })).toBeTruthy();
+    expect(screen.getByText('Preview')).toBeTruthy();
     expect(window.localStorage.getItem('cico-locale')).toBe('es');
     // Welcome is a landing surface; the continuous rail begins once the
     // reader enters the one-way verification sequence.

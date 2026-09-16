@@ -12,10 +12,10 @@ export class PassportJourneyPage {
       name: /Comenzar|Get started|Commencer/i,
     });
     this.journeyHeading = page.getByRole('heading', {
-      name: 'midnight.vote',
+      name: /Your voice\.\s*Your choice\.|Tu voz\.\s*Tu elección\./,
     });
     this.credentialHeading = page.getByRole('heading', {
-      name: /Your (?:credential|eligibility pass) is ready|Tu (?:credencial está lista|pase de elegibilidad está listo)/i,
+      name: /Your simulated pass is ready|Tu pase simulado está listo/i,
     });
     this.receiptHeading = page.getByRole('heading', {
       name: /Thank you for participating|Gracias por participar/i,
@@ -43,6 +43,7 @@ export class PassportJourneyPage {
   }
 
   async issueSyntheticCredential(): Promise<void> {
+    await this.page.getByText(/Try with a simulated pass|Probar con un pase simulado/i).click();
     // The test-country choice moved onto the eligibility screen, so this is
     // one click rather than two.
     await this.page
@@ -57,7 +58,7 @@ export class PassportJourneyPage {
       .click();
     await this.page
       .getByRole('heading', {
-        name: /Consultations for you|Decisions you can explore|Consultas para vos|Decisiones que podés explorar/i,
+        name: /Consultations for you|Your place in the conversation|Consultas para vos|Tu lugar en la conversación/i,
       })
       .waitFor();
   }

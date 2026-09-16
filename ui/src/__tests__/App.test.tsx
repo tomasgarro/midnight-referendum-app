@@ -13,6 +13,7 @@ async function completeDemoCredential(user: ReturnType<typeof userEvent.setup>, 
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
   await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
   await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
+  await user.click(screen.getByText(/Probar con un pase simulado|Try with a simulated pass/i));
   // France is the default; the pilot's other country is one click away.
   if (country) await user.click(screen.getByRole('radio', { name: country }));
   await user.click(
@@ -41,7 +42,7 @@ describe('App', () => {
 
   it('opens the first visit on Welcome instead of the dashboard', async () => {
     render(<App />);
-    expect(await screen.findByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /Tu voz\.\s*Tu elección\./ })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
   });
@@ -52,7 +53,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: /Volver a la app|Back to the app/i })).toBeNull();
     await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
     expect(
-      screen.getByRole('heading', { name: /Qué protege tu voto|What protects your vote/i }),
+      screen.getByRole('heading', { name: /Tu propia voz|A voice of your own/i }),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Volver a la app|Back to the app/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Consultas para vos' })).toBeNull();
@@ -69,18 +70,20 @@ describe('App', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
 
-    expect(screen.getByText('Midnight Passport')).toBeTruthy();
-    expect(screen.getByText('Pasaporte físico')).toBeTruthy();
-    expect(screen.getByText('Pase de elegibilidad')).toBeTruthy();
-    expect(screen.getByText(/No está guardado dentro de Passport/i)).toBeTruthy();
+    expect(screen.getByText(/divulgación selectiva/i)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.getByText(/Vos elegís qué datos de perfil compartir/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Usar Passport de demo' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.getByText(/Es distinto de tu cuenta Midnight Passport/)).toBeTruthy();
   });
 
   it('completes the Passport-first journey without scope, ballot, or wallet discovery', async () => {
     render(<App />);
     const user = userEvent.setup();
     await completeDemoCredential(user);
-    expect(screen.getByRole('heading', { name: /Decisiones que podés explorar/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Explorar por lugar.*Global/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Tu lugar en la conversación/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Explorar por lugar.*Francia/i })).toBeTruthy();
     expect(screen.queryByText(/Passport v2|Paso 9|Elegí tu respuesta/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wallet' })).toBeNull();
   });
@@ -106,7 +109,7 @@ describe('App', () => {
     // The action is icon-led now; its purpose remains available to assistive
     // technology and the tooltip without adding another line to the capsule.
     expect(verify.textContent?.trim()).toBe('');
-    expect(verify.querySelector('svg')).toBeTruthy();
+    expect(verify.querySelector('img')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'midnight.vote' })).toBeTruthy();
   });
 
@@ -116,18 +119,18 @@ describe('App', () => {
     const user = userEvent.setup();
 
     expect(
-      await screen.findByRole('heading', { name: 'Decisiones que podés explorar' }),
+      await screen.findByRole('heading', { name: 'Tu lugar en la conversación' }),
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Probar el pulso cívico/i }));
 
     expect(
-      await screen.findByRole('heading', { name: 'What should government focus on?' }),
+      await screen.findByRole('heading', { name: /Empezá por lo\s*que te importa/iu }),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Back to the app/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Volver a la app/i })).toBeTruthy();
     expect(screen.queryByRole('navigation')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /Back to the app/i }));
-    expect(screen.getByRole('heading', { name: 'Decisiones que podés explorar' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Volver a la app/i }));
+    expect(screen.getByRole('heading', { name: 'Tu lugar en la conversación' })).toBeTruthy();
   });
 
   it('keeps the compact utility shell visible and opens the settings surface', async () => {
@@ -182,9 +185,11 @@ describe('App', () => {
     const user = userEvent.setup();
     await completeDemoCredential(user);
 
-    await user.click(screen.getByRole('button', { name: /Verificar · documento físico/ }));
+    expect(screen.getByRole('button', { name: 'Preguntá a Midnight' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Credenciales' }));
+    await user.click(screen.getByRole('button', { name: 'Añadir otro pase' }));
 
-    expect(screen.getByRole('heading', { name: /Creá tu pase de elegibilidad/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Tu pasaporte/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Comenzar|Get started/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /Paso anterior|Previous step/i })).toBeNull();
   });
@@ -198,7 +203,7 @@ describe('App', () => {
     const user = userEvent.setup();
     await completeDemoCredential(user);
 
-    expect(screen.getByText(/Explorar un país no declara tu nacionalidad/i)).toBeTruthy();
+    expect(screen.getByText(/Esto no acredita elegibilidad/i)).toBeTruthy();
 
     // The demo issues a French pass. Argentina is browsable all the same, and
     // browsing it must not present the reader as eligible there.
@@ -209,13 +214,20 @@ describe('App', () => {
     expect(screen.getAllByRole('button', { name: /Añadir elegibilidad/i }).length).toBeGreaterThan(
       0,
     );
-    expect(screen.queryByRole('button', { name: /^Participar/i })).toBeNull();
+    expect(
+      screen
+        .getByRole('region', { name: 'Argentina' })
+        .querySelectorAll('.poll__actions button[data-variant="primary"]'),
+    ).not.toHaveLength(0);
+    expect(screen.getByRole('region', { name: 'Argentina' }).textContent).not.toContain(
+      'Participar',
+    );
 
     await chooseCountry(user, /Francia|France/i);
-    expect(screen.getByText(/Pase registrado para/i)).toBeTruthy();
+    expect(screen.getByText(/DEMO ·/i)).toBeTruthy();
   });
 
-  it('offers only the two countries with a complete pilot journey', async () => {
+  it('offers five explicit test countries and an age choice', async () => {
     render(<App />);
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Comenzar|Get started/i }));
@@ -223,11 +235,13 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Passport de demo|demo Passport/i }));
     await user.click(screen.getByRole('button', { name: /Continuar|Continue/i }));
 
+    await user.click(screen.getByText(/Probar con un pase simulado|Try with a simulated pass/i));
     expect(screen.getByRole('radio', { name: /Francia|France/i })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Argentina/i })).toBeTruthy();
     // The 249-country search was a dead end: every country but one led nowhere.
     expect(screen.queryByRole('radio', { name: /Brasil|Brazil/i })).toBeNull();
-    expect(screen.getAllByRole('radio').length).toBe(2);
+    expect(screen.getAllByRole('radio').length).toBe(5);
+    expect(screen.getByLabelText('Edad de prueba')).toBeTruthy();
   });
 
   it('holds one active eligibility pass in Credentials', async () => {
@@ -357,8 +371,11 @@ describe('App', () => {
     const user = userEvent.setup();
     await completeDemoCredential(user);
     await user.click(screen.getByRole('button', { name: /^Passport$/ }));
+    expect(screen.queryByRole('button', { name: /Revisar cómo funciona/i })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Ayuda y seguridad/i }));
+    expect(screen.getByRole('link', { name: /Identidad .night/i })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Revisar cómo funciona/i }));
-    expect(screen.getByRole('heading', { name: 'midnight.vote' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Tu voz\.\s*Tu elección\./ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Volver a la app|Back to the app/i })).toBeTruthy();
   });
 
@@ -381,7 +398,7 @@ describe('App', () => {
     skipOnboarding();
     render(<App />);
     expect(
-      await screen.findByRole('heading', { name: /Decisiones que podés explorar/i }),
+      await screen.findByRole('heading', { name: /Tu lugar en la conversación/i }),
     ).toBeTruthy();
     // Nothing was verified and no session exists, yet consultations render.
     expect(screen.queryByText(/Pase registrado para/i)).toBeNull();

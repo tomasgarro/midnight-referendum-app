@@ -16,6 +16,7 @@ import type { CicoLocale } from '@/integration/locale';
 import { getPollAvailability } from '@/integration/poll-lifecycle';
 import { COUNTRY_POLL_COUNTRIES, localizePoll, type Poll } from '@/views/poll-model';
 import './policy-detail-view.css';
+import { canUseDemoPass } from './discovery-presentation';
 
 /**
  * The dossier: everything a person needs to decide, and the action.
@@ -159,6 +160,8 @@ export function PolicyDetailView({
   const displayPoll = localizePoll(poll, locale);
   const runtimePoll = Boolean(poll.runtimeContractAddress);
   const isOpen = getPollAvailability(poll).isOpen;
+  const demoBlocked =
+    credential?.kind === 'synthetic-demo-credential' && !canUseDemoPass(poll, credential);
   const consultationCountry = poll.runtimeCountryCode ?? COUNTRY_POLL_COUNTRIES.get(poll.id);
   const consultationCountryName = consultationCountry
     ? getCountryName(consultationCountry, locale)
@@ -184,9 +187,18 @@ export function PolicyDetailView({
         isOpen ? (
           <Button
             block
+            disabled={demoBlocked}
             onClick={() => (credential ? onStartVote(poll.id) : onOpenPassportJourney())}
           >
-            {credential ? copy.vote : copy.prepare}
+            {demoBlocked
+              ? locale === 'es'
+                ? 'Requiere pase válido del país · 18+'
+                : locale === 'fr'
+                  ? 'Pass valide du pays requis · 18+'
+                  : 'Valid country pass required · 18+'
+              : credential
+                ? copy.vote
+                : copy.prepare}
           </Button>
         ) : undefined
       }

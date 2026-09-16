@@ -1,902 +1,596 @@
-import { ArrowRight, CheckCircle, Info, Lock } from '@phosphor-icons/react';
-import type {
-  CivicPassportSession,
-  PassportHolderBindingResult,
-  PassportSessionPort,
-} from 'midnight-referendum-api';
-import { type ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ProofPlayground } from '@/components/landing/ProofPlayground';
-import { CapybaraMascot } from '@/components/mascot';
-import { CountryFlag, CountryPicker, JourneyTopBar, SuccessMark } from '@/components/system';
+import { ArrowRight, CheckCircle, Lock } from '@phosphor-icons/react';
+import type { CivicPassportSession, PassportSessionPort } from 'midnight-referendum-api';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { CountryFlag, CountryPicker, JourneyTopBar, Sheet } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import type { OnboardingStage } from '@/integration/civic-state';
-import { countryName, findAssignedCountry } from '@/integration/country-catalog';
+import { countryName } from '@/integration/country-catalog';
 import { type CicoLocale, detectLocale, persistLocale } from '@/integration/locale';
-import { passportHolderBindingPort } from '@/integration/passport-session-port';
-import { PASSPORT_ACCOUNT_NETWORK, passportNetworkLabel } from '@/views/app-runtime';
-import {
-  type DocumentReadResult,
-  DocumentVerificationJourney,
-} from './DocumentVerificationJourney';
-import { PassportScanTutorial } from './PassportScanTutorial';
+import { PASSPORT_ACCOUNT_NETWORK } from '@/views/app-runtime';
+import { DocumentVerificationJourney } from './DocumentVerificationJourney';
+import { OnboardingMascot } from './OnboardingMascot';
+import { ONBOARDING_COPY } from './onboarding-copy';
+import { PassportPageArt } from './PassportPageArt';
+import { PreviewPassportJourney, type PreviewPassportJourneyPorts } from './PreviewPassportJourney';
+import { useJourneyHistory } from './useJourneyHistory';
 import './journey.css';
+import './onboarding.css';
 
-type OnboardingMode = 'demo' | 'showcase' | 'undeployed';
-
-interface UnifiedPassportOnboardingProps {
-  mode: OnboardingMode;
+export type OnboardingOutcome = 'browsing' | 'deferred' | 'demo-ready' | 'verified';
+export interface UnifiedPassportOnboardingProps {
+  mode: 'demo' | 'showcase' | 'preview' | 'undeployed';
   passportPort?: PassportSessionPort;
+  previewPorts?: PreviewPassportJourneyPorts;
   onClose: () => void;
-  /** Required first-run onboarding cannot exit into an unexplained dashboard. */
+  onComplete?: (outcome: OnboardingOutcome) => void;
   dismissible?: boolean;
   onCredentialReady?: (credential: DemoCredentialSummary) => void;
   onPassportConnected?: (session: CivicPassportSession | null) => void;
-  /**
-   * Where the journey opens. First run starts at the welcome screen, but
-   * someone who already has a Passport session and taps Verify wants the
-   * document step -- not to be re-asked for consent they have already given.
-   */
+  initialSession?: CivicPassportSession | null;
   initialStage?: OnboardingStage;
   initialLocale?: CicoLocale;
   onLocaleChange?: (locale: CicoLocale) => void;
 }
 
-const DEFAULT_DEMO_COUNTRY = 'FR';
-/**
- * The shortlist shown before anyone searches. It exists to make the point the
- * screen is making -- that the consultation is open from anywhere -- visible
- * without typing, rather than to privilege these six places.
- */
-const SUGGESTED_COUNTRIES = ['FR', 'AR'] as const;
-
-/**
- * Six screens across four named stages.
- *
- * The stage names are no longer drawn as four numbered pills above every card;
- * they are the accessible label on one filling bar. That is why `welcome` and
- * `privacy` can share a stage without the header looking frozen the way the
- * old discrete stepper did -- the bar still advances a sixth on every screen.
- *
- * `demo-country` is gone as a screen. Choosing a test country was never a step
- * in its own right: it is the input the eligibility step needs, so it sits on
- * the eligibility screen next to the button that consumes it. The stage value
- * stays in the shared vocabulary for the legacy state helpers.
- */
-const SCREEN_ORDER: readonly OnboardingStage[] = [
-  'welcome',
-  'privacy',
-  'passport',
-  'consent-return',
-  'eligibility',
-  'credential-success',
-];
-const PREVIOUS_STAGE: Partial<Record<OnboardingStage, OnboardingStage>> = {
-  privacy: 'welcome',
-  passport: 'privacy',
-  'consent-return': 'passport',
-  eligibility: 'consent-return',
-  'credential-success': 'eligibility',
-};
-/** Which of the four named stages each screen belongs to. */
-const SCREEN_STAGE_INDEX: Partial<Record<OnboardingStage, number>> = {
-  welcome: 0,
-  privacy: 0,
-  passport: 1,
-  'consent-return': 1,
-  eligibility: 2,
-  'credential-success': 3,
-};
-
-function createDemoCredential(country: string): DemoCredentialSummary {
-  return {
-    kind: 'synthetic-demo-credential',
-    issuer: 'cico-demo-issuer',
-    country,
-    ageClass: '18+',
-    assurance: 'fixture',
-    epoch: 'preview-2026-08',
-    validUntil: '2026-09-30',
-    commitment: '0x7a91…c420',
-  };
-}
-
-const copy = {
-  es: {
-    back: 'Volver a la app',
-    language: 'Idioma',
-    previousStep: 'Paso anterior',
-    stages: ['Bienvenida', 'Passport', 'Documento', 'Pase listo'],
-    step: (n: number, total: number) => `Paso ${n} de ${total}`,
-    demoEnvironment: 'Demo',
-    liveEnvironment: 'Passport en vivo',
-    origin: 'Origen',
-    originSynthetic: 'Pase simulado',
-    why: '¿Por qué se necesita esto?',
-
-    // 1 · welcome
-    welcomeTitle: 'midnight.vote',
-    welcomeSubtitle: 'Tu voz. Tu elección. Tu secreto.',
-    welcomeNote:
-      'Un recorrido corto para aprender sobre privacidad y probar una consulta no vinculante.',
-    start: 'Comenzar',
-    signIn: '¿Ya tenés Passport? Conectate',
-
-    // 2 · privacy
-    privacyTitle: 'Qué protege tu voto',
-    privacyItems: [
-      [
-        'Midnight Passport',
-        'Tu cuenta segura para esta experiencia Preview y el nombre que elegís mostrar.',
-      ],
-      [
-        'Pasaporte físico',
-        'El documento se usa en un paso separado para comprobar elegibilidad. No está guardado dentro de Passport.',
-      ],
-      [
-        'Pase de elegibilidad',
-        'Guarda solo el resultado mínimo que una consulta necesita. La demo lo etiqueta siempre como simulado.',
-      ],
-    ],
-    continue: 'Continuar',
-
-    // 3 · passport
-    passportTitle: 'Conectá tu Passport',
-    passportBody:
-      'Passport es tu ingreso seguro. Esta app recibe únicamente los campos de perfil que aprobés.',
-    passportWhy:
-      'Passport administra tu identidad fuera de esta app, así el prototipo nunca guarda una contraseña ni una cuenta tuya. La sesión sirve para reconocerte entre pantallas; no autoriza pagos, transacciones ni votos.',
-    requested: 'Se solicita',
-    requestedValue: 'Sesión y perfil aprobado',
-    notRequested: 'No se solicita',
-    notRequestedValue: 'Wallet, voto, nacionalidad, edad o documento',
-    connect: 'Continuar con Passport',
-    connectDemo: 'Usar Passport de demo',
-    connecting: 'Esperando tu consentimiento…',
-    connected: 'Sesión aprobada',
-
-    // 4 · consent return
-    consentTitle: 'Esto es lo que Passport compartió',
-    consentBody:
-      'El nombre visible sirve para mostrar tu cuenta. No se transforma en un dato de nacionalidad, edad ni voto.',
-    approved: 'Aprobado por vos',
-    approvedValue: 'Sesión Passport y nombre visible',
-    walletTitle: '¿Y la wallet?',
-    walletBody:
-      'Una wallet solo aparece cuando hay que aprobar y pagar una acción real en la red. Este recorrido de demo no la necesita y no te la va a pedir.',
-
-    // 5 · eligibility + country
-    eligibilityTitle: 'Creá tu pase de elegibilidad',
-    eligibilityBody:
-      'El pase representa país y mayoría de edad. Es distinto de tu cuenta Passport y de tu pasaporte físico.',
-    demoBanner: 'DEMO · SIN LECTURA NI PRUEBA REAL',
-    demoBannerBody: 'Elegí Francia o Argentina para probar el recorrido con un pase simulado.',
-    evidenceWhy: '¿Cómo funciona con un documento real?',
-    evidenceSteps: [
-      ['Pedido preparado', 'Se crea un vínculo temporal y de un solo uso con este navegador.'],
-      [
-        'Lectura NFC en tu teléfono',
-        'Apoyás el teléfono sobre el chip del pasaporte. La lectura ocurre en tu dispositivo.',
-      ],
-      [
-        'Datos mínimos',
-        'El emisor recibe solo si cumplís la regla — país y mayoría de edad — y nada más.',
-      ],
-    ],
-    countryLabel: '¿Desde qué país participás?',
-    countrySearch: 'Buscar Francia o Argentina',
-    countryList: 'Países disponibles',
-    countrySuggested: 'El piloto comienza con Francia y Argentina.',
-    countryEmpty: 'No encontramos ese país. Probá con otro nombre o su código.',
-    verifyDocument: 'Verificar mi pasaporte',
-    createCredential: 'Crear mi pase simulado',
-
-    // 6 · success
-    successTitle: 'Tu pase de elegibilidad está listo',
-    successBody: 'Ya podés ver qué consultas están abiertas para vos y emitir un voto de prueba.',
-    successMark: 'Pase creado',
-    country: 'País de prueba',
-    age: 'Clase de edad',
-    issuer: 'Emisor',
-    issuerValue: 'CICO demo · prueba',
-    dashboard: 'Ver las consultas',
-    privacy: 'Este pase simulado no contiene un documento ni una elección.',
-
-    error: 'No se pudo conectar Passport. Revisá el consentimiento e intentá otra vez.',
-    holderBindingVerified:
-      'Holder binding verificado para esta sesión. No mostramos sus bytes ni lo tratamos como un dato de elegibilidad.',
-    holderBindingUnsupported:
-      'Esta versión de Passport todavía no ofrece el vínculo necesario para una elegibilidad real. La demo mantiene la cuenta y el pase separados.',
-    mascotWaving: 'Carpincho saludando',
-    mascotReading: 'Carpincho leyendo un libro',
-    mascotThinking: 'Carpincho pensando',
-    mascotPassport: 'Carpincho sosteniendo un pasaporte',
-    mascotAchievement: 'Carpincho con una pequeña bandera en una colina',
-  },
-  en: {
-    back: 'Back to the app',
-    language: 'Language',
-    previousStep: 'Previous step',
-    stages: ['Welcome', 'Passport', 'Document', 'Pass ready'],
-    step: (n: number, total: number) => `Step ${n} of ${total}`,
-    demoEnvironment: 'Demo',
-    liveEnvironment: 'Live Passport',
-    origin: 'Origin',
-    originSynthetic: 'Simulated pass',
-    why: 'Why is this needed?',
-
-    welcomeTitle: 'midnight.vote',
-    welcomeSubtitle: 'Your voice. Your choice. Your secret.',
-    welcomeNote: 'A short journey to learn about privacy and try a non-binding consultation.',
-    start: 'Get started',
-    signIn: 'Already have Passport? Connect',
-
-    privacyTitle: 'What protects your vote',
-    privacyItems: [
-      [
-        'Midnight Passport',
-        'Your secure account for this Preview experience and the name you choose to display.',
-      ],
-      [
-        'Physical passport',
-        'The document is used in a separate eligibility step. It is not stored inside Passport.',
-      ],
-      [
-        'Eligibility pass',
-        'It keeps only the minimum result a consultation needs. The demo always labels it as simulated.',
-      ],
-    ],
-    continue: 'Continue',
-
-    passportTitle: 'Connect your Passport',
-    passportBody:
-      'Passport is your secure sign-in. This app receives only the profile fields you approve.',
-    passportWhy:
-      'Passport manages your identity outside this app, so the prototype never stores a password or an account for you. The session is what recognises you between screens; it authorises no payment, transaction, or vote.',
-    requested: 'Requested',
-    requestedValue: 'Session and approved profile',
-    notRequested: 'Not requested',
-    notRequestedValue: 'Wallet, vote, nationality, age, or document',
-    connect: 'Continue with Passport',
-    connectDemo: 'Use demo Passport',
-    connecting: 'Waiting for your consent…',
-    connected: 'Session approved',
-
-    consentTitle: 'This is what Passport shared',
-    consentBody:
-      'The display name identifies your account in this interface. It does not become a nationality, age, or voting claim.',
-    approved: 'Approved by you',
-    approvedValue: 'Passport session and display name',
-    walletTitle: 'What about the wallet?',
-    walletBody:
-      'A wallet only appears when a real on-chain action has to be approved and paid for. This demo journey does not need one and will not ask for it.',
-
-    eligibilityTitle: 'Create your eligibility pass',
-    eligibilityBody:
-      'The pass represents country and adult status. It is separate from your Passport account and your physical passport.',
-    demoBanner: 'DEMO · NO DOCUMENT READ OR REAL PROOF',
-    demoBannerBody: 'Choose France or Argentina to try the journey with a simulated pass.',
-    evidenceWhy: 'How does this work with a real document?',
-    evidenceSteps: [
-      ['Request prepared', 'A temporary, single-use link is created with this browser.'],
-      [
-        'NFC read on your phone',
-        'You hold the phone against the passport chip. The read happens on your device.',
-      ],
-      [
-        'Minimal data',
-        'The issuer learns only whether you meet the rule — country and adult class — and nothing else.',
-      ],
-    ],
-    countryLabel: 'Which country are you taking part from?',
-    countrySearch: 'Search France or Argentina',
-    countryList: 'Available countries',
-    countrySuggested: 'The pilot begins with France and Argentina.',
-    countryEmpty: 'No country matched. Try another name or its code.',
-    verifyDocument: 'Verify my passport',
-    createCredential: 'Create my simulated pass',
-
-    successTitle: 'Your eligibility pass is ready',
-    successBody: 'You can now see which consultations are open to you and cast a test vote.',
-    successMark: 'Pass created',
-    country: 'Test country',
-    age: 'Age class',
-    issuer: 'Issuer',
-    issuerValue: 'CICO demo · test',
-    dashboard: 'See the consultations',
-    privacy: 'This simulated pass contains no document or voting choice.',
-
-    error: 'Passport could not connect. Check consent and try again.',
-    holderBindingVerified:
-      'Holder binding verified for this session. We do not display its bytes or treat it as an eligibility claim.',
-    holderBindingUnsupported:
-      'This Passport build does not yet expose the link required for real eligibility. The demo keeps the account and pass separate.',
-    mascotWaving: 'Capybara waving hello',
-    mascotReading: 'Capybara reading a book',
-    mascotThinking: 'Capybara thinking',
-    mascotPassport: 'Capybara holding a passport',
-    mascotAchievement: 'Capybara holding a small flag on a hill',
-  },
-  fr: {
-    back: "Retour à l'application",
-    language: 'Langue',
-    previousStep: 'Étape précédente',
-    stages: ['Bienvenue', 'Passport', 'Document', 'Laissez-passer'],
-    step: (n: number, total: number) => `Étape ${n} sur ${total}`,
-    demoEnvironment: 'Démo',
-    liveEnvironment: 'Passport réel',
-    origin: 'Origine',
-    originSynthetic: 'Laissez-passer simulé',
-    why: 'Pourquoi est-ce nécessaire ?',
-
-    welcomeTitle: 'midnight.vote',
-    welcomeSubtitle: 'Votre voix. Votre choix. Votre secret.',
-    welcomeNote:
-      'Un court parcours pour découvrir la confidentialité et essayer une consultation non contraignante.',
-    start: 'Commencer',
-    signIn: 'Vous avez déjà Passport ? Connectez-vous',
-
-    privacyTitle: 'Ce qui protège votre vote',
-    privacyItems: [
-      [
-        'Midnight Passport',
-        "Votre compte sécurisé pour cette expérience Preview et le nom que vous choisissez d'afficher.",
-      ],
-      [
-        'Passeport physique',
-        "Le document sert à une étape d'éligibilité distincte. Il n'est pas conservé dans Passport.",
-      ],
-      [
-        "Laissez-passer d'éligibilité",
-        "Il ne retient que le résultat minimal dont une consultation a besoin. La démo l'indique toujours comme simulé.",
-      ],
-    ],
-    continue: 'Continuer',
-
-    passportTitle: 'Connectez votre Passport',
-    passportBody:
-      'Passport est votre connexion sécurisée. Cette application ne reçoit que les champs de profil que vous approuvez.',
-    passportWhy:
-      "Passport gère votre identité en dehors de cette application : le prototype ne conserve jamais de mot de passe ni de compte à votre place. La session est ce qui vous reconnaît d'un écran à l'autre ; elle n'autorise aucun paiement, aucune transaction, aucun vote.",
-    requested: 'Demandé',
-    requestedValue: 'Session et profil approuvé',
-    notRequested: 'Non demandé',
-    notRequestedValue: 'Portefeuille, vote, nationalité, âge ou document',
-    connect: 'Continuer avec Passport',
-    connectDemo: 'Utiliser le Passport de démo',
-    connecting: 'En attente de votre consentement…',
-    connected: 'Session approuvée',
-
-    consentTitle: 'Voici ce que Passport a partagé',
-    consentBody:
-      'Le nom affiché identifie votre compte dans cette interface. Il ne devient ni une nationalité, ni un âge, ni une revendication de vote.',
-    approved: 'Approuvé par vous',
-    approvedValue: 'Session Passport et nom affiché',
-    walletTitle: 'Et le portefeuille ?',
-    walletBody:
-      "Un portefeuille n'apparaît que lorsqu'une action réelle sur la chaîne doit être approuvée et payée. Ce parcours de démo n'en a pas besoin et ne vous en demandera pas.",
-
-    eligibilityTitle: "Créez votre laissez-passer d'éligibilité",
-    eligibilityBody:
-      'Le laissez-passer représente le pays et la majorité. Il est distinct de votre compte Passport et de votre passeport physique.',
-    demoBanner: 'DÉMO · AUCUNE LECTURE NI PREUVE RÉELLE',
-    demoBannerBody:
-      "Choisissez la France ou l'Argentine pour tester le parcours avec un laissez-passer simulé.",
-    evidenceWhy: 'Comment cela fonctionne-t-il avec un vrai document ?',
-    evidenceSteps: [
-      ['Demande préparée', 'Un lien temporaire à usage unique est créé avec ce navigateur.'],
-      [
-        'Lecture NFC sur votre téléphone',
-        'Vous approchez le téléphone de la puce du passeport. La lecture se fait sur votre appareil.',
-      ],
-      [
-        'Données minimales',
-        "L'émetteur apprend seulement si vous remplissez la règle — pays et classe d'âge — et rien d'autre.",
-      ],
-    ],
-    countryLabel: 'Depuis quel pays participez-vous ?',
-    countrySearch: "Rechercher la France ou l'Argentine",
-    countryList: 'Pays disponibles',
-    countrySuggested: "Le pilote commence par la France et l'Argentine.",
-    countryEmpty: 'Aucun pays ne correspond. Essayez un autre nom ou son code.',
-    verifyDocument: 'Vérifier mon passeport',
-    createCredential: 'Créer mon laissez-passer simulé',
-
-    successTitle: "Votre laissez-passer d'éligibilité est prêt",
-    successBody:
-      'Vous pouvez maintenant voir quelles consultations vous sont ouvertes et voter à titre de test.',
-    successMark: 'Laissez-passer créé',
-    country: 'Pays de test',
-    age: "Classe d'âge",
-    issuer: 'Émetteur',
-    issuerValue: 'CICO démo · test',
-    dashboard: 'Voir les consultations',
-    privacy: 'Ce laissez-passer simulé ne contient aucun document ni choix de vote.',
-
-    error: 'Passport n’a pas pu se connecter. Vérifiez le consentement et réessayez.',
-    holderBindingVerified:
-      "Le lien avec le porteur est vérifié pour cette session. Nous n'affichons pas ses octets et ne le traitons pas comme une revendication d'éligibilité.",
-    holderBindingUnsupported:
-      "Cette version de Passport n'expose pas encore le lien requis pour une éligibilité réelle. La démo garde le compte et le laissez-passer séparés.",
-    mascotWaving: 'Capybara qui fait coucou',
-    mascotReading: 'Capybara qui lit un livre',
-    mascotThinking: 'Capybara qui réfléchit',
-    mascotPassport: 'Capybara tenant un passeport',
-    mascotAchievement: 'Capybara tenant un petit drapeau sur une colline',
-  },
-} as const;
-
-/**
- * The escape valve for detail.
- *
- * Every screen used to carry its technical justification inline, as a stack of
- * lock-icon notices the reader had to scroll past to reach the button. The
- * justification is still there and still complete -- it is one tap away
- * instead of permanently in the path.
- */
-function WhyDetails({ summary, children }: { summary: string; children: ReactNode }) {
-  return (
-    <details className="journey-why">
-      <summary>{summary}</summary>
-      <div>{children}</div>
-    </details>
-  );
-}
-
 export function UnifiedPassportOnboarding({
   mode,
   passportPort,
+  previewPorts,
   onClose,
+  onComplete,
   dismissible = true,
   onCredentialReady,
   onPassportConnected,
+  initialSession = null,
   initialStage = 'welcome',
   initialLocale,
   onLocaleChange,
 }: UnifiedPassportOnboardingProps) {
   const [locale, setLocale] = useState<CicoLocale>(() => initialLocale ?? detectLocale());
-  const [stage, setStage] = useState<OnboardingStage>(initialStage);
-  const [session, setSession] = useState<CivicPassportSession | null>(null);
-  const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
+  const entry =
+    initialStage === 'demo-country' || initialStage === 'credential-success'
+      ? 'eligibility'
+      : initialStage === 'consent-return'
+        ? 'passport'
+        : initialStage;
+  const history = useJourneyHistory<OnboardingStage>(entry);
+  const { stage, go, back, canBack } = history;
+  const [session, setSession] = useState(initialSession);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [demoCountry, setDemoCountry] = useState(DEFAULT_DEMO_COUNTRY);
-  const [documentJourney, setDocumentJourney] = useState(false);
-  const [usedPassportShortcut, setUsedPassportShortcut] = useState(false);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const initialRender = useRef(false);
-  const t = copy[locale];
-  // Back never walks out of the entry point: opening at the document step
-  // must not offer a route into a consent screen this visit never showed.
-  const previousStage =
-    stage === initialStage
-      ? undefined
-      : usedPassportShortcut && stage === 'passport'
-        ? 'welcome'
-        : PREVIOUS_STAGE[stage];
-  const selectedCountry = useMemo(() => findAssignedCountry(demoCountry), [demoCountry]);
-
-  /**
-   * A real document read gives a country; a typed one does not, because the
-   * nationality is not in the block people transcribe. Either way the chip is
-   * the authority, so a read without a country falls back to the picker rather
-   * than inventing one.
-   */
-  const handleDocumentRead = (result: DocumentReadResult) => {
-    if (result.country) {
-      const matched = findAssignedCountry(result.country);
-      if (matched) setDemoCountry(matched.alpha2);
+  const [country, setCountry] = useState('FR');
+  const [age, setAge] = useState(25);
+  const [countrySearchOpen, setCountrySearchOpen] = useState(false);
+  const [documentOpen, setDocumentOpen] = useState(false);
+  const [createdDemo, setCreatedDemo] = useState<DemoCredentialSummary | null>(null);
+  const attempt = useRef(0);
+  const busy = useRef(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (stage) {
+      attempt.current += 1;
+      busy.current = false;
+      setConnecting(false);
     }
-    setDocumentJourney(false);
-  };
-
-  useLayoutEffect(() => {
-    if (!initialRender.current) {
-      initialRender.current = true;
-      return;
-    }
-    if (stage) headingRef.current?.focus();
   }, [stage]);
-
-  const setLanguage = (next: CicoLocale) => {
+  const t = ONBOARDING_COPY[locale];
+  const realMode = mode === 'preview' || mode === 'undeployed';
+  const port = passportPort ?? previewPorts?.passport;
+  useEffect(
+    () => () => {
+      attempt.current += 1;
+    },
+    [],
+  );
+  useLayoutEffect(() => {
+    if (stage) heading.current?.focus();
+  }, [stage]);
+  const language = (next: CicoLocale) => {
     setLocale(next);
     persistLocale(next);
     onLocaleChange?.(next);
   };
-
-  const connect = async () => {
+  const cancel = () => {
+    attempt.current += 1;
+    busy.current = false;
+    setConnecting(false);
+  };
+  const finish = (outcome: OnboardingOutcome) => {
+    cancel();
+    onComplete?.(outcome);
+    onClose();
+  };
+  const navigateBack = () => {
+    cancel();
+    setError(null);
+    back();
+  };
+  const connect = async (demo = false) => {
+    if (busy.current) return;
+    busy.current = true;
+    const id = ++attempt.current;
     setConnecting(true);
     setError(null);
     try {
-      let next: CivicPassportSession;
-      if (mode !== 'demo') {
-        if (!passportPort) throw new Error(t.error);
-        next = await passportPort.connect({
-          origin: window.location.origin,
-          network: PASSPORT_ACCOUNT_NETWORK,
-          requestedCapabilities: ['session', 'profile'],
-        });
-      } else {
-        next = {
-          sessionId: `local-demo-${mode}`,
-          origin: window.location.origin,
-          network: 'devnet',
-          status: 'connected',
-          profile: { displayName: 'Ciudadano demo' },
-          capabilities: ['session', 'profile'],
-        };
-      }
-      if (mode !== 'demo' && passportPort) {
-        const holderBindingPort = passportHolderBindingPort(passportPort);
-        if (holderBindingPort && next.network !== 'mainnet') {
-          const result = await holderBindingPort.getHolderBinding({
-            session: next,
-            network: next.network,
+      if (!demo && !port) throw new Error(t.error);
+      const next: CivicPassportSession = demo
+        ? {
+            sessionId: 'local-demo-explicit',
+            origin: window.location.origin,
+            network: 'devnet',
+            status: 'connected',
+            profile: { displayName: 'Demo Passport' },
+            capabilities: ['session', 'profile'],
+          }
+        : await (port as PassportSessionPort).connect({
+            origin: window.location.origin,
+            network: PASSPORT_ACCOUNT_NETWORK,
+            requestedCapabilities: ['session', 'profile'],
           });
-          setHolderBinding(result);
-        }
-      }
+      if (id !== attempt.current) return;
       setSession(next);
       onPassportConnected?.(next);
-      setStage('consent-return');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t.error);
+    } catch {
+      if (id === attempt.current) setError(t.error);
     } finally {
-      setConnecting(false);
+      if (id === attempt.current) {
+        busy.current = false;
+        setConnecting(false);
+      }
     }
   };
-
-  const finish = () => {
-    if (selectedCountry) {
-      onCredentialReady?.(createDemoCredential(selectedCountry.alpha2));
-    }
-    onClose();
+  const createDemo = () => {
+    const next: DemoCredentialSummary = {
+      kind: 'synthetic-demo-credential',
+      issuer: 'cico-demo-issuer',
+      country,
+      ageClass: age >= 18 ? '18+' : 'under-18',
+      assurance: 'fixture',
+      epoch: 'preview-2026-08',
+      validUntil: new Date(Date.now() + 30 * 86400000).toISOString(),
+      commitment: '0x7a91…c420',
+    };
+    setCreatedDemo(next);
+    go('credential-success');
   };
+  const indices: Partial<Record<OnboardingStage, number>> = {
+    welcome: 1,
+    privacy: 2,
+    passport: 3,
+    eligibility: 4,
+    'credential-success': 4,
+    'demo-country': 4,
+  };
+  const current = indices[stage] ?? 1;
+  const actions = (
+    primary: string,
+    action: () => void,
+    secondary?: string,
+    secondaryAction?: () => void,
+  ) => (
+    <div className="onboarding-actions">
+      <button type="button" className="onboarding-primary" onClick={action}>
+        {primary}
+        <ArrowRight size={19} />
+      </button>
+      {secondary && (
+        <button type="button" className="onboarding-secondary" onClick={secondaryAction}>
+          {secondary}
+        </button>
+      )}
+    </div>
+  );
+  const title = (text: string, id: string) => (
+    <h1 id={id} ref={heading} tabIndex={-1}>
+      {text}
+    </h1>
+  );
 
-  const screenIndex = Math.max(SCREEN_ORDER.indexOf(stage), 0);
-  const stageIndex = SCREEN_STAGE_INDEX[stage] ?? 0;
-  const localizedLocale = locale === 'es' ? 'es' : 'en';
+  if (stage === 'eligibility' && realMode && session && previewPorts)
+    return (
+      <PreviewPassportJourney
+        mode={mode}
+        ports={previewPorts}
+        initialSession={session}
+        initialLocale={locale}
+        onLocaleChange={language}
+        onBackToPassport={() => (canBack ? back() : go('passport'))}
+        onClose={() => finish('deferred')}
+        onVerified={() => finish('verified')}
+        onCredentialReady={onCredentialReady}
+        onPassportConnected={onPassportConnected}
+      />
+    );
 
   return (
-    <main className="page-content passport-journey-page unified-onboarding" data-stage={stage}>
+    <main
+      className="page-content passport-journey-page unified-onboarding onboarding-v3"
+      data-stage={stage}
+    >
       <JourneyTopBar
         locale={locale}
-        onLocaleChange={setLanguage}
+        onLocaleChange={language}
         languageLabel={t.language}
-        {...(dismissible ? { onExit: onClose, exitLabel: t.back } : {})}
-        {...(previousStage ? { onBack: () => setStage(previousStage) } : {})}
-        backLabel={t.previousStep}
-        badge={mode === 'showcase' ? t.liveEnvironment : t.demoEnvironment}
-        showProgress={stage !== 'welcome'}
-        current={screenIndex + 1}
-        total={SCREEN_ORDER.length}
-        stageLabel={t.stages[stageIndex] ?? t.stages[0]}
-        progressLabel={t.step(screenIndex + 1, SCREEN_ORDER.length)}
+        {...(dismissible ? { onExit: () => finish('browsing'), exitLabel: t.exit } : {})}
+        {...(canBack && !documentOpen ? { onBack: navigateBack } : {})}
+        backLabel={t.back}
+        badge={mode === 'demo' ? 'Demo' : mode === 'undeployed' ? 'Local' : 'Preview'}
+        showProgress={stage !== 'welcome' && !documentOpen}
+        current={current}
+        total={4}
+        stageLabel={stage}
+        progressLabel={`${t.step} ${current} ${t.of} 4`}
       />
-
-      {stage === 'welcome' ? (
+      {stage === 'welcome' && (
         <section
-          className="journey-screen journey-welcome"
+          className="onboarding-screen onboarding-welcome"
           aria-labelledby="onboarding-welcome-title"
         >
-          <div className="journey-mascot-scene">
-            <span className="journey-mascot-scene__moon" aria-hidden="true" />
-            <CapybaraMascot variant="waving" alt={t.mascotWaving} size={230} priority />
-            <span className="journey-mascot-scene__seal" aria-hidden="true">
-              <Lock size={20} />
+          <div className="onboarding-brand">
+            <img src="/brand/midnight-symbol-black.svg" alt="" />
+            midnight<span>.vote</span>
+          </div>
+          <div className="onboarding-welcome-art">
+            <span className="onboarding-orbit" />
+            <OnboardingMascot pose="welcome" motion priority />
+            <span className="onboarding-art-label">
+              <Lock size={12} /> midnight
             </span>
           </div>
-          <h1
-            className="journey-screen__title"
-            id="onboarding-welcome-title"
-            ref={headingRef}
-            tabIndex={-1}
-          >
-            {t.welcomeTitle}
-          </h1>
-          <p className="journey-welcome__subtitle">{t.welcomeSubtitle}</p>
-          <p className="journey-welcome__note">{t.welcomeNote}</p>
-          <div className="journey-screen__actions">
-            <button
-              className="passport-action-button primary"
-              onClick={() => setStage('privacy')}
-              type="button"
-            >
-              {t.start} <ArrowRight size={19} />
-            </button>
-            <button
-              className="passport-action-button quiet"
-              onClick={() => {
-                setUsedPassportShortcut(true);
-                setStage('passport');
-              }}
-              type="button"
-            >
-              {t.signIn}
-            </button>
-          </div>
+          {title(t.welcome, 'onboarding-welcome-title')}
+          <p className="onboarding-secret">{t.secret}</p>
+          <p className="onboarding-body">{t.invitation}</p>
+          {actions(
+            t.start,
+            () => go('privacy'),
+            t.returning,
+            () => go('passport'),
+          )}
         </section>
-      ) : null}
-
-      {stage === 'privacy' ? (
-        <section className="journey-screen" aria-labelledby="onboarding-privacy-title">
-          <CapybaraMascot variant="reading" alt={t.mascotReading} size={150} />
-          <h1
-            className="journey-screen__title"
-            id="onboarding-privacy-title"
-            ref={headingRef}
-            tabIndex={-1}
-          >
-            {t.privacyTitle}
-          </h1>
-          <ProofPlayground locale={locale} />
-          {/* The paragraph that used to sit here summarised the three items
-              below it in one sentence, so the reader read the same idea twice
-              before reaching either. The items are the explanation. */}
-          <div className="unified-explanation-list">
-            {t.privacyItems.map(([title, body], index) => (
-              <article key={title}>
-                <span>{index + 1}</span>
-                <div>
-                  <strong>{title}</strong>
-                  <small>{body}</small>
-                </div>
-              </article>
+      )}
+      {stage === 'privacy' && (
+        <section className="onboarding-screen" aria-labelledby="onboarding-privacy-title">
+          <p className="onboarding-eyebrow">MIDNIGHT / PRIVACY</p>
+          {title(t.privacyTitle, 'onboarding-privacy-title')}
+          <figure className="onboarding-privacy-art">
+            <svg viewBox="0 0 400 210" aria-hidden="true" focusable="false">
+              <ellipse cx="200" cy="113" rx="166" ry="81" fill="#ebe2d5" />
+              <circle
+                cx="102"
+                cy="77"
+                r="43"
+                fill="none"
+                stroke="#d7bea5"
+                strokeWidth="15"
+                strokeDasharray="11 7"
+              />
+              <circle
+                cx="298"
+                cy="120"
+                r="52"
+                fill="none"
+                stroke="#b5aaa2"
+                strokeWidth="13"
+                strokeDasharray="12 7"
+              />
+              <circle cx="277" cy="38" r="19" fill="none" stroke="#d2b18f" strokeWidth="9" />
+              <path
+                d="M196 24 C222 42 252 48 274 49 L272 112 C269 151 236 180 198 199 C159 179 125 150 122 112 L121 49 C145 48 172 41 196 24Z"
+                fill="#c57b4b"
+              />
+              <path
+                d="M196 38 C218 53 244 59 260 60 L259 112 C255 143 229 168 198 184 C166 167 139 143 136 112 L135 60 C153 58 177 52 196 38Z"
+                fill="none"
+                stroke="#f8dfbf"
+                strokeWidth="1.5"
+              />
+              <image
+                href="/brand/midnight-symbol-white.svg"
+                x="169"
+                y="78"
+                width="58"
+                height="58"
+              />
+              <g transform="translate(55 134) rotate(-9)">
+                <rect width="84" height="56" rx="10" fill="#faf7ef" stroke="#d5c7b6" />
+                <path d="M17 19 H65 M17 28 H56 M17 37 H60" stroke="#afa08c" strokeWidth="4" />
+              </g>
+              <g transform="translate(274 161)">
+                <rect width="57" height="35" rx="17" fill="#f7f3ea" stroke="#cec1b1" />
+                <path
+                  d="M18 18 L25 24 L38 11"
+                  stroke="#7b715c"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </g>
+            </svg>
+            <figcaption>
+              <span>
+                <Lock size={12} />
+                {t.privateNote}
+              </span>
+              <span>{t.sharedNote}</span>
+            </figcaption>
+          </figure>
+          <p className="onboarding-body">{t.privacyBody}</p>
+          <ul className="onboarding-features">
+            {t.features.map((feature) => (
+              <li key={feature}>
+                <CheckCircle size={18} />
+                {feature}
+              </li>
             ))}
-          </div>
-          <div className="journey-screen__actions">
-            <button
-              className="passport-action-button primary"
-              onClick={() => setStage('passport')}
-              type="button"
-            >
-              {t.continue} <ArrowRight size={19} />
-            </button>
-          </div>
+          </ul>
+          <details className="onboarding-details">
+            <summary>{t.more}</summary>
+            <div className="onboarding-explanation">
+              <OnboardingMascot pose="explain" motion />
+              <p>{t.detail}</p>
+            </div>
+          </details>
+          {actions(t.continue, () => go('passport'))}
         </section>
-      ) : null}
-
-      {stage === 'passport' ? (
-        <section className="journey-screen" aria-labelledby="onboarding-passport-title">
-          <CapybaraMascot variant={connecting ? 'waiting' : 'thinking'} decorative size={140} />
-          <h1
-            className="journey-screen__title"
-            id="onboarding-passport-title"
-            ref={headingRef}
-            tabIndex={-1}
-          >
-            {t.passportTitle}
-          </h1>
-          <p className="journey-screen__body">{t.passportBody}</p>
-          {/* This is the consent moment, so this is the one place the full
-              boundary is stated. It is not repeated on the screen after it. */}
-          <dl className="unified-consent-grid">
-            <div>
-              <dt>{t.requested}</dt>
-              <dd>
-                <CheckCircle size={16} />
-                {t.requestedValue}
-              </dd>
+      )}
+      {stage === 'passport' && (
+        <section className="onboarding-screen" aria-labelledby="onboarding-passport-title">
+          <div className="onboarding-passport-mark">
+            <img src="/brand/midnight-symbol-black.svg" alt="" />
+          </div>
+          {title(t.connectTitle, 'onboarding-passport-title')}
+          <p className="onboarding-body">{t.connectBody}</p>
+          <ul className="onboarding-permissions">
+            <li>
+              <CheckCircle size={22} />
+              {t.shares}
+            </li>
+            <li>
+              <Lock size={22} />
+              {t.protects}
+            </li>
+          </ul>
+          {session ? (
+            <div className="onboarding-connected" role="status">
+              <CheckCircle size={24} />
+              <div>
+                <strong>{t.connected}</strong>
+                <span>{session.profile?.displayName ?? 'Passport'}</span>
+              </div>
             </div>
-            <div>
-              <dt>{t.notRequested}</dt>
-              <dd>
-                <Lock size={16} />
-                {t.notRequestedValue}
-              </dd>
+          ) : null}
+          {connecting && (
+            <div className="onboarding-waiting" role="status">
+              <OnboardingMascot pose="waiting" motion />
+              <p>{t.waiting}</p>
             </div>
-          </dl>
-          <WhyDetails summary={t.why}>{t.passportWhy}</WhyDetails>
-          {error ? (
-            <div className="passport-notice warning" role="alert">
-              <Info size={18} />
+          )}
+          {error && (
+            <div className="onboarding-error" role="alert">
+              <OnboardingMascot pose="reassure" />
               <p>{error}</p>
             </div>
-          ) : null}
-          <div className="journey-screen__actions">
+          )}
+          <div className="onboarding-actions">
             <button
-              className="passport-action-button primary"
-              disabled={connecting}
-              onClick={() => void connect()}
+              className="onboarding-primary"
               type="button"
+              disabled={connecting}
+              onClick={() => (session ? go('eligibility') : void connect())}
             >
-              {connecting ? t.connecting : mode === 'showcase' ? t.connect : t.connectDemo}{' '}
+              {connecting ? t.waiting : session ? t.continue : t.connect}
               <ArrowRight size={19} />
             </button>
+            {connecting ? (
+              <button className="onboarding-secondary" type="button" onClick={cancel}>
+                {t.cancel}
+              </button>
+            ) : (
+              <>
+                <button
+                  className="onboarding-secondary"
+                  type="button"
+                  onClick={() => finish(session ? 'deferred' : 'browsing')}
+                >
+                  {t.skip}
+                </button>
+                {mode === 'demo' && !session && (
+                  <button
+                    className="onboarding-demo-link"
+                    type="button"
+                    onClick={() => void connect(true)}
+                  >
+                    {t.demo}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </section>
-      ) : null}
-
-      {stage === 'consent-return' ? (
-        <section className="journey-screen" aria-labelledby="onboarding-consent-title">
-          <div className="journey-consent-seal" aria-hidden="true">
-            <CheckCircle size={48} weight="thin" />
-          </div>
-          <h1
-            className="journey-screen__title"
-            id="onboarding-consent-title"
-            ref={headingRef}
-            tabIndex={-1}
-          >
-            {t.consentTitle}
-          </h1>
-          <p className="journey-screen__body">{t.consentBody}</p>
-          <div className="unified-session-confirmation" role="status">
-            <CheckCircle size={22} />
-            <span>
-              <strong>{t.connected}</strong>
-              <small>
-                {session?.profile?.displayName ?? 'Passport'}
-                {session ? ` · Passport ${passportNetworkLabel(session.network, locale)}` : ''}
-              </small>
-            </span>
-          </div>
-          {/* Only the half that changed. The "not requested" row was identical
-              to the previous screen's, word for word, one tap apart. */}
-          <dl className="unified-consent-grid">
-            <div>
-              <dt>{t.approved}</dt>
-              <dd>
-                <CheckCircle size={16} />
-                {t.approvedValue}
-              </dd>
-            </div>
-          </dl>
-          {holderBinding ? (
-            <div
-              className={`passport-notice ${holderBinding.status === 'verified' ? 'success' : 'info'}`}
-              role="status"
-            >
-              {holderBinding.status === 'verified' ? <CheckCircle size={18} /> : <Info size={18} />}
-              <p>
-                {holderBinding.status === 'verified'
-                  ? t.holderBindingVerified
-                  : t.holderBindingUnsupported}
-              </p>
-            </div>
-          ) : null}
-          <WhyDetails summary={t.walletTitle}>{t.walletBody}</WhyDetails>
-          <div className="journey-screen__actions">
-            <button
-              className="passport-action-button primary"
-              onClick={() => setStage('eligibility')}
-              type="button"
-            >
-              {t.continue} <ArrowRight size={19} />
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      {stage === 'eligibility' ? (
-        <section className="journey-screen" aria-labelledby="onboarding-evidence-title">
-          {documentJourney ? (
-            /* The document journey replaces this screen entirely once started.
-               Running the teaching steps and a country picker side by side put
-               two different mental models of "prove eligibility" on one page. */
-            <DocumentVerificationJourney
-              locale={locale}
-              onDocumentRead={handleDocumentRead}
-              onCancel={() => setDocumentJourney(false)}
-            />
+      )}
+      {stage === 'eligibility' && (
+        <section
+          className="onboarding-screen"
+          aria-labelledby={documentOpen ? undefined : 'onboarding-evidence-title'}
+        >
+          {documentOpen ? (
+            <>
+              <DocumentVerificationJourney
+                locale={locale}
+                onCancel={() => setDocumentOpen(false)}
+                onDocumentRead={(result) => {
+                  if (result.country === 'FRA') setCountry('FR');
+                  if (result.country === 'ARG') setCountry('AR');
+                }}
+              />
+              <button
+                className="onboarding-secondary"
+                type="button"
+                onClick={() => finish('deferred')}
+              >
+                {t.later}
+              </button>
+            </>
           ) : (
             <>
-              <CapybaraMascot variant="passport" alt={t.mascotPassport} size={140} />
-              <h1
-                className="journey-screen__title"
-                id="onboarding-evidence-title"
-                ref={headingRef}
-                tabIndex={-1}
-              >
-                {t.eligibilityTitle}
-              </h1>
-              <p className="journey-screen__body">{t.eligibilityBody}</p>
-              {/* The demo label stays visible and stays above the action, because
-                  the reader has to know what they are about to get before they
-                  tap, not after. */}
-              <div className="journey-demo-banner" role="status">
-                <strong>{t.demoBanner}</strong>
-                <small>{t.demoBannerBody}</small>
+              <div className="onboarding-document-art">
+                <PassportPageArt />
+                <OnboardingMascot pose="passport" motion />
               </div>
-              {/* The walkthrough carries its own three steps, and they are the
-                  same three this list used to describe in the abstract. Two
-                  numbered lists of three, one above the other, inside one
-                  disclosure, is the repetition this pass exists to remove. */}
-              <WhyDetails summary={t.evidenceWhy}>
-                <PassportScanTutorial locale={locale} />
-              </WhyDetails>
-              <div className="journey-field">
-                <CountryPicker
-                  value={demoCountry}
-                  onChange={setDemoCountry}
-                  locale={locale}
-                  searchLabel={t.countryLabel}
-                  searchPlaceholder={t.countrySearch}
-                  listLabel={t.countryList}
-                  suggested={SUGGESTED_COUNTRIES}
-                  allowed={SUGGESTED_COUNTRIES}
-                  searchable={false}
-                  suggestedLabel={t.countrySuggested}
-                  emptyLabel={t.countryEmpty}
-                />
-              </div>
-              <div className="journey-screen__actions">
-                {/* Reading the real document page is the primary path now. The
-                    simulated pass stays, clearly named, because demo has no
-                    provider behind it and a jury still has to walk the flow. */}
+              {title(t.documentTitle, 'onboarding-evidence-title')}
+              <p className="onboarding-body">{t.documentBody}</p>
+              <p className="onboarding-note">{t.documentNote}</p>
+              {realMode ? (
+                <p className="onboarding-note" role="status">
+                  {t.connectBody}
+                </p>
+              ) : null}
+              {!realMode && (
                 <button
-                  className="passport-action-button primary"
-                  onClick={() => setDocumentJourney(true)}
+                  className="onboarding-demo-entry"
                   type="button"
+                  onClick={() => go('demo-country')}
                 >
-                  {t.verifyDocument} <ArrowRight size={19} />
+                  <span>
+                    <strong>{t.demoTitle}</strong>
+                    <small>
+                      {locale === 'es'
+                        ? 'Elegí país y edad. Sin documentos.'
+                        : locale === 'fr'
+                          ? 'Choisissez le pays et l’âge. Sans document.'
+                          : 'Choose a country and age. No document needed.'}
+                    </small>
+                  </span>
+                  <ArrowRight size={20} />
                 </button>
-                <button
-                  className="passport-action-button secondary"
-                  disabled={!selectedCountry}
-                  onClick={() => setStage('credential-success')}
-                  type="button"
-                >
-                  {t.createCredential}
-                </button>
-              </div>
+              )}
+              {actions(
+                realMode ? t.connect : t.verify,
+                () => (realMode ? go('passport') : setDocumentOpen(true)),
+                t.later,
+                () => finish('deferred'),
+              )}
             </>
           )}
         </section>
-      ) : null}
-
-      {stage === 'credential-success' ? (
-        <section className="journey-screen" aria-labelledby="onboarding-success-title">
-          {/* One hero, not two. The mark used to stack above the mascot,
-              so the screen opened with 250px of celebration before the
-              sentence that says what happened. It is a badge on the
-              mascot now, which is also where the eye already is. */}
-          <div className="journey-success-hero">
-            <CapybaraMascot variant="achievement" alt={t.mascotAchievement} size={168} />
-            <SuccessMark label={t.successMark} size="sm" />
-          </div>
-          <h1
-            className="journey-screen__title"
-            id="onboarding-success-title"
-            ref={headingRef}
-            tabIndex={-1}
+      )}
+      {stage === 'demo-country' && !realMode && (
+        <section className="onboarding-screen onboarding-demo-form">
+          <p className="onboarding-eyebrow">DEMO</p>
+          {title(t.demoTitle, 'demo-pass-title')}
+          <p>{t.demoNote}</p>
+          <fieldset className="onboarding-countries">
+            <legend>{t.country}</legend>
+            {[...new Set(['FR', 'AR', 'CH', 'IT', 'ES', country])].map((code) => (
+              <label key={code} data-selected={country === code}>
+                <input
+                  type="radio"
+                  name="demo-country"
+                  value={code}
+                  checked={country === code}
+                  onChange={() => setCountry(code)}
+                />
+                <CountryFlag alpha2={code} size="sm" />
+                {countryName(code, locale)}
+              </label>
+            ))}
+          </fieldset>
+          <button
+            className="onboarding-secondary"
+            type="button"
+            onClick={() => setCountrySearchOpen(true)}
           >
-            {t.successTitle}
-          </h1>
-          <p className="journey-screen__body">{t.successBody}</p>
-          <dl className="credential-summary-rows">
+            {locale === 'es' ? 'Más países' : locale === 'fr' ? 'Autres pays' : 'More countries'}
+          </button>
+          <Sheet
+            open={countrySearchOpen}
+            title={t.country}
+            closeLabel={locale === 'es' ? 'Cerrar' : locale === 'fr' ? 'Fermer' : 'Close'}
+            onClose={() => setCountrySearchOpen(false)}
+          >
+            <CountryPicker
+              value={country}
+              locale={locale}
+              onChange={(code) => {
+                setCountry(code);
+                setCountrySearchOpen(false);
+              }}
+              searchLabel={t.country}
+              searchPlaceholder={t.country}
+              listLabel={t.country}
+              suggested={['FR', 'AR', 'CH', 'IT', 'ES']}
+              suggestedLabel={t.country}
+              emptyLabel={
+                locale === 'es'
+                  ? 'No se encontró el país'
+                  : locale === 'fr'
+                    ? 'Aucun pays trouvé'
+                    : 'No country found'
+              }
+            />
+          </Sheet>
+          <label className="onboarding-demo-age">
+            <span>
+              {locale === 'es' ? 'Edad de prueba' : locale === 'fr' ? 'Âge de test' : 'Test age'}
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={120}
+              step={1}
+              value={Number.isNaN(age) ? '' : age}
+              onChange={(event) => setAge(event.target.valueAsNumber)}
+            />
+          </label>
+          <button
+            className="onboarding-primary"
+            type="button"
+            disabled={!Number.isInteger(age) || age < 1 || age > 120}
+            onClick={createDemo}
+          >
+            {t.create}
+            <ArrowRight size={19} />
+          </button>
+        </section>
+      )}
+      {stage === 'credential-success' && createdDemo && (
+        <section
+          className="onboarding-screen onboarding-success"
+          aria-labelledby="onboarding-success-title"
+        >
+          <OnboardingMascot pose="success" motion />
+          <p className="onboarding-eyebrow">DEMO</p>
+          {title(t.success, 'onboarding-success-title')}
+          <p className="onboarding-body">
+            {createdDemo.ageClass === '18+'
+              ? t.successBody
+              : locale === 'es'
+                ? 'Podés explorar y conversar. El voto de prueba requiere 18 años o más.'
+                : locale === 'fr'
+                  ? 'Vous pouvez explorer et discuter. Le vote de test est réservé aux 18 ans et plus.'
+                  : 'You can explore and chat. Test voting requires age 18 or older.'}
+          </p>
+          <dl className="onboarding-summary">
             <div>
-              <dt>{t.origin}</dt>
-              <dd>{t.originSynthetic}</dd>
-            </div>
-            <div>
-              <dt>{t.country}</dt>
-              <dd>
-                <span className="credential-country">
-                  <CountryFlag alpha2={demoCountry} size="sm" />
-                  {countryName(demoCountry, localizedLocale)}
-                </span>
-              </dd>
+              <dt>{t.testCountry}</dt>
+              <dd>{countryName(country, locale)}</dd>
             </div>
             <div>
               <dt>{t.age}</dt>
-              <dd>18+</dd>
+              <dd>{createdDemo.ageClass === '18+' ? '18+' : '< 18'}</dd>
             </div>
             <div>
-              <dt>{t.issuer}</dt>
-              <dd>{t.issuerValue}</dd>
+              <dt>{t.simulated}</dt>
+              <dd>Demo</dd>
             </div>
           </dl>
-          <div className="passport-notice success">
-            <CheckCircle size={18} />
-            <p>{t.privacy}</p>
-          </div>
-          <div className="journey-screen__actions">
-            <button className="passport-action-button primary" onClick={finish} type="button">
-              {t.dashboard} <ArrowRight size={19} />
-            </button>
-          </div>
+          {actions(t.dashboard, () => {
+            onCredentialReady?.(createdDemo);
+            finish('demo-ready');
+          })}
         </section>
-      ) : null}
+      )}
     </main>
   );
 }

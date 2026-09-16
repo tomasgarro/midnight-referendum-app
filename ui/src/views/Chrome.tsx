@@ -8,7 +8,6 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { Fragment } from 'react';
-import { MidnightMark, VotingMark } from '@/components/brand/MidnightMark';
 import { Button } from '@/components/system';
 import { LanguageToggle } from '@/components/system/LanguageToggle';
 import type { CicoLocale } from '@/integration/locale';
@@ -96,7 +95,14 @@ export function AppHeader({
   return (
     <header className="chrome-header">
       <div className="chrome-header__identity">
-        <MidnightMark className="chrome-mark" title="midnight.vote" size={44} />
+        <span className="dashboard-brand">
+          <img
+            className="dashboard-symbol"
+            src="/brand/midnight-symbol-black.svg"
+            alt="midnight.vote"
+          />
+          <span>midnight.vote</span>
+        </span>
         <span className={`chrome-environment chrome-environment--${APP_MODE}`}>
           <span className="chrome-environment__dot" aria-hidden="true" />
           {environment}
@@ -151,9 +157,16 @@ export interface BottomNavProps {
   readonly onChange: (tab: Tab) => void;
   readonly onVerify: () => void;
   readonly locale: CicoLocale;
+  readonly dialogueReady?: boolean;
 }
 
-export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
+export function BottomNav({
+  tab,
+  onChange,
+  onVerify,
+  locale,
+  dialogueReady = false,
+}: BottomNavProps) {
   const copy = APP_COPY[locale];
   const chrome = CHROME_COPY[locale];
   const items = [
@@ -163,6 +176,13 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
     { id: 'passport' as const, label: copy.nav.passport, Icon: UserCircle },
   ];
   const verifyLabel = `${copy.nav.verify} · ${chrome.verifyQualifier}`;
+  const centerLabel = dialogueReady
+    ? locale === 'fr'
+      ? 'Demandez à Midnight'
+      : locale === 'es'
+        ? 'Preguntá a Midnight'
+        : 'Ask Midnight'
+    : verifyLabel;
   return (
     <div className="chrome-bar">
       <nav className="chrome-nav" aria-label={chrome.primaryNav}>
@@ -182,6 +202,7 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
               <span className="chrome-nav__icon">
                 <Icon size={22} weight={tab === id ? 'fill' : 'regular'} />
               </span>
+              <span className="chrome-nav__label">{label}</span>
             </button>
           </Fragment>
         ))}
@@ -199,12 +220,13 @@ export function BottomNav({ tab, onChange, onVerify, locale }: BottomNavProps) {
       <button
         type="button"
         className="chrome-verify"
-        onClick={onVerify}
-        aria-label={verifyLabel}
-        title={verifyLabel}
+        onClick={dialogueReady ? () => onChange('assistant') : onVerify}
+        aria-label={centerLabel}
+        aria-current={dialogueReady && tab === 'assistant' ? 'page' : undefined}
+        title={centerLabel}
       >
         <span className="chrome-verify__disc">
-          <VotingMark className="chrome-verify__mark" size={44} />
+          <img className="dashboard-symbol" src="/brand/midnight-symbol-black.svg" alt="" />
         </span>
       </button>
     </div>

@@ -11,7 +11,7 @@ import type {
   PassportSessionPort,
 } from 'midnight-referendum-api';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CapybaraMascot } from '@/components/mascot';
+
 import { JourneyTopBar, SuccessMark } from '@/components/system';
 import type { DemoCredentialSummary } from '@/integration/cico-passport-journey';
 import { countryName } from '@/integration/country-catalog';
@@ -24,9 +24,14 @@ import {
 import { passportHolderBindingPort } from '@/integration/passport-session-port';
 import { PASSPORT_ACCOUNT_NETWORK } from '@/views/app-runtime';
 import './journey.css';
+import './onboarding.css';
 import type { PassportV2RuntimeReferendum } from '@/integration/passport-v2-runtime-config';
 import { CredentialJourneyTutorial } from './CredentialJourneyTutorial';
 import { EnrollmentHandoff } from './EnrollmentHandoff';
+import { OnboardingMascot } from './OnboardingMascot';
+import { ONBOARDING_COPY } from './onboarding-copy';
+import { PassportPageArt } from './PassportPageArt';
+import { useJourneyHistory } from './useJourneyHistory';
 
 export interface PreviewPassportJourneyPorts {
   readonly passport: PassportSessionPort;
@@ -45,6 +50,9 @@ interface PreviewPassportJourneyProps {
   readonly ports: PreviewPassportJourneyPorts;
   readonly mode?: PreviewPassportJourneyMode;
   readonly onClose: () => void;
+  readonly initialSession?: CivicPassportSession | null;
+  readonly onBackToPassport?: () => void;
+  readonly onVerified?: () => void;
   readonly onCredentialReady?: (credential: DemoCredentialSummary) => void;
   readonly onPassportConnected?: (session: CivicPassportSession | null) => void;
   readonly initialLocale?: CicoLocale;
@@ -129,11 +137,25 @@ export function PreviewPassportJourney({
   onCredentialReady,
   onPassportConnected,
   initialLocale,
+  initialSession,
+  onBackToPassport,
+  onVerified,
   onLocaleChange,
 }: PreviewPassportJourneyProps) {
   const [locale, setLocale] = useState<CicoLocale>(initialLocale ?? 'es');
-  const [stage, setStage] = useState<PreviewStage>('consent');
-  const [session, setSession] = useState<CivicPassportSession | null>(null);
+  const journey = useJourneyHistory<PreviewStage>(
+    initialSession ? 'provider' : 'consent',
+    onBackToPassport,
+  );
+  const { stage, go: setStage } = journey;
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const [session, setSession] = useState<CivicPassportSession | null>(initialSession ?? null);
   const [enrollment, setEnrollment] = useState<ActiveEnrollment | null>(null);
   const [enrollmentStatus, setEnrollmentStatus] = useState<EnrollmentStatusSnapshot | null>(null);
   const [credential, setCredential] = useState<CredentialSummary | null>(null);
@@ -141,12 +163,11 @@ export function PreviewPassportJourney({
   const [error, setError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
-  const [holderBinding, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
+  const [, setHolderBinding] = useState<PassportHolderBindingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const headingRef = useRef<HTMLHeadingElement>(null);
   const pollingRef = useRef(false);
   const checkEnrollmentRef = useRef<(automatic?: boolean) => Promise<void>>(async () => {});
-  const en = locale === 'en';
   const pick = picker(locale);
   const setLanguage = (next: CicoLocale) => {
     setLocale(next);
@@ -206,7 +227,7 @@ export function PreviewPassportJourney({
     return () => {
       active = false;
     };
-  }, [onPassportConnected, ports.passport]);
+  }, [onPassportConnected, ports.passport, setStage]);
 
   const enrollmentExpired =
     Boolean(
@@ -247,6 +268,7 @@ export function PreviewPassportJourney({
         network: PASSPORT_ACCOUNT_NETWORK,
         requestedCapabilities: ['session', 'profile'],
       });
+      if (!active.current) return;
       setSession(connected);
       const holderBindingPort = passportHolderBindingPort(ports.passport);
       if (holderBindingPort && connected.network !== 'mainnet') {
@@ -254,6 +276,7 @@ export function PreviewPassportJourney({
           session: connected,
           network: connected.network,
         });
+        if (!active.current) return;
         setHolderBinding(result);
       }
       onPassportConnected?.(connected);
@@ -261,8 +284,10 @@ export function PreviewPassportJourney({
     });
 
   const loadCredential = async () => {
+    const requestedFrom = journey.current.current;
     if (!ports.credential) throw new Error('El emisor cívico no está configurado.');
     const summary = await ports.credential.getCredentialSummary();
+    if (!active.current || journey.current.current !== requestedFrom) return;
     if (summary?.status !== 'issued') {
       throw new Error('El emisor no devolvió una credencial vigente.');
     }
@@ -277,6 +302,7 @@ export function PreviewPassportJourney({
         session,
         policy: { minimumAssurance: 'document-nfc', requireAdult: true },
       });
+      if (!active.current) return;
       setEnrollment(created);
       setLastCheckedAt(null);
       setEnrollmentStatus({
@@ -311,6 +337,7 @@ export function PreviewPassportJourney({
     try {
       setLastCheckedAt(new Date().toISOString());
       const status = await ports.credential.getEnrollmentStatus(enrollment.enrollmentId);
+      if (!active.current || journey.current.current !== 'enrollment') return;
       setEnrollmentStatus(status);
       if (status.status === 'pending') return;
       if (status.status !== 'issued') {
@@ -354,6 +381,7 @@ export function PreviewPassportJourney({
   const restartEnrollment = () =>
     run(async () => {
       await ports.credential?.clearCredential();
+      if (!active.current) return;
       clearPassportAttempt();
       setEnrollment(null);
       setEnrollmentStatus(null);
@@ -362,21 +390,17 @@ export function PreviewPassportJourney({
       setStage('provider');
     });
 
-  const previousStage: Partial<Record<PreviewStage, PreviewStage>> = {
-    provider: 'consent',
-    enrollment: 'provider',
-    credential: 'enrollment',
-  };
   const screenIndex = Math.max(PREVIEW_SCREENS.indexOf(stage), 0);
 
   const finish = () => {
     if (!credential) return;
     onCredentialReady?.(toDisplayCredential(credential));
-    onClose();
+    if (onVerified) onVerified();
+    else onClose();
   };
 
   return (
-    <main className="page-content passport-journey-page unified-onboarding preview-journey">
+    <main className="page-content passport-journey-page unified-onboarding preview-journey onboarding-v3">
       {/* The same two-row header the demo journey uses. What it replaces here
           was eight stacked blocks: an exit link, a labelled language select, a
           mode label, an eyebrow, a display-size page title, two truth chips, a
@@ -390,21 +414,23 @@ export function PreviewPassportJourney({
         languageLabel={pick('Language', 'Idioma', 'Langue')}
         onExit={onClose}
         exitLabel={pick('Back to app', 'Volver a la app', "Retour à l'application")}
-        {...(previousStage[stage]
-          ? { onBack: () => setStage(previousStage[stage] as PreviewStage) }
-          : {})}
+        {...(journey.canBack && stage !== 'credential'
+          ? { onBack: journey.back }
+          : stage === 'provider' && onBackToPassport
+            ? { onBack: journey.back }
+            : {})}
         backLabel={pick('Previous step', 'Paso anterior', 'Étape précédente')}
         badge={
           mode === 'undeployed' ? pick('Local chain', 'Cadena local', 'Chaîne locale') : 'Preview'
         }
-        current={screenIndex + 1}
+        current={initialSession ? 4 : screenIndex + 1}
         total={PREVIEW_SCREENS.length}
         stageLabel={PREVIEW_STAGE_LABEL[locale][stage]}
-        progressLabel={
-          en
-            ? `Step ${screenIndex + 1} of ${PREVIEW_SCREENS.length}`
-            : `Paso ${screenIndex + 1} de ${PREVIEW_SCREENS.length}`
-        }
+        progressLabel={pick(
+          `Step ${initialSession ? 4 : screenIndex + 1} of 4`,
+          `Paso ${initialSession ? 4 : screenIndex + 1} de 4`,
+          `Étape ${initialSession ? 4 : screenIndex + 1} sur 4`,
+        )}
       />
 
       {error ? (
@@ -491,75 +517,19 @@ export function PreviewPassportJourney({
           className="passport-journey-card unified-card"
           aria-labelledby="preview-provider-title"
         >
-          <div className="unified-hero-icon passport">
-            <ShieldCheck size={38} />
+          <div className="onboarding-document-art">
+            <PassportPageArt />
+            <OnboardingMascot pose="passport" motion />
           </div>
           <h2 id="preview-provider-title" ref={headingRef} tabIndex={-1}>
-            {pick(
-              'Passport session connected',
-              'Sesión Passport conectada',
-              'Session Passport connectée',
-            )}
+            {ONBOARDING_COPY[locale].documentTitle}
           </h2>
-          <dl className="credential-summary">
-            <div>
-              <dt>{pick('Profile', 'Perfil', 'Profil')}</dt>
-              <dd>
-                {session?.profile?.displayName ??
-                  pick('Approved profile', 'Perfil aprobado', 'Profil approuvé')}
-              </dd>
-            </div>
-            <div>
-              <dt>{pick('Network', 'Red', 'Réseau')}</dt>
-              <dd>{session?.network}</dd>
-            </div>
-            <div>
-              <dt>{pick('Capabilities', 'Capacidades', 'Capacités')}</dt>
-              <dd>{session?.capabilities.join(', ')}</dd>
-            </div>
-          </dl>
-          {mode === 'undeployed' ? (
-            <div className="passport-notice info" role="status">
-              <Info size={18} />
-              <p>
-                {pick('Passport account:', 'Cuenta Passport:', 'Compte Passport :')}{' '}
-                <strong>{session?.network ?? 'preview'}</strong>.{' '}
-                {pick('App chain:', 'Cadena de la aplicación:', "Chaîne de l'application :")}{' '}
-                <strong>
-                  {pick('undeployed local', 'local no desplegada', 'locale non déployée')}
-                </strong>
-                .{' '}
-                {pick(
-                  'These networks stay separate.',
-                  'Estas redes no se mezclan.',
-                  'Ces réseaux restent séparés.',
-                )}
-              </p>
-            </div>
-          ) : null}
-          {holderBinding ? (
-            <div
-              className={`passport-notice ${holderBinding.status === 'verified' ? 'success' : 'info'}`}
-              role="status"
-            >
-              {holderBinding.status === 'verified' ? <Check size={18} /> : <Info size={18} />}
-              <p>
-                {holderBinding.status === 'verified'
-                  ? pick(
-                      'Holder binding verified for this Passport session. The binding is not shown or treated as a claim.',
-                      'Holder binding verificado para esta sesión Passport. El binding no se muestra ni se trata como un claim.',
-                      "Le lien avec le porteur est vérifié pour cette session Passport. Il n'est ni affiché ni traité comme une revendication.",
-                    )
-                  : pick(
-                      'This Passport build does not expose a verified holder binding. The session is not presented as a credential.',
-                      'Esta versión de Passport no expone un holder binding verificado. La sesión no se presenta como una credencial.',
-                      "Cette version de Passport n'expose pas de lien vérifié avec le porteur. La session n'est pas présentée comme un justificatif.",
-                    )}
-              </p>
-            </div>
-          ) : null}
-          {/* The boundary was agreed on the previous screen and is not
-              restated here; what belongs on this screen is what came back. */}
+          <p className="onboarding-body">{ONBOARDING_COPY[locale].documentBody}</p>
+          <p className="onboarding-note">{ONBOARDING_COPY[locale].documentNote}</p>
+          <p className="onboarding-note" role="status">
+            <Check size={16} /> {ONBOARDING_COPY[locale].connected} ·{' '}
+            {session?.profile?.displayName ?? 'Passport'}
+          </p>
           {ports.credential ? (
             <>
               <PrivacyNotice>
@@ -591,6 +561,9 @@ export function PreviewPassportJourney({
               </p>
             </div>
           )}
+          <button type="button" className="onboarding-secondary" onClick={onClose}>
+            {ONBOARDING_COPY[locale].later}
+          </button>
         </section>
       ) : null}
 
@@ -726,7 +699,7 @@ export function PreviewPassportJourney({
           aria-labelledby="preview-success-title"
         >
           <div className="journey-success-hero">
-            <CapybaraMascot variant="achievement" decorative size={168} />
+            <OnboardingMascot pose="success" motion />
             <SuccessMark
               label={pick('Credential created', 'Credencial creada', 'Justificatif créé')}
               size="sm"

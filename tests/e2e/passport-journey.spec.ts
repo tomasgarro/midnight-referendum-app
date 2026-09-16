@@ -18,6 +18,7 @@ test('completes the civic pulse without submitting or persisting answers', async
 
   await page.addInitScript(() => {
     window.sessionStorage.setItem('cico-wave1-onboarding-complete', '1');
+    window.localStorage.setItem('cico-locale', 'en');
   });
   await page.goto('/#app');
   const pulseLauncher = page.getByRole('button', {
@@ -29,16 +30,16 @@ test('completes the civic pulse without submitting or persisting answers', async
     session: Object.keys(window.sessionStorage),
   }));
   await pulseLauncher.click();
-  await page.getByRole('button', { name: /Try the civic pulse demo/i }).click();
+  await page.getByRole('button', { name: /Start reflecting/i }).click();
   await page.getByRole('button', { name: /^Begin/i }).click();
   await page.getByRole('button', { name: /Cost of living/i }).click();
   await page.getByRole('button', { name: /Healthcare/i }).click();
   await page.getByRole('button', { name: /^Continue/i }).click();
   await page.getByRole('button', { name: /^Skip$/i }).click();
   await page.getByRole('button', { name: /^Skip$/i }).click();
-  await page.getByRole('button', { name: /Complete local demo/i }).click();
+  await page.getByRole('button', { name: /Finish reflection/i }).click();
 
-  await expect(page.getByRole('heading', { name: 'Your answers stayed private' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A little more clarity.' })).toBeVisible();
   expect(externalRequests).toEqual([]);
   expect(
     await page.evaluate(() => ({
@@ -72,7 +73,7 @@ test('completes Passport onboarding, then creates a choice-free simulated receip
   await expect(journey.credentialHeading).toBeVisible();
   await journey.openDashboard();
   await expect(
-    page.getByRole('button', { name: /Browse by place.*Global|Explorar por lugar.*Global/i }),
+    page.getByRole('button', { name: /Browse by place.*France|Explorar por lugar.*Francia/i }),
   ).toBeVisible();
   await journey.openConsultationAndVote();
   await journey.submitSimulatedReceipt();
@@ -96,7 +97,7 @@ test('ends credential onboarding before scope, ballot, proving, or receipts', as
   await journey.openDashboard();
   await expect(
     page.getByRole('heading', {
-      name: /Consultas para vos|Decisiones que podés explorar|Consultations for you|Decisions you can explore/i,
+      name: /Consultas para vos|Tu lugar en la conversación|Consultations for you|Your place in the conversation/i,
     }),
   ).toBeVisible();
 });
@@ -247,6 +248,7 @@ test('wallet approval appears only at the live-action boundary and groups duplic
   await page.getByRole('button', { name: /Continue/i }).click();
   await page.getByRole('button', { name: /Use demo Passport/i }).click();
   await page.getByRole('button', { name: /Continue/i }).click();
+  await page.getByText(/Try with a simulated pass|Probar con un pase simulado/i).click();
   await page
     .getByRole('button', { name: /Create my simulated pass|Crear mi pase simulado/i })
     .click();
@@ -332,8 +334,7 @@ test('completes the Passport popup handshake with a real browser WindowProxy', a
   page,
   context,
 }) => {
-  test.skip(!showcase, 'Only runs against the prebuilt public showcase artifact.');
-
+  await page.addInitScript(() => localStorage.setItem('cico-locale', 'en'));
   const relyingPartyOrigin = new URL(process.env.BASE_URL ?? 'http://localhost:4173').origin;
   await context.route('https://midnightpassport.com/**', async (route) => {
     await route.fulfill({
@@ -371,14 +372,14 @@ test('completes the Passport popup handshake with a real browser WindowProxy', a
   await page.getByRole('button', { name: /Get started/i }).click();
   await page.getByRole('button', { name: /Continue/i }).click();
   const popupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: /Continue with Passport/i }).click();
+  await page.getByRole('button', { name: /Connect Midnight Passport/i }).click();
   const popup = await popupPromise;
   await popup.waitForLoadState('domcontentloaded');
   await expect(page.getByText('popup.passport')).toBeVisible();
   await page.getByRole('button', { name: /Continue/i }).click();
-  await expect(page.getByRole('heading', { name: 'Vote from wherever you are' })).toBeVisible();
   await expect(
-    page.getByRole('button', { name: /Create my simulated pass|Crear mi pase simulado/i }),
+    page.getByRole('heading', { name: /Your passport\.\s*Just the essentials/ }),
   ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Verify my passport', exact: true })).toBeVisible();
   await popup.close();
 });

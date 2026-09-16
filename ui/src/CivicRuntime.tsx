@@ -54,8 +54,11 @@ import {
   shouldShowFirstRunOnboarding,
   type Tab,
 } from '@/views/app-runtime';
+import { CatalogueChat, type CatalogueMessage } from '@/views/CatalogueChat';
 import { AppHeader, BottomNav } from '@/views/Chrome';
 import { CredentialsView } from '@/views/CredentialsView';
+import { canUseCatalogueDialogue } from '@/views/catalogue-guide';
+import { canUseDemoPass } from '@/views/discovery-presentation';
 import { PolicyDetailView } from '@/views/PolicyDetailView';
 import { ProfileView } from '@/views/ProfileView';
 import {
@@ -68,6 +71,7 @@ import {
 import { SettingsView } from '@/views/SettingsView';
 import { VoteFlow } from '@/views/VoteFlow';
 import { VotesView } from '@/views/VotesView';
+import '@/views/dashboard.css';
 
 /** Re-exported so the runtime-catalog conversion keeps its existing test entry point. */
 export { toRuntimePolls };
@@ -105,11 +109,14 @@ function CivicApp() {
   const [locale, setLocale] = useState<CicoLocale>(() => detectLocale('es-AR'));
   const [theme, setTheme] = useState<ThemePreference>(detectThemePreference);
   const [tab, setTab] = useState<Tab>('discover');
+  const [guideMessages, setGuideMessages] = useState<CatalogueMessage[]>([]);
   const [flowStage, setFlowStage] = useState<FlowStage | null>(null);
   const [passportJourneyOpen, setPassportJourneyOpen] = useState(initialOnboardingRequired);
   const [pulseOpen, setPulseOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsInitialPanel, setSettingsInitialPanel] = useState<'root' | 'feedback'>('root');
+  const [settingsInitialPanel, setSettingsInitialPanel] = useState<'root' | 'feedback' | 'help'>(
+    'root',
+  );
   const [settingsViewKey, setSettingsViewKey] = useState(0);
   /**
    * Verify is an action, so it opens the document step for someone who already
@@ -144,7 +151,7 @@ function CivicApp() {
     setLocale(nextLocale);
     persistLocale(nextLocale);
   };
-  const openSettings = (initialPanel: 'root' | 'feedback') => {
+  const openSettings = (initialPanel: 'root' | 'feedback' | 'help') => {
     setPulseOpen(false);
     setFlowStage(null);
     setPolicyDetailId(null);
@@ -175,7 +182,7 @@ function CivicApp() {
     setPulseOpen(false);
     setFlowStage(null);
     setPolicyDetailId(null);
-    setJourneyStage(passportSession ? 'eligibility' : 'welcome');
+    setJourneyStage(!CHAIN_RUNTIME_ENABLED || passportSession ? 'eligibility' : 'passport');
     setPassportJourneyOpen(true);
   };
   const { status: walletStatus, dustBalance } = useWallet();
@@ -193,6 +200,7 @@ function CivicApp() {
     () =>
       new MidnightPassportSessionAdapter({
         bridge: new PassportIdentityBridge({ passportOrigin: PASSPORT_ORIGIN }),
+        profileFields: ['displayName', 'midnightAddresses'],
       }),
     [],
   );
@@ -361,6 +369,20 @@ function CivicApp() {
       setPreviewError('Esta votación está cerrada y no acepta nuevas participaciones.');
       return;
     }
+    if (
+      !CHAIN_RUNTIME_ENABLED &&
+      credential?.kind === 'synthetic-demo-credential' &&
+      !canUseDemoPass(poll, credential)
+    ) {
+      setPreviewError(
+        locale === 'es'
+          ? 'Esta consulta requiere un pase de prueba vigente, del país correspondiente y de 18 años o más.'
+          : locale === 'fr'
+            ? 'Cette consultation exige un pass de test valide, du pays concerné, et un âge de 18 ans ou plus.'
+            : 'This consultation requires a current test pass for the matching country and age 18 or older.',
+      );
+      return;
+    }
     setActivePollId(pollId);
     setPolicyDetailId(null);
     setChoice(null);
@@ -483,11 +505,13 @@ function CivicApp() {
   };
 
   const lockAndDisconnect = async () => {
+    setGuideMessages([]);
     await passportSessionPort.disconnect();
     setPassportSession(null);
     setPassportError(null);
   };
   const removeLocalData = async () => {
+    setGuideMessages([]);
     const credentialPort = passportJourneyPorts.credential;
     if (credentialPort) await credentialPort.clearCredential();
     if (receiptProfileKey) await clearPassportReceipts(receiptProfileKey);
@@ -500,7 +524,20 @@ function CivicApp() {
   };
 
   const currentTabContent =
-    tab === 'credentials' ? (
+    tab === 'assistant' ? (
+      <CatalogueChat
+        initialMessages={guideMessages}
+        onMessagesChange={setGuideMessages}
+        polls={polls}
+        locale={locale}
+        country={
+          canUseCatalogueDialogue(credential, !CHAIN_RUNTIME_ENABLED)
+            ? credential?.country
+            : undefined
+        }
+        onOpenPolicy={setPolicyDetailId}
+      />
+    ) : tab === 'credentials' ? (
       <CredentialsView
         credentials={credential ? [credential] : []}
         onVerify={openVerification}
@@ -514,7 +551,7 @@ function CivicApp() {
         profileId={profileId}
         walletStatus={walletStatus}
         onConnectPassport={() => void connectPassport()}
-        onReplayOnboarding={replayOnboarding}
+        onOpenHelp={() => openSettings('help')}
         onLockAndDisconnect={() => void lockAndDisconnect()}
         onRemoveLocalData={removeLocalData}
         locale={locale}
@@ -531,6 +568,7 @@ function CivicApp() {
         onOpenPolicy={setPolicyDetailId}
         onOpenPassportJourney={openVerification}
         onOpenPulse={() => setPulseOpen(true)}
+        onOpenGuide={() => setTab('assistant')}
         locale={locale}
       />
     );
@@ -547,7 +585,7 @@ function CivicApp() {
     setReceiptToastVisible(false);
   };
   return (
-    <div className="app-shell">
+    <div className="app-shell dashboard-v4">
       {/* The mode strip is gone. It sat under the header on every screen
           announcing the network label and a line of mode help, plus a
           <details> the user had to open to learn whether anything was wrong.
@@ -573,6 +611,7 @@ function CivicApp() {
           onCredentialReady={(nextCredential) => setCredential(nextCredential)}
           onPassportConnected={setPassportSession}
           initialStage={journeyStage}
+          initialSession={passportSession}
           initialLocale={locale}
           onLocaleChange={changeLocale}
           passportPort={passportSessionPort}
@@ -582,11 +621,18 @@ function CivicApp() {
         <Suspense
           fallback={
             <main className="runtime-loading" aria-live="polite">
-              <p>Loading the civic pulse…</p>
+              <p>
+                {locale === 'es'
+                  ? 'Cargando el pulso cívico…'
+                  : locale === 'fr'
+                    ? 'Chargement du pouls civique…'
+                    : 'Loading the civic pulse…'}
+              </p>
             </main>
           }
         >
           <PulseExperience
+            locale={locale}
             embedded
             onExit={() => setPulseOpen(false)}
             onExploreReferenda={() => setPulseOpen(false)}
@@ -665,6 +711,7 @@ function CivicApp() {
       )}
       {!passportJourneyOpen && !pulseOpen && !settingsOpen && !flowStage && !selectedPolicy ? (
         <BottomNav
+          dialogueReady={canUseCatalogueDialogue(credential, !CHAIN_RUNTIME_ENABLED)}
           tab={tab}
           onVerify={openVerification}
           onChange={(nextTab) => {
