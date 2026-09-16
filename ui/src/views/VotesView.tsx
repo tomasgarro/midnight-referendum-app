@@ -219,26 +219,6 @@ export function VotesView({
 
   return (
     <main className="votes">
-      <header className="votes__head">
-        <Eyebrow>{copy.eyebrow}</Eyebrow>
-        <Display>{copy.title}</Display>
-        <p className="votes__lead">{copy.lead}</p>
-      </header>
-
-      <section className="votes__pulse" aria-labelledby="civic-pulse-title">
-        <span className="votes__pulse-icon" aria-hidden="true">
-          <UsersThree size={23} />
-        </span>
-        <div className="votes__pulse-copy">
-          <p className="sys-eyebrow">{copy.pulseEyebrow}</p>
-          <h2 id="civic-pulse-title">{copy.pulseTitle}</h2>
-          <p>{copy.pulseBody}</p>
-          <Button size="sm" onClick={onOpenPulse}>
-            {copy.pulseAction} <ArrowRight size={16} />
-          </Button>
-        </div>
-      </section>
-
       {onOpenGuide ? (
         <button className="dashboard-guide-entry" type="button" onClick={onOpenGuide}>
           <Robot size={26} />
@@ -423,6 +403,26 @@ export function VotesView({
           </section>
         );
       })}
+
+      <header className="votes__head">
+        <Eyebrow>{copy.eyebrow}</Eyebrow>
+        <Display>{copy.title}</Display>
+        <p className="votes__lead">{copy.lead}</p>
+      </header>
+
+      <section className="votes__pulse" aria-labelledby="civic-pulse-title">
+        <span className="votes__pulse-icon" aria-hidden="true">
+          <UsersThree size={23} />
+        </span>
+        <div className="votes__pulse-copy">
+          <p className="sys-eyebrow">{copy.pulseEyebrow}</p>
+          <h2 id="civic-pulse-title">{copy.pulseTitle}</h2>
+          <p>{copy.pulseBody}</p>
+          <Button size="sm" onClick={onOpenPulse}>
+            {copy.pulseAction} <ArrowRight size={16} />
+          </Button>
+        </div>
+      </section>
 
       {scope.kind === 'world' ? (
         <ResultsPanel contractAddress={publicContractAddress} locale={locale} />
