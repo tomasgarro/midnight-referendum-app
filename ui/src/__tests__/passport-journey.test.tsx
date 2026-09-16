@@ -101,7 +101,10 @@ describe('Passport onboarding', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Connect Midnight Passport' }));
     expect(connect).toHaveBeenCalledWith(
-      expect.objectContaining({ requestedCapabilities: ['session', 'profile'] }),
+      expect.objectContaining({
+        network: 'stagenet',
+        requestedCapabilities: ['session', 'profile'],
+      }),
     );
     expect(connected).toHaveBeenCalledWith(session);
     await user.click(screen.getByRole('button', { name: 'Continue' }));

@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { LandingPage } from './components/landing/LandingPage';
 
+const FeedbackPage = lazy(() => import('./views/FeedbackPage'));
+
 const CivicRuntime = lazy(async () => {
   const module = await import('./CivicRuntime');
   return { default: module.CivicRuntime };
@@ -19,6 +21,13 @@ export function App() {
     window.addEventListener('hashchange', syncRoute);
     return () => window.removeEventListener('hashchange', syncRoute);
   }, [inApp]);
+  if (window.location.pathname.replace(/\/$/, '') === '/feedback') {
+    return (
+      <Suspense fallback={<main className="runtime-loading">Loading…</main>}>
+        <FeedbackPage />
+      </Suspense>
+    );
+  }
   if (!inApp) return <LandingPage />;
   return (
     <Suspense

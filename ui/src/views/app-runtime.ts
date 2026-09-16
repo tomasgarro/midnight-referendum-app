@@ -78,13 +78,11 @@ export const PASSPORT_ORIGIN =
   import.meta.env.VITE_PASSPORT_ORIGIN?.trim() || 'https://midnightpassport.com';
 const configuredPassportNetwork = import.meta.env.VITE_PASSPORT_NETWORK?.trim();
 export const PASSPORT_ACCOUNT_NETWORK: Exclude<PassportNetwork, 'mainnet'> =
-  APP_MODE === 'demo'
-    ? 'devnet'
-    : configuredPassportNetwork === 'preview' ||
-        configuredPassportNetwork === 'devnet' ||
-        configuredPassportNetwork === 'stagenet'
-      ? configuredPassportNetwork
-      : 'stagenet';
+  configuredPassportNetwork === 'preview' ||
+  configuredPassportNetwork === 'devnet' ||
+  configuredPassportNetwork === 'stagenet'
+    ? configuredPassportNetwork
+    : 'stagenet';
 
 export function passportNetworkLabel(network: PassportNetwork, locale: CicoLocale): string {
   if (network === 'stagenet') return 'Stagenet';

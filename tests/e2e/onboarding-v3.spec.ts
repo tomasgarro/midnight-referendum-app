@@ -126,7 +126,7 @@ test('records the complete onboarding with its entry gestures', async ({ page })
   await page.addInitScript(() => localStorage.setItem('cico-locale', 'en'));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#app');
-  await expect(page.locator('.onboarding-mascot__gesture')).toBeVisible();
+  await expect(page.locator('.onboarding-mascot__image')).toBeVisible();
   // Hold each screen long enough to review the actual gesture in the recording.
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: 'Get started', exact: true }).click();

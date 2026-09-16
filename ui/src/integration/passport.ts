@@ -72,6 +72,7 @@ type ProfileResponse = {
 };
 
 type ProfileRequest = {
+  version: 1;
   protocol: typeof PASSPORT_PROFILE_PROTOCOL;
   type: 'passport.profile.request';
   requestId: string;
@@ -293,6 +294,7 @@ function profileRequest(
   return {
     protocol: PASSPORT_PROFILE_PROTOCOL,
     type: 'passport.profile.request',
+    version: 1,
     requestId: pair.requestId,
     nonce: pair.nonce,
     network,

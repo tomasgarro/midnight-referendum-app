@@ -360,13 +360,20 @@ test('completes the Passport popup handshake with a real browser WindowProxy', a
           }, openerOrigin);
           window.addEventListener('message', (event) => {
             if (event.origin !== openerOrigin || event.data?.type !== 'passport.profile.request') return;
+            // Match the deployed Passport contract, rather than accepting any fields.
+            const supported = ['displayName', 'passportContract'];
+            const valid = event.data.version === 1 && event.data.network === 'stagenet'
+              && event.data.fields.length > 0
+              && event.data.fields.every(field => supported.includes(field));
             window.opener.postMessage({
               protocol: 'org.midnight.passport.profile/v1',
               type: 'passport.profile.response',
               requestId,
               nonce,
-              approved: true,
-              profile: { displayName: 'popup.passport' },
+              approved: valid,
+              ...(valid ? { profile: { displayName: 'popup.passport',
+                passportContract: { address: 'test-profile-contract', network: 'stagenet' } } }
+                : { error: 'invalid_request' }),
             }, openerOrigin);
           });
         </script></body></html>`,

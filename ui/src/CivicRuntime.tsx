@@ -200,7 +200,8 @@ function CivicApp() {
     () =>
       new MidnightPassportSessionAdapter({
         bridge: new PassportIdentityBridge({ passportOrigin: PASSPORT_ORIGIN }),
-        profileFields: ['displayName', 'midnightAddresses'],
+        // The public profile bridge supports these fields, not wallet addresses.
+        profileFields: ['displayName', 'passportContract'],
       }),
     [],
   );
