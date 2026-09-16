@@ -7,46 +7,45 @@ in another. Recorded 2 September evidence establishes an earlier-SHA Preview
 registry and referendum deployment, issuance, and root attestation, but no
 citizen vote or current-source runtime transcript. The preserved `abdd0a2`
 transcript remains older frozen-enrollment evidence. See the [dated release
-record](releases/2026-09-13-current-state.md), [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md),
+record](releases/2026-09-16-submission-candidate.md), [ADR-007](adr/ADR-007-open-enrollment-and-evidence-roles.md),
 and [ADR-008](adr/ADR-008-civic-pulse-and-actor-lanes.md).
 
-```text
-Official Midnight Passport PWA
-  passkey account + consented display/account fields
-                 |
-                 v
-        PassportSessionPort
-                 |
-       optional verified grant
-                 v
-   PassportHolderBindingPort ---- unsupported is a valid result
+## Runtime boundaries
 
-Native NFC companion -> evidence provider -> CICO issuer
-       (future P1/P2)      opaque auth       minimum claims only
-                                                   |
-                                                   v
-browser encrypted vault <- private holder material <- Registry V1 leaf
-          |                                             |
-          | local witness + proof                       | initial + admitted roots
-          v                                             v
-     CivicActionPort ----------------------------> Referendum V2
-          |
-          v
- atomic walletless relay -> Midnight node -> indexer -> canonical receipt
+Read this map as a division of responsibility: signing in, checking eligibility, authorizing an action and confirming its result are separate operations. The working demo substitutes explicitly simulated eligibility and receipts. The full live composition below still needs current-release end-to-end evidence.
+
+```mermaid
+flowchart TD
+  passport[Midnight Passport: consent and session] --> session[Session and display profile]
+  session --> ui[Participant application]
+  document[Supported document and NFC phone] --> verifier[Evidence verification provider]
+  verifier --> issuer[CICO: eligibility issuer]
+  issuer --> registry[Credential Registry V1]
+  registry --> publisher[Root publisher: off-chain attestation checks]
+  publisher --> referendum[Referendum V2: approved roots and ballot rules]
+  ui --> prover[Local proof boundary: browser and proof server]
+  prover --> relay[Relay: submit authorized proved actions]
+  relay --> referendum
+  referendum --> indexer[Indexer: observe network state]
+  indexer --> receipt[Canonical receipt reconciliation]
+  receipt --> ui
 ```
 
-The local v1 civic pulse is launched from Discover after the first-run teaching
-journey. It remains outside the credential and contract runtime:
+The root publisher is a trust boundary: the service checks registry attestation, while the referendum contract checks publisher authority. The contract does not independently prove a root came from the intended registry. The configured local proof server sees witnesses and therefore belongs inside the private computing boundary.
 
-```text
-mascot-led onboarding -> Discover -> local priorities -> optional values/explanation needs
-                                      |
-                                      +-> private review -> component memory only
-                                                            -> local completion marker
-                                                               (submitted: false)
+For a step-by-step explanation, see [How it works](HOW-IT-WORKS.md). For reviewed limitations, see the [Compact review](COMPACT-REVIEW-2026-09-16.md).
 
-human result lane ------------------------------------------X synthetic-agent lane
+### Reflection stays outside voting
+
+```mermaid
+flowchart LR
+  discover[Discover] --> pulse[Optional Civic Pulse]
+  pulse --> draft[Think, skip or edit]
+  draft --> review[Private review]
+  review --> done[Local completion: nothing submitted]
 ```
+
+Answers stay in component memory. This path does not issue credentials, call ballot contracts or publish results. Future agent experiments require a separate actor lane and cannot fall back into human results.
 
 ## Package and service ownership
 
@@ -96,8 +95,9 @@ credential, or a wallet; the user-facing fallback is synthetic and labelled.
 2. Evidence authorization is opaque and single-use; CICO persists only the
    minimum derived claims needed for issuance.
 3. Holder material is generated and encrypted in the browser boundary.
-4. Proof creation is intended to happen locally for the Undeployed and Preview
-   product paths; this requirement is not a claim that either path is live.
+4. Proof creation uses a local boundary that includes the configured proof server,
+   which sees witnesses. This is not browser-only computation or evidence that
+   the full Undeployed or Preview product path is live.
 5. The relay accepts only already-proved, allowlisted work and reserves DUST
    transactionally.
 6. A relay acknowledgement is pending state. Only an indexer observation can
