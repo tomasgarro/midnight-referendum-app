@@ -2,11 +2,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Cpu,
-  GlobeHemisphereWest,
   LockKey,
-  Sparkle,
-  UsersThree,
+  MagnifyingGlass,
+  Plant,
+  Scales,
+  X,
 } from '@phosphor-icons/react';
 import {
   CIVIC_PULSE_VERSION,
@@ -16,144 +16,116 @@ import {
   type PulseDraft,
   type TradeoffId,
 } from 'midnight-referendum-api/pulse';
-import { useMemo, useState } from 'react';
-import { MidnightMark } from '@/components/brand/MidnightMark';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { OnboardingMascot } from '@/components/passport-v2/OnboardingMascot';
+import { useJourneyHistory } from '@/components/passport-v2/useJourneyHistory';
+import type { CicoLocale } from '@/integration/locale';
+import { BUDGET_COPY } from './budget-copy';
+import { PULSE_COPY } from './pulse-copy';
 import './pulse-experience.css';
+import './pulse-reflection.css';
 
-type PulseStage =
+type Stage =
   | 'home'
   | 'intro'
   | 'priorities'
   | 'values'
+  | 'budget'
+  | 'funding'
   | 'explanations'
   | 'review'
   | 'complete';
-
-const PRIORITIES: readonly { id: PriorityId; label: string; detail: string }[] = [
-  {
-    id: 'cost-of-living',
-    label: 'Cost of living',
-    detail: 'Everyday prices, income and household security',
-  },
-  {
-    id: 'healthcare',
-    label: 'Healthcare',
-    detail: 'Timely, affordable physical and mental healthcare',
-  },
-  {
-    id: 'education',
-    label: 'Education',
-    detail: 'Learning, skills and opportunity throughout life',
-  },
-  { id: 'housing', label: 'Housing', detail: 'Safe, stable and affordable places to live' },
-  {
-    id: 'climate',
-    label: 'Climate resilience',
-    detail: 'Preparing communities while reducing emissions',
-  },
-  {
-    id: 'public-safety',
-    label: 'Public safety',
-    detail: 'Prevention, emergency services and trusted justice',
-  },
+const PRIORITIES: PriorityId[] = [
+  'cost-of-living',
+  'healthcare',
+  'education',
+  'housing',
+  'climate',
+  'public-safety',
 ];
-
-const TRADEOFFS: readonly { id: TradeoffId; label: string; detail: string }[] = [
-  {
-    id: 'act-sooner',
-    label: 'Act sooner',
-    detail: 'Move quickly, then improve the policy with evidence.',
-  },
-  {
-    id: 'build-consensus',
-    label: 'Build consensus',
-    detail: 'Take more time to seek durable agreement.',
-  },
-  {
-    id: 'target-support',
-    label: 'Target support',
-    detail: 'Focus limited resources on people with the greatest need.',
-  },
-  {
-    id: 'universal-services',
-    label: 'Universal services',
-    detail: 'Make core support broadly available and simple to access.',
-  },
-  {
-    id: 'prefer-not-to-answer',
-    label: 'Prefer not to answer',
-    detail: 'Leave this optional question unanswered.',
-  },
+const VALUES: TradeoffId[] = [
+  'act-sooner',
+  'build-consensus',
+  'target-support',
+  'universal-services',
+  'prefer-not-to-answer',
 ];
-
-const EXPLANATIONS: readonly { id: ExplanationAreaId; label: string }[] = [
-  { id: 'costs', label: 'Costs and funding' },
-  { id: 'delivery', label: 'How delivery would work' },
-  { id: 'evidence', label: 'Evidence for likely outcomes' },
-  { id: 'tradeoffs', label: 'Who benefits and what is traded off' },
-];
-
-const STEP_NUMBER: Partial<Record<PulseStage, number>> = {
-  priorities: 1,
-  values: 2,
-  explanations: 3,
-  review: 4,
-};
-
-function toggle<T extends string>(items: readonly T[], item: T): T[] {
-  return items.includes(item) ? items.filter((value) => value !== item) : [...items, item];
-}
-
+const INFORMATION: ExplanationAreaId[] = ['costs', 'delivery', 'evidence', 'tradeoffs'];
+const stages: Stage[] = ['priorities', 'values', 'budget', 'funding', 'explanations', 'review'];
+const toggle = <T extends string>(items: T[], item: T) =>
+  items.includes(item) ? items.filter((v) => v !== item) : [...items, item];
 export interface PulseExperienceProps {
   readonly onExploreReferenda?: () => void;
   readonly onExit?: () => void;
   readonly embedded?: boolean;
+  readonly locale?: CicoLocale;
 }
-
 export function PulseExperience({
   onExploreReferenda,
   onExit,
   embedded = false,
+  locale = 'en',
 }: PulseExperienceProps) {
+  const t = PULSE_COPY[locale];
+  const budgetCopy = BUDGET_COPY[locale];
+  // Optional reflection stays in component memory, separate from the legacy pulse adapter.
+  const [budget, setBudget] = useState<string | null>(null);
+  const [funding, setFunding] = useState<string | null>(null);
+
   const adapter = useMemo(() => new LocalDemoPriorityPulseAdapter(), []);
-  const [stage, setStage] = useState<PulseStage>('home');
+  const journey = useJourneyHistory<Stage>('home', onExit);
+  const { stage, go } = journey;
   const [priorities, setPriorities] = useState<PriorityId[]>([]);
   const [tradeoffs, setTradeoffs] = useState<TradeoffId[]>([]);
   const [explanationAreas, setExplanationAreas] = useState<ExplanationAreaId[]>([]);
   const [error, setError] = useState<string | null>(null);
-
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (stage) {
+      title.current?.focus();
+      title.current?.scrollIntoView?.({ block: 'nearest' });
+      setError(null);
+    }
+  }, [stage]);
   const reset = () => {
+    setBudget(null);
+    setFunding(null);
     setPriorities([]);
     setTradeoffs([]);
     setExplanationAreas([]);
     setError(null);
-    setStage('home');
+    setEditing(false);
+    if (onExit) onExit();
+    else go('home');
   };
-
+  const next = (target: Stage) => {
+    go(editing ? 'review' : target);
+    setEditing(false);
+  };
   const choosePriority = (id: PriorityId) => {
+    if (!priorities.includes(id) && priorities.length === 3) {
+      setError(t.cap);
+      return;
+    }
     setError(null);
-    if (priorities.includes(id)) {
-      setPriorities(priorities.filter((priority) => priority !== id));
-      return;
-    }
-    if (priorities.length === 3) {
-      setError('Choose up to three priorities. Remove one before adding another.');
-      return;
-    }
-    setPriorities([...priorities, id]);
+    setPriorities(toggle(priorities, id));
   };
-
-  const chooseTradeoff = (id: TradeoffId) => {
-    setError(null);
-    if (id === 'prefer-not-to-answer') {
-      setTradeoffs(tradeoffs.includes(id) ? [] : [id]);
-      return;
-    }
-    const withoutSkip = tradeoffs.filter((value) => value !== 'prefer-not-to-answer');
-    setTradeoffs(toggle(withoutSkip, id));
-  };
-
-  const complete = async () => {
+  const chooseValue = (id: TradeoffId) =>
+    setTradeoffs(
+      id === 'prefer-not-to-answer'
+        ? tradeoffs.includes(id)
+          ? []
+          : [id]
+        : toggle(
+            tradeoffs.filter((v) => v !== 'prefer-not-to-answer'),
+            id,
+          ),
+    );
+  const finish = async () => {
+    if (busy) return;
+    setBusy(true);
     const draft: PulseDraft = {
       questionnaireVersion: CIVIC_PULSE_VERSION,
       actorLane: 'human',
@@ -163,443 +135,342 @@ export function PulseExperience({
     };
     try {
       await adapter.completeLocalDemo(draft);
-      setStage('complete');
-    } catch (failure) {
-      setError(
-        failure instanceof Error ? failure.message : 'The local demo could not be completed.',
-      );
+      go('complete');
+    } catch {
+      setError(t.cap);
+    } finally {
+      setBusy(false);
     }
   };
-
-  const back = () => {
-    setError(null);
-    const previous: Record<Exclude<PulseStage, 'home'>, PulseStage> = {
-      intro: 'home',
-      priorities: 'intro',
-      values: 'priorities',
-      explanations: 'values',
-      review: 'explanations',
-      complete: 'review',
-    };
-    setStage(previous[stage as Exclude<PulseStage, 'home'>]);
-  };
-
-  if (stage === 'home') {
-    return (
-      <div className={`pulse-shell ${embedded ? 'pulse-shell--embedded' : ''}`.trim()}>
-        <header className="pulse-header">
-          {embedded ? (
-            <button className="pulse-back" type="button" onClick={onExit}>
-              <ArrowLeft size={18} /> Back to the app
-            </button>
-          ) : (
-            <a className="pulse-brand" href="#top" aria-label="midnight.vote home">
-              <MidnightMark size={44} title="midnight.vote" />
-              <span>midnight.vote</span>
-            </a>
-          )}
-          <span className="pulse-mode">
-            <span aria-hidden="true" />
-            Local demo
-          </span>
-        </header>
-        <main id="top">
-          <section className="pulse-hero" aria-labelledby="pulse-hero-title">
-            <p className="pulse-kicker">Human civic pulse</p>
-            <h1 id="pulse-hero-title">What should government focus on?</h1>
-            <p className="pulse-hero__lead">
-              Explore priorities, values and tradeoffs in a simple, non-binding civic consultation.
-              Try the local demo: your answers stay in this session and are not submitted.
-            </p>
-            <div className="pulse-actions">
-              <button
-                className="pulse-button pulse-button--primary"
-                type="button"
-                onClick={() => setStage('intro')}
-              >
-                Try the civic pulse demo <ArrowRight size={19} />
-              </button>
-              <button
-                className="pulse-button pulse-button--secondary"
-                type="button"
-                onClick={onExploreReferenda ?? onExit}
-              >
-                Explore consultations
-              </button>
-            </div>
-            <p className="pulse-disclaimer">Non-binding consultation. Not an official election.</p>
-          </section>
-
-          <section className="pulse-trust" aria-labelledby="pulse-trust-title">
-            <div className="pulse-section-heading">
-              <p className="pulse-kicker">Clear boundaries</p>
-              <h2 id="pulse-trust-title">Private by design, honest about the demo</h2>
-            </div>
-            <div className="pulse-card-grid">
-              <article className="pulse-info-card">
-                <LockKey size={24} />
-                <h3>Your answers stay here</h3>
-                <p>
-                  No backend submission, browser storage or political profile. Reset or reload to
-                  erase the draft.
-                </p>
-              </article>
-              <article className="pulse-info-card">
-                <GlobeHemisphereWest size={24} />
-                <h3>Browse without signing in</h3>
-                <p>
-                  Passport is the session and consent foundation. Eligibility is a separate
-                  capability, requested only when needed.
-                </p>
-              </article>
-              <article className="pulse-info-card">
-                <UsersThree size={24} />
-                <h3>Human lane only</h3>
-                <p>
-                  This experience represents an individual person. Synthetic-agent results can never
-                  be mixed into it.
-                </p>
-              </article>
-            </div>
-          </section>
-
-          <section className="pulse-roadmap" aria-labelledby="pulse-roadmap-title">
-            <div className="pulse-section-heading">
-              <p className="pulse-kicker">What comes later</p>
-              <h2 id="pulse-roadmap-title">Tools with visible limits</h2>
-            </div>
-            <div className="pulse-roadmap-grid">
-              <article className="pulse-roadmap-card">
-                <Sparkle size={22} />
-                <div>
-                  <p className="pulse-card-label">Planned · advisory only</p>
-                  <h3>AI research assistant</h3>
-                  <p>
-                    Source-linked context, multiple perspectives and uncertainty. It will never
-                    submit an answer or use civic credentials.
-                  </p>
-                </div>
-              </article>
-              <article className="pulse-roadmap-card">
-                <Cpu size={22} />
-                <div>
-                  <p className="pulse-card-label">Planned · synthetic agents</p>
-                  <h3>Midnight City</h3>
-                  <p>
-                    A separate product space and result lane. Synthetic participation is not human
-                    public opinion.
-                  </p>
-                </div>
-              </article>
-            </div>
-          </section>
-        </main>
-        <footer className="pulse-footer">
-          midnight.vote · Local demonstration · Answers are not collected
-        </footer>
-      </div>
-    );
-  }
-
-  const step = STEP_NUMBER[stage];
+  const step = stages.indexOf(stage);
+  const heading = (value: string) => (
+    <h1 ref={title} tabIndex={-1}>
+      {value}
+    </h1>
+  );
+  const primary = (label: string, action: () => void, disabled = false) => (
+    <button
+      className="pulse-button pulse-button--primary"
+      type="button"
+      onClick={action}
+      disabled={disabled}
+    >
+      {label}
+      <ArrowRight size={19} />
+    </button>
+  );
+  const reviewGroups = [
+    ...(
+      [
+        ['budget', budget],
+        ['funding', funding],
+      ] as const
+    ).map(([target, value], i) => ({
+      name: budgetCopy.groups[i],
+      target: target as Stage,
+      labels: (budgetCopy.options[i] ?? [])
+        .filter((option) => option[0] === value)
+        .map((option) => option[1]),
+    })),
+    {
+      name: t.groups[0],
+      target: 'priorities' as Stage,
+      labels: priorities.map((id) => t.priorities[PRIORITIES.indexOf(id)]?.[0] ?? id),
+    },
+    {
+      name: t.groups[1],
+      target: 'values' as Stage,
+      labels: tradeoffs.map((id) => t.values[VALUES.indexOf(id)]?.[0] ?? id),
+    },
+    {
+      name: t.groups[2],
+      target: 'explanations' as Stage,
+      labels: explanationAreas.map((id) => t.information[INFORMATION.indexOf(id)]),
+    },
+  ];
   return (
-    <div className={`pulse-flow-shell ${embedded ? 'pulse-flow-shell--embedded' : ''}`.trim()}>
-      <header className="pulse-flow-header">
-        <button className="pulse-back" type="button" onClick={stage === 'complete' ? reset : back}>
-          <ArrowLeft size={18} /> {stage === 'complete' ? 'Return home' : 'Back'}
-        </button>
-        <span className="pulse-mode">
-          <span aria-hidden="true" />
-          Local demo
-        </span>
-      </header>
-      {step ? (
-        <div
-          className="pulse-progress"
-          role="progressbar"
-          aria-label={`Step ${step} of 4`}
-          aria-valuemin={1}
-          aria-valuemax={4}
-          aria-valuenow={step}
+    <div className={`pulse-v4 ${embedded ? 'pulse-v4--embedded' : ''}`}>
+      <header className="pulse-v4__header">
+        <button
+          type="button"
+          aria-label={stage === 'home' ? t.exit : t.back}
+          onClick={
+            stage === 'complete'
+              ? reset
+              : stage === 'home'
+                ? (onExit ?? onExploreReferenda ?? reset)
+                : journey.back
+          }
         >
-          <span style={{ width: `${step * 25}%` }} />
+          <ArrowLeft size={20} />
+        </button>
+        <span>{t.name}</span>
+        {stage !== 'home' ? (
+          <button type="button" aria-label={t.exit} onClick={reset}>
+            <X size={20} />
+          </button>
+        ) : (
+          <LockKey size={20} />
+        )}
+      </header>
+      {step >= 0 ? (
+        <div
+          className="pulse-v4__progress"
+          role="progressbar"
+          aria-label={`${t.step} ${step + 1} ${t.of} ${stages.length}`}
+          aria-valuemin={1}
+          aria-valuemax={stages.length}
+          aria-valuenow={step + 1}
+        >
+          {stages.map((s, i) => (
+            <span key={s} data-done={i <= step} />
+          ))}
         </div>
       ) : null}
-      <main className="pulse-flow">
+      <main className="pulse-v4__body" key={stage}>
+        {stage === 'home' ? (
+          <section className="pulse-v4__welcome">
+            <div className="pulse-v4__art">
+              <Plant size={76} weight="duotone" />
+            </div>
+            <p className="sys-eyebrow">{t.private}</p>
+            {heading(t.homeTitle)}
+            <p>{t.homeBody}</p>
+            <span className="pulse-v4__duration">{budgetCopy.duration}</span>
+            <div className="pulse-v4__actions">
+              {primary(t.start, () => go('intro'))}
+              <small>{t.homeNote}</small>
+            </div>
+          </section>
+        ) : null}
         {stage === 'intro' ? (
-          <section className="pulse-flow-card">
-            <p className="pulse-kicker">Before you begin</p>
-            <h1>Your view is yours</h1>
-            <p>
-              This four-step demo helps you reflect on public priorities. There is no correct
-              answer, score or inferred ideology.
+          <section className="pulse-v4__welcome">
+            <div className="pulse-v4__companion">
+              <OnboardingMascot pose="explain" />
+            </div>
+            {heading(t.introTitle)}
+            <p>{t.introBody}</p>
+            <p className="pulse-v4__privacy">
+              <LockKey size={20} />
+              {t.privacy}
             </p>
-            <ul className="pulse-check-list">
-              <li>
-                <Check size={18} /> Choose up to three priorities
-              </li>
-              <li>
-                <Check size={18} /> Skip every optional question
-              </li>
-              <li>
-                <Check size={18} /> Review before completing the demo
-              </li>
-              <li>
-                <Check size={18} /> Nothing is sent or saved
-              </li>
-            </ul>
-            <button
-              className="pulse-button pulse-button--primary"
-              type="button"
-              onClick={() => setStage('priorities')}
-            >
-              Begin <ArrowRight size={19} />
-            </button>
+            <div className="pulse-v4__actions">{primary(t.begin, () => go('priorities'))}</div>
           </section>
         ) : null}
-
-        {stage === 'priorities' ? (
-          <section className="pulse-flow-card" aria-labelledby="priorities-title">
-            <p className="pulse-kicker">Step 1 of 4 · Required</p>
-            <h1 id="priorities-title">Choose up to three priorities</h1>
-            <p>Pick the areas you believe deserve the most attention right now.</p>
-            <div className="pulse-selection-count" aria-live="polite">
-              {priorities.length} of 3 selected
+        {step >= 0 ? (
+          <section>
+            <div className="pulse-v4__question-icon">
+              {step === 0 ? (
+                <Plant size={28} />
+              ) : step === 1 ? (
+                <Scales size={28} />
+              ) : step === 2 ? (
+                <MagnifyingGlass size={28} />
+              ) : (
+                <Check size={28} />
+              )}
             </div>
-            <div className="pulse-option-list">
-              {PRIORITIES.map((priority) => {
-                const selected = priorities.includes(priority.id);
-                return (
-                  <button
-                    key={priority.id}
-                    className="pulse-option"
-                    aria-pressed={selected}
-                    type="button"
-                    onClick={() => choosePriority(priority.id)}
-                  >
-                    <span>
-                      <strong>{priority.label}</strong>
-                      <small>{priority.detail}</small>
-                    </span>
-                    <span className="pulse-option__check" aria-hidden="true">
-                      {selected ? <Check size={16} /> : null}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            {error ? (
-              <p className="pulse-error" role="alert">
-                {error}
-              </p>
+            <p className="sys-eyebrow">
+              {step === 0 ? t.required : stage !== 'review' ? t.optional : t.private}
+            </p>
+            {heading(
+              stage === 'budget'
+                ? budgetCopy.titles[0]
+                : stage === 'funding'
+                  ? budgetCopy.titles[1]
+                  : (t.titles[stage === 'explanations' ? 2 : stage === 'review' ? 3 : step] ?? ''),
+            )}
+            <p className="pulse-v4__lead">
+              {stage === 'budget'
+                ? budgetCopy.bodies[0]
+                : stage === 'funding'
+                  ? budgetCopy.bodies[1]
+                  : t.bodies[stage === 'explanations' ? 2 : stage === 'review' ? 3 : step]}
+            </p>
+            {stage === 'priorities' ? (
+              <>
+                <p className="pulse-v4__count" aria-live="polite">
+                  {priorities.length} {t.of} 3 {t.selected}
+                </p>
+                <div className="pulse-option-list">
+                  {PRIORITIES.map((id, i) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="pulse-option"
+                      aria-pressed={priorities.includes(id)}
+                      onClick={() => choosePriority(id)}
+                    >
+                      <span>
+                        <strong>{t.priorities[i]?.[0]}</strong>
+                        <small>{t.priorities[i]?.[1]}</small>
+                      </span>
+                      <span className="pulse-option__check" aria-hidden="true">
+                        {priorities.includes(id) ? <Check size={16} /> : null}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="pulse-v4__actions">
+                  {error ? <p role="alert">{error}</p> : null}
+                  {primary(t.next, () => next('values'), priorities.length === 0)}
+                </div>
+              </>
             ) : null}
-            <button
-              className="pulse-button pulse-button--primary"
-              type="button"
-              disabled={priorities.length === 0}
-              onClick={() => setStage('values')}
-            >
-              Continue <ArrowRight size={19} />
-            </button>
-          </section>
-        ) : null}
-
-        {stage === 'values' ? (
-          <section className="pulse-flow-card" aria-labelledby="values-title">
-            <p className="pulse-kicker">Step 2 of 4 · Optional</p>
-            <h1 id="values-title">Which tradeoffs matter to you?</h1>
-            <p>
-              Select any statements that fit. Some may pull in different directions; that is part of
-              the question.
-            </p>
-            <div className="pulse-option-list">
-              {TRADEOFFS.map((item) => {
-                const selected = tradeoffs.includes(item.id);
-                return (
+            {stage === 'values' ? (
+              <>
+                <div className="pulse-option-list">
+                  {VALUES.map((id, i) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="pulse-option"
+                      aria-pressed={tradeoffs.includes(id)}
+                      onClick={() => chooseValue(id)}
+                    >
+                      <span>
+                        <strong>{t.values[i]?.[0]}</strong>
+                        <small>{t.values[i]?.[1]}</small>
+                      </span>
+                      <span className="pulse-option__check" aria-hidden="true">
+                        {tradeoffs.includes(id) ? <Check size={16} /> : null}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="pulse-v4__actions">
+                  {primary(t.next, () => next('budget'))}
                   <button
-                    key={item.id}
-                    className="pulse-option"
-                    aria-pressed={selected}
+                    className="pulse-v4__skip"
                     type="button"
-                    onClick={() => chooseTradeoff(item.id)}
+                    onClick={() => {
+                      setTradeoffs([]);
+                      next('budget');
+                    }}
                   >
-                    <span>
-                      <strong>{item.label}</strong>
-                      <small>{item.detail}</small>
-                    </span>
-                    <span className="pulse-option__check" aria-hidden="true">
-                      {selected ? <Check size={16} /> : null}
-                    </span>
+                    {t.skip}
                   </button>
-                );
-              })}
-            </div>
-            <div className="pulse-flow-actions">
-              <button
-                className="pulse-button pulse-button--secondary"
-                type="button"
-                onClick={() => {
-                  setTradeoffs([]);
-                  setStage('explanations');
-                }}
-              >
-                Skip
-              </button>
-              <button
-                className="pulse-button pulse-button--primary"
-                type="button"
-                onClick={() => setStage('explanations')}
-              >
-                Continue <ArrowRight size={19} />
-              </button>
-            </div>
-          </section>
-        ) : null}
-
-        {stage === 'explanations' ? (
-          <section className="pulse-flow-card" aria-labelledby="explanations-title">
-            <p className="pulse-kicker">Step 3 of 4 · Optional</p>
-            <h1 id="explanations-title">What would you like explained better?</h1>
-            <p>
-              Choose any areas where clearer, source-linked information would help you consider the
-              options.
-            </p>
-            <div className="pulse-chip-list">
-              {EXPLANATIONS.map((item) => (
-                <button
-                  key={item.id}
-                  className="pulse-chip"
-                  aria-pressed={explanationAreas.includes(item.id)}
-                  type="button"
-                  onClick={() => setExplanationAreas(toggle(explanationAreas, item.id))}
+                </div>
+              </>
+            ) : null}
+            {stage === 'budget' || stage === 'funding' ? (
+              <>
+                {stage === 'budget' && (
+                  <p className="pulse-budget-definition">{budgetCopy.definition}</p>
+                )}
+                <fieldset
+                  className="pulse-option-list"
+                  aria-label={budgetCopy.groups[stage === 'budget' ? 0 : 1]}
                 >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <p className="pulse-source-note">
-              Future explanations will show publication dates, sources, perspectives and
-              uncertainty. Interactive AI is not enabled in this demo.
-            </p>
-            <div className="pulse-flow-actions">
-              <button
-                className="pulse-button pulse-button--secondary"
-                type="button"
-                onClick={() => {
-                  setExplanationAreas([]);
-                  setStage('review');
-                }}
-              >
-                Skip
-              </button>
-              <button
-                className="pulse-button pulse-button--primary"
-                type="button"
-                onClick={() => setStage('review')}
-              >
-                Review <ArrowRight size={19} />
-              </button>
-            </div>
-          </section>
-        ) : null}
-
-        {stage === 'review' ? (
-          <section className="pulse-flow-card" aria-labelledby="review-title">
-            <p className="pulse-kicker">Step 4 of 4 · Private review</p>
-            <h1 id="review-title">Review your answers</h1>
-            <p>Completing the demo does not submit, store or publish these choices.</p>
-            <div className="pulse-review-section">
-              <div>
-                <h2>Priorities</h2>
-                <button type="button" onClick={() => setStage('priorities')}>
-                  Edit
-                </button>
-              </div>
-              <ul>
-                {priorities.map((id) => (
-                  <li key={id}>{PRIORITIES.find((item) => item.id === id)?.label}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="pulse-review-section">
-              <div>
-                <h2>Values and tradeoffs</h2>
-                <button type="button" onClick={() => setStage('values')}>
-                  Edit
-                </button>
-              </div>
-              <p>
-                {tradeoffs.length
-                  ? tradeoffs
-                      .map((id) => TRADEOFFS.find((item) => item.id === id)?.label)
-                      .join(' · ')
-                  : 'Skipped'}
-              </p>
-            </div>
-            <div className="pulse-review-section">
-              <div>
-                <h2>Explanation needs</h2>
-                <button type="button" onClick={() => setStage('explanations')}>
-                  Edit
-                </button>
-              </div>
-              <p>
-                {explanationAreas.length
-                  ? explanationAreas
-                      .map((id) => EXPLANATIONS.find((item) => item.id === id)?.label)
-                      .join(' · ')
-                  : 'Skipped'}
-              </p>
-            </div>
-            {error ? (
-              <p className="pulse-error" role="alert">
-                {error}
-              </p>
+                  {budgetCopy.options[stage === 'budget' ? 0 : 1].map(([id, label, detail]) => (
+                    <button
+                      className="pulse-option"
+                      type="button"
+                      key={id}
+                      aria-pressed={(stage === 'budget' ? budget : funding) === id}
+                      onClick={() => (stage === 'budget' ? setBudget(id) : setFunding(id))}
+                    >
+                      <span>
+                        <strong>{label}</strong>
+                        <small>{detail}</small>
+                      </span>
+                      <span className="pulse-option__check" aria-hidden="true">
+                        {(stage === 'budget' ? budget : funding) === id && <Check size={16} />}
+                      </span>
+                    </button>
+                  ))}
+                </fieldset>
+                <div className="pulse-v4__actions">
+                  {primary(t.next, () => next(stage === 'budget' ? 'funding' : 'explanations'))}
+                  <button
+                    className="pulse-v4__skip"
+                    type="button"
+                    onClick={() => {
+                      if (stage === 'budget') setBudget(null);
+                      else setFunding(null);
+                      next(stage === 'budget' ? 'funding' : 'explanations');
+                    }}
+                  >
+                    {t.skip}
+                  </button>
+                </div>
+              </>
             ) : null}
-            <button
-              className="pulse-button pulse-button--primary"
-              type="button"
-              onClick={() => void complete()}
-            >
-              Complete local demo <ArrowRight size={19} />
-            </button>
+            {stage === 'explanations' ? (
+              <>
+                <div className="pulse-option-list">
+                  {INFORMATION.map((id, i) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="pulse-option"
+                      aria-pressed={explanationAreas.includes(id)}
+                      onClick={() => setExplanationAreas(toggle(explanationAreas, id))}
+                    >
+                      <strong>{t.information[i]}</strong>
+                      <span className="pulse-option__check" aria-hidden="true">
+                        {explanationAreas.includes(id) ? <Check size={16} /> : null}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="pulse-v4__actions">
+                  {primary(t.review, () => next('review'))}
+                  <button
+                    className="pulse-v4__skip"
+                    type="button"
+                    onClick={() => {
+                      setExplanationAreas([]);
+                      next('review');
+                    }}
+                  >
+                    {t.skip}
+                  </button>
+                </div>
+              </>
+            ) : null}
+            {stage === 'review' ? (
+              <>
+                <div className="pulse-v4__review">
+                  {reviewGroups.map((group) => (
+                    <section key={group.target}>
+                      <header>
+                        <h2>{group.name}</h2>
+                        <button
+                          type="button"
+                          aria-label={`${t.edit}: ${group.name}`}
+                          onClick={() => {
+                            setEditing(true);
+                            go(group.target);
+                          }}
+                        >
+                          {t.edit}
+                        </button>
+                      </header>
+                      <p>{group.labels.join(' · ') || t.skipped}</p>
+                    </section>
+                  ))}
+                </div>
+                <div className="pulse-v4__actions">
+                  {error ? <p role="alert">{error}</p> : null}
+                  {primary(t.finish, () => void finish(), busy)}
+                </div>
+              </>
+            ) : null}
           </section>
         ) : null}
-
         {stage === 'complete' ? (
-          <section className="pulse-flow-card pulse-complete" aria-labelledby="complete-title">
-            <div className="pulse-complete-mark">
-              <Check size={30} />
+          <section className="pulse-v4__welcome">
+            <div className="pulse-v4__art">
+              <Plant size={76} weight="duotone" />
             </div>
-            <p className="pulse-kicker">Demo complete</p>
-            <h1 id="complete-title">Your answers stayed private</h1>
-            <p>
-              No response was submitted or saved. The choices above exist only in this open page and
-              will be erased when you return home or reload.
+            {heading(t.completeTitle)}
+            <p>{t.completeBody}</p>
+            <p className="pulse-v4__privacy">
+              <LockKey size={20} />
+              {t.completeNote}
             </p>
-            <aside className="pulse-fixture" aria-labelledby="fixture-title">
-              <p className="pulse-card-label">Fixed synthetic fixture · Not your answers</p>
-              <h2 id="fixture-title">Example of a future aggregate</h2>
-              <div>
-                <span>Cost of living</span>
-                <strong>59%</strong>
-              </div>
-              <div>
-                <span>Healthcare</span>
-                <strong>49%</strong>
-              </div>
-              <div>
-                <span>Housing</span>
-                <strong>38%</strong>
-              </div>
-              <small>
-                Illustrative data from 240 fictional participants. Human and synthetic-agent lanes
-                remain separate.
-              </small>
-            </aside>
-            <button className="pulse-button pulse-button--primary" type="button" onClick={reset}>
-              Erase answers and return home
-            </button>
+            <div className="pulse-v4__actions">{primary(t.erase, reset)}</div>
           </section>
         ) : null}
       </main>

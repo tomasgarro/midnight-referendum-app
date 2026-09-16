@@ -52,8 +52,8 @@ describe('DocumentVerificationJourney', () => {
 
     expect(screen.getByText('Voting process')).toBeTruthy();
     expect(screen.getByRole('heading', { name: /not a robot/i })).toBeTruthy();
-    // The strongest privacy claim is on the first screen, not buried.
-    expect(screen.getByText(/identity is not kept/i)).toBeTruthy();
+    // Reading the page must not imply provider verification.
+    expect(screen.getByText(/provider verification is a separate step/i)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: /continue/i }));
     expect(screen.getByRole('heading', { name: /on your own device/i })).toBeTruthy();

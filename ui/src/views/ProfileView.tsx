@@ -8,7 +8,6 @@ import {
   SealCheck,
   Translate,
   Trash,
-  Wallet as WalletIcon,
 } from '@phosphor-icons/react';
 import type { CivicPassportSession } from 'midnight-referendum-api';
 import { useState } from 'react';
@@ -16,6 +15,7 @@ import { Button, Card, Display, Eyebrow } from '@/components/system';
 import type { CicoLocale } from '@/integration/locale';
 import type { ThemePreference } from '@/integration/theme';
 import { passportNetworkLabel } from '@/views/app-runtime';
+import { PASSPORT_HELP, passportDisplay } from './passport-display';
 import './profile-view.css';
 
 const COPY = {
@@ -38,7 +38,7 @@ const COPY = {
     language: 'Idioma',
     theme: 'Apariencia',
     themeSystem: 'Según el dispositivo',
-    themeLight: 'Crema',
+    themeLight: 'Gris cálido',
     themeDark: 'Oscuro',
     help: 'Ayuda y seguridad',
     review: 'Revisar cómo funciona',
@@ -73,7 +73,7 @@ const COPY = {
     language: 'Language',
     theme: 'Appearance',
     themeSystem: 'Match device',
-    themeLight: 'Cream',
+    themeLight: 'Warm gray',
     themeDark: 'Dark',
     help: 'Help and security',
     review: 'Review how it works',
@@ -108,7 +108,7 @@ const COPY = {
     language: 'Langue',
     theme: 'Apparence',
     themeSystem: "Selon l'appareil",
-    themeLight: 'Crème',
+    themeLight: 'Gris chaud',
     themeDark: 'Sombre',
     help: 'Aide et sécurité',
     review: 'Revoir le fonctionnement',
@@ -131,7 +131,7 @@ export interface ProfileViewProps {
   readonly profileId: string;
   readonly walletStatus: string;
   readonly onConnectPassport: () => void;
-  readonly onReplayOnboarding: () => void;
+  readonly onOpenHelp: () => void;
   readonly onLockAndDisconnect: () => void;
   readonly onRemoveLocalData: () => Promise<void>;
   readonly locale: CicoLocale;
@@ -142,10 +142,9 @@ export interface ProfileViewProps {
 
 export function ProfileView({
   passportSession,
-  profileId,
   walletStatus,
   onConnectPassport,
-  onReplayOnboarding,
+  onOpenHelp,
   onLockAndDisconnect,
   onRemoveLocalData,
   locale,
@@ -157,10 +156,10 @@ export function ProfileView({
   const [copied, setCopied] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const address = passportSession?.accountAddress ?? null;
-  const displayId = address ?? (passportSession ? profileId : copy.unavailable);
+  const displayId = address || copy.unavailable;
 
   const copyIdentifier = async () => {
-    if (!passportSession) return;
+    if (!address) return;
     await navigator.clipboard.writeText(displayId);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
@@ -174,7 +173,7 @@ export function ProfileView({
             <Fingerprint size={26} weight="bold" />
           </span>
           <div className="profile__identity-copy">
-            <Display>{passportSession?.profile?.displayName ?? copy.fallbackName}</Display>
+            <Display>{passportDisplay(passportSession, locale)}</Display>
             <span className="profile__state" data-on={Boolean(passportSession)}>
               <SealCheck size={14} weight="bold" />
               {passportSession ? copy.stateConnected : copy.statePending}
@@ -193,7 +192,7 @@ export function ProfileView({
         <Card className="profile__account">
           <div className="profile__account-row">
             <span>{copy.address}</span>
-            <button type="button" onClick={() => void copyIdentifier()} disabled={!passportSession}>
+            <button type="button" onClick={() => void copyIdentifier()} disabled={!address}>
               {copied ? <Check size={16} /> : <Copy size={16} />}
               <span className="sr-only">{copy.copyAddress}</span>
             </button>
@@ -257,33 +256,15 @@ export function ProfileView({
       </section>
 
       <section className="profile__section">
-        <Eyebrow>{copy.help}</Eyebrow>
         <Card className="profile__rows" flush>
-          <button
-            type="button"
-            className="profile__row profile__row--action"
-            onClick={onReplayOnboarding}
-          >
-            <Fingerprint size={18} aria-hidden="true" />
+          <button type="button" className="profile__row profile__row--action" onClick={onOpenHelp}>
+            <LockKey size={18} aria-hidden="true" />
             <span>
-              <strong>{copy.review}</strong>
-              <small>{copy.reviewHint}</small>
+              <strong>{PASSPORT_HELP[locale].title}</strong>
+              <small>{PASSPORT_HELP[locale].hint}</small>
             </span>
-            <ArrowUpRight size={17} />
+            <ArrowUpRight size={17} aria-hidden="true" />
           </button>
-          <a
-            className="profile__row profile__row--action"
-            href="https://midnight.domains/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <WalletIcon size={18} aria-hidden="true" />
-            <span>
-              <strong>{copy.domains}</strong>
-              <small>{copy.domainsHint}</small>
-            </span>
-            <ArrowUpRight size={17} />
-          </a>
         </Card>
       </section>
 

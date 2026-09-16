@@ -29,6 +29,9 @@ import {
 import { PassportScanTutorial } from './PassportScanTutorial';
 import { VERIFICATION_JOURNEY_COPY } from './verification-journey-copy';
 import './verification-journey.css';
+import { ONBOARDING_COPY } from './onboarding-copy';
+import { PassportPageArt } from './PassportPageArt';
+import { useJourneyHistory } from './useJourneyHistory';
 
 /**
  * The document journey, following the Référendum Citoyen shape: teach, show,
@@ -125,7 +128,17 @@ export function DocumentVerificationJourney({
   initialStep = 'explain-1',
 }: DocumentVerificationJourneyProps) {
   const copy = VERIFICATION_JOURNEY_COPY[locale];
-  const [step, setStep] = useState<VerificationStep>(initialStep);
+  const journey = useJourneyHistory<VerificationStep>(initialStep, onCancel);
+  const { stage: step, go: setStep } = journey;
+  const mounted = useRef(true);
+  const cameraRequest = useRef(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      cameraRequest.current += 1;
+    };
+  }, []);
   const [cameraError, setCameraError] = useState<CameraFailure | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -149,6 +162,7 @@ export function DocumentVerificationJourney({
   }, []);
 
   const stopCamera = useCallback(() => {
+    cameraRequest.current += 1;
     closeCamera(streamRef.current);
     streamRef.current = null;
     setScanning(false);
@@ -191,12 +205,17 @@ export function DocumentVerificationJourney({
       onDocumentRead({ country: eligibility.country, isAdult: true, source });
       setStep('chip');
     },
-    [copy, onDocumentRead, stopCamera],
+    [copy, onDocumentRead, stopCamera, setStep],
   );
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
+    const request = ++cameraRequest.current;
     const result = await openCamera('environment');
+    if (!mounted.current || request !== cameraRequest.current) {
+      if (result.ok) closeCamera(result.stream);
+      return;
+    }
     if (!result.ok) {
       setCameraError(result.reason);
       return;
@@ -215,7 +234,7 @@ export function DocumentVerificationJourney({
       const started = video.play() as Promise<void> | undefined;
       started?.catch(() => setCameraError('in-use'));
     });
-  }, []);
+  }, [setStep]);
 
   /* The recognition loop. It runs only where the platform has a text detector;
      everywhere else the capture screen says so and points at the manual form,
@@ -265,6 +284,16 @@ export function DocumentVerificationJourney({
 
   return (
     <div className="verify-journey">
+      <button
+        type="button"
+        className="verify-journey__back"
+        onClick={() => {
+          stopCamera();
+          journey.back();
+        }}
+      >
+        {ONBOARDING_COPY[locale].back}
+      </button>
       {isExplain ? (
         <section className="verify-journey__screen" aria-labelledby={`${formId}-explain`}>
           <p className="verify-journey__eyebrow">{copy.processTitle}</p>
@@ -361,7 +390,7 @@ export function DocumentVerificationJourney({
             {copy.analysisTitle}
           </h2>
           <div className="verify-journey__art" aria-hidden="true">
-            <Camera size={44} />
+            <PassportPageArt />
           </div>
           <p className="verify-journey__body">{copy.analysisBody}</p>
           <div className="verify-journey__actions">

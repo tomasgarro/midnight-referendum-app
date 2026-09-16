@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { CivicCredentialPort, PassportSessionPort } from 'midnight-referendum-api';
 import { isoNumericCountry } from 'midnight-referendum-api';
 import { describe, expect, it, vi } from 'vitest';
-import { PassportJourney } from '../components/passport-v2/PassportJourney';
+import { PreviewPassportJourney as PassportJourney } from '../components/passport-v2/PreviewPassportJourney';
 
 const session = {
   sessionId: 'passport-session',
@@ -63,7 +63,7 @@ describe('Preview Passport journey', () => {
         mode="preview"
         onClose={onClose}
         onCredentialReady={onCredentialReady}
-        previewPorts={{
+        ports={{
           passport: passportPort(),
           credential: credentialPort(),
           actions: {
@@ -77,7 +77,9 @@ describe('Preview Passport journey', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
-    expect(await screen.findByRole('heading', { name: 'Sesión Passport conectada' })).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { name: /Tu pasaporte\.\s*Solo lo esencial\./ }),
+    ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Iniciar verificación documental/i }));
     expect(await screen.findByRole('heading', { name: 'Tu credencial está lista' })).toBeTruthy();
     expect(screen.getByText('AR')).toBeTruthy();
@@ -99,11 +101,7 @@ describe('Preview Passport journey', () => {
   it('connects Passport but does not fabricate a credential when backend ports are absent', async () => {
     const user = userEvent.setup();
     render(
-      <PassportJourney
-        mode="preview"
-        onClose={vi.fn()}
-        previewPorts={{ passport: passportPort() }}
-      />,
+      <PassportJourney mode="preview" onClose={vi.fn()} ports={{ passport: passportPort() }} />,
     );
 
     await user.click(screen.getByRole('button', { name: /Conectar Passport/i }));
@@ -142,7 +140,7 @@ describe('Preview Passport journey', () => {
       <PassportJourney
         mode="preview"
         onClose={vi.fn()}
-        previewPorts={{ passport: passportPort(), credential }}
+        ports={{ passport: passportPort(), credential }}
       />,
     );
 
@@ -154,7 +152,9 @@ describe('Preview Passport journey', () => {
     await user.click(screen.getByRole('button', { name: /Comprobar ahora/i }));
     expect(await screen.findByText('el enlace venció')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Generar un enlace nuevo/i }));
-    expect(await screen.findByRole('heading', { name: 'Sesión Passport conectada' })).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { name: /Tu pasaporte\.\s*Solo lo esencial\./ }),
+    ).toBeTruthy();
     expect(clearCredential).toHaveBeenCalledOnce();
   });
 });

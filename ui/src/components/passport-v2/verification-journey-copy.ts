@@ -92,16 +92,15 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
     close: 'Cerrar',
 
     step1Title: 'Comprobá que tu voto es único (y que no sos un robot)',
-    step1Body:
-      'Validá tu edad y tu nacionalidad. Los datos viajan cifrados y no quedan ligados a vos.',
+    step1Body: 'Tu pasaporte puede acreditar tu edad y nacionalidad para una consulta.',
     step1Warning:
-      'Tu identidad no se conserva: los datos personales no se pueden rastrear y se descartan apenas termina la comprobación.',
+      'Leer la página del documento no acredita tu elegibilidad. La comprobación del proveedor es un paso separado.',
     step2Title: 'Verificá tu edad y nacionalidad en tu propio dispositivo',
     step2Body:
-      'El chip del pasaporte se lee en tu teléfono. Los datos del documento no se transfieren ni se guardan en un servidor de terceros.',
+      'Esta página lee los datos localmente. La comprobación del chip continúa en RariMe; revisá su información de privacidad antes de seguir.',
     step3Title: 'Voto anónimo',
     step3Body:
-      'Una vez comprobados los datos, la aplicación produce una credencial anónima que te permite votar.',
+      'Una verificación aprobada puede generar un pase de elegibilidad. Cada consulta define sus requisitos.',
 
     videoTitle: 'Cómo se ve el proceso',
     videoBody: 'Un recorrido de menos de un minuto. Podés saltarlo y volver cuando quieras.',
@@ -179,16 +178,15 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
     close: 'Close',
 
     step1Title: 'Prove your vote is unique (and that you are not a robot)',
-    step1Body:
-      'Validate your age and nationality. The data is encrypted and cannot be traced back to you.',
+    step1Body: 'Your passport can establish age and nationality for a consultation.',
     step1Warning:
-      'Your identity is not kept: personal data cannot be traced and is discarded as soon as the check completes.',
+      'Reading the document page does not establish eligibility. Provider verification is a separate step.',
     step2Title: 'Verify your age and nationality on your own device',
     step2Body:
-      'The chip inside your passport is read on your phone. The document data is not transferred to or stored on a third-party server.',
+      'This page reads document details locally. Chip verification continues in RariMe; review its privacy information before continuing.',
     step3Title: 'Anonymous vote',
     step3Body:
-      'Once the data is checked, the app produces an anonymous credential that lets you vote.',
+      'Successful verification can produce an eligibility pass. Each consultation sets its own requirements.',
 
     videoTitle: 'What the process looks like',
     videoBody: 'Under a minute. You can skip it and come back whenever you like.',
@@ -267,15 +265,15 @@ export const VERIFICATION_JOURNEY_COPY: Record<'es' | 'en' | 'fr', VerificationJ
 
     step1Title: "Validez le caractère unique de votre vote (et que vous n'êtes pas un robot)",
     step1Body:
-      'Validez votre âge et votre nationalité. Vos données sont chiffrées et non traçables.',
+      'Votre passeport peut attester votre âge et votre nationalité pour une consultation.',
     step1Warning:
-      'Votre identité ne sera pas conservée : vos données personnelles sont impossibles à retracer et sont effacées dès la fin de la vérification.',
+      'La lecture du document ne prouve pas votre éligibilité. La vérification du fournisseur est une étape distincte.',
     step2Title: 'Vérifiez votre âge et nationalité localement sur votre appareil',
     step2Body:
-      "Cette application vérifie les données de la puce NFC à l'intérieur de votre passeport. Les données ne sont ni transférées ni conservées sur un serveur tiers.",
+      'Cette page lit les données localement. La vérification de la puce continue dans RariMe ; consultez ses informations de confidentialité avant de continuer.',
     step3Title: 'Vote anonyme',
     step3Body:
-      "Une fois vos données vérifiées comme authentiques, l'application produit un jeton anonyme vous permettant de voter.",
+      "Une vérification réussie peut produire un justificatif d'éligibilité. Chaque consultation définit ses critères.",
 
     videoTitle: 'À quoi ressemble le processus',
     videoBody: "Moins d'une minute. Vous pouvez passer et y revenir quand vous voulez.",

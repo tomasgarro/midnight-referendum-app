@@ -69,7 +69,7 @@ describe('VotesView scope discovery', () => {
       }),
     ]);
 
-    await user.click(screen.getByRole('button', { name: /Browse by place.*Global/i }));
+    await user.click(screen.getByRole('button', { name: /Browse by place.*France/i }));
     expect(screen.getByText('Consultations available')).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Italy/ })).toBeTruthy();
     expect(screen.queryByRole('radio', { name: /Japan/ })).toBeNull();
@@ -90,7 +90,7 @@ describe('VotesView scope discovery', () => {
       }),
     ]);
 
-    await user.click(screen.getByRole('button', { name: /Browse by place.*Global/i }));
+    await user.click(screen.getByRole('button', { name: /Browse by place.*France/i }));
     await user.click(screen.getByRole('radio', { name: /Italy/ }));
 
     expect(screen.getByRole('heading', { name: 'Italy' })).toBeTruthy();

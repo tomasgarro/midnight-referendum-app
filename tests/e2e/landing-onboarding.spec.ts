@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.use({ video: 'on' });
+test.use({ video: { mode: 'on', size: { width: 390, height: 900 } } });
 
 for (const width of [320, 390]) {
   test(`landing to full demo onboarding stays usable at ${width}px`, async ({ page }) => {
@@ -32,30 +32,40 @@ for (const width of [320, 390]) {
     await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden();
     await expect(page.getByRole('heading', { name: /A little less exposure/ })).toBeInViewport();
     await page.getByRole('button', { name: 'Explore Passport', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'midnight.vote', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        name: /Your voice\.\s*Your choice\.|Tu voz\.\s*Tu elección\./,
+        exact: true,
+      }),
+    ).toBeVisible();
     await page.screenshot({ path: test.info().outputPath(`welcome-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Get started', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'What protects your vote' })).toBeVisible();
-    await page.getByRole('button', { name: 'Try a zero-knowledge proof', exact: true }).click();
+    await expect(page.getByRole('heading', { name: /A voice of your own/ })).toBeVisible();
+    await expect(page.getByText('Try a zero-knowledge proof')).toHaveCount(0);
     await noOverflow();
     await page.screenshot({ path: test.info().outputPath(`privacy-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Connect your Passport' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /Meet your\s*Midnight Passport/ }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Previous step' }).click();
-    await expect(page.getByRole('heading', { name: 'What protects your vote' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /A voice of your own/ })).toBeVisible();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await page.screenshot({
       path: test.info().outputPath(`passport-${width}.png`),
       fullPage: true,
     });
     await page.getByRole('button', { name: 'Use demo Passport', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'This is what Passport shared' })).toBeVisible();
+    await expect(page.getByRole('status')).toContainText('Passport connected');
     await page.screenshot({ path: test.info().outputPath(`consent-${width}.png`), fullPage: true });
     await noOverflow();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Create your eligibility pass' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /Your passport\.\s*Just the essentials/ }),
+    ).toBeVisible();
+    await page.getByText('Try with a simulated pass', { exact: true }).click();
     // The native radio is visually hidden; users tap its visible label.
-    await page.getByText('Argentina', { exact: true }).click();
+    await page.getByRole('radio', { name: 'Argentina', exact: true }).check();
     await expect(page.getByRole('radio', { name: /Argentina/ })).toBeChecked();
     await page.screenshot({
       path: test.info().outputPath(`eligibility-${width}.png`),
@@ -63,7 +73,7 @@ for (const width of [320, 390]) {
     });
     await page.getByRole('button', { name: 'Create my simulated pass', exact: true }).click();
     await expect(
-      page.getByRole('heading', { name: 'Your eligibility pass is ready' }),
+      page.getByRole('heading', { name: 'Your simulated pass is ready.' }),
     ).toBeVisible();
     await noOverflow();
     await page.screenshot({ path: test.info().outputPath(`success-${width}.png`), fullPage: true });
@@ -72,7 +82,12 @@ for (const width of [320, 390]) {
       page.getByRole('button', { name: 'Try the civic pulse', exact: true }),
     ).toBeVisible();
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'midnight.vote', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', {
+        name: /Your voice\.\s*Your choice\.|Tu voz\.\s*Tu elección\./,
+        exact: true,
+      }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole('button', { name: 'Try the civic pulse', exact: true }),
     ).toBeVisible();
@@ -101,7 +116,12 @@ test('reduced motion keeps the proof interaction and landing navigation function
     .click();
   await expect(page.locator('.finale-quote blockquote')).toBeInViewport();
   await page.getByRole('button', { name: 'Get started', exact: true }).first().click();
-  await expect(page.getByRole('heading', { name: 'midnight.vote', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: /Your voice\.\s*Your choice\.|Tu voz\.\s*Tu elección\./,
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.goBack();
   await expect(page.locator('.finale-quote blockquote')).toBeVisible();
 });

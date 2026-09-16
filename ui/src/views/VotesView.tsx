@@ -3,6 +3,7 @@ import {
   CaretDown,
   GlobeHemisphereWest,
   MapPin,
+  Robot,
   ShieldCheck,
   UsersThree,
 } from '@phosphor-icons/react';
@@ -31,13 +32,16 @@ import {
   pollCountryCode,
 } from '@/views/poll-model';
 import { ResultsPanel } from '@/views/ResultsPanel';
+import { ConsultationRail } from './ConsultationRail';
 import './votes-view.css';
+import { ConsultationMedia, canUseDemoPass, pollSubject, SUBJECTS } from './discovery-presentation';
+import './discovery-cards.css';
 
 const COPY = {
   es: {
     eyebrow: 'Descubrir',
-    title: 'Decisiones que podés explorar',
-    lead: 'Explorar un país no declara tu nacionalidad. La elegibilidad se verifica solo cuando querés participar.',
+    title: 'Tu lugar en la conversación',
+    lead: 'Explorá preguntas abiertas, entendé las propuestas y participá cuando estés listo.',
     world: 'Global',
     scopeButton: 'Explorar por lugar',
     scopeDialogTitle: 'Elegí un lugar',
@@ -63,16 +67,15 @@ const COPY = {
     fromContract: 'Estado público leído desde Midnight',
     empty: 'No hay consultas publicadas en este alcance todavía.',
     passOnFile: 'Pase registrado para',
-    pulseEyebrow: 'Pulso cívico · Demo local',
-    pulseTitle: '¿Qué debería priorizar el gobierno?',
-    pulseBody:
-      'Elegí prioridades y reflexioná sobre valores sin iniciar sesión. Tus respuestas no se envían ni se guardan.',
+    pulseEyebrow: 'Un momento para reflexionar',
+    pulseTitle: '¿Qué importa en tu día a día?',
+    pulseBody: 'Unas preguntas sobre los cambios que querés ver. En privado y a tu ritmo.',
     pulseAction: 'Probar el pulso cívico',
   },
   en: {
     eyebrow: 'Discover',
-    title: 'Decisions you can explore',
-    lead: 'Browsing a country does not declare your nationality. Eligibility is checked only when you choose to participate.',
+    title: 'Your place in the conversation',
+    lead: 'Explore open questions, understand the proposals, and take part when you are ready.',
     world: 'Global',
     scopeButton: 'Browse by place',
     scopeDialogTitle: 'Choose a place',
@@ -98,16 +101,16 @@ const COPY = {
     fromContract: 'Public state read from Midnight',
     empty: 'No consultations are published in this scope yet.',
     passOnFile: 'Pass on file for',
-    pulseEyebrow: 'Civic pulse · Local demo',
-    pulseTitle: 'What should government prioritize?',
+    pulseEyebrow: 'A moment to reflect',
+    pulseTitle: 'What matters in your everyday life?',
     pulseBody:
-      'Choose priorities and reflect on values without signing in. Your answers are not sent or stored.',
+      'A few thoughtful questions about the changes you want to see. Private, and at your pace.',
     pulseAction: 'Try the civic pulse',
   },
   fr: {
     eyebrow: 'Découvrir',
-    title: 'Des décisions à explorer',
-    lead: "Consulter un pays ne déclare pas votre nationalité. L'éligibilité n'est vérifiée qu'au moment où vous choisissez de participer.",
+    title: 'Votre place dans la conversation',
+    lead: 'Explorez les questions ouvertes, comprenez les propositions et participez à votre rythme.',
     world: 'Monde',
     scopeButton: 'Parcourir par lieu',
     scopeDialogTitle: 'Choisir un lieu',
@@ -134,10 +137,10 @@ const COPY = {
     fromContract: 'État public lu depuis Midnight',
     empty: "Aucune consultation n'est encore publiée dans ce périmètre.",
     passOnFile: 'Laissez-passer enregistré pour',
-    pulseEyebrow: 'Pouls civique · Démo locale',
-    pulseTitle: 'Que devrait prioriser le gouvernement ?',
+    pulseEyebrow: 'Un moment pour réfléchir',
+    pulseTitle: 'Qu’est-ce qui compte au quotidien ?',
     pulseBody:
-      'Choisissez des priorités et réfléchissez aux valeurs sans vous connecter. Vos réponses ne sont ni envoyées ni enregistrées.',
+      'Quelques questions sur les changements que vous souhaitez. En privé, à votre rythme.',
     pulseAction: 'Essayer le pouls civique',
   },
 } as const;
@@ -150,6 +153,7 @@ export interface VotesViewProps {
   readonly onOpenPolicy: (pollId: string) => void;
   readonly onOpenPassportJourney: () => void;
   readonly onOpenPulse: () => void;
+  readonly onOpenGuide?: () => void;
   readonly locale: CicoLocale;
 }
 
@@ -161,10 +165,17 @@ export function VotesView({
   onOpenPolicy,
   onOpenPassportJourney,
   onOpenPulse,
+  onOpenGuide,
   locale,
 }: VotesViewProps) {
   const copy = COPY[locale];
-  const [scope, setScope] = useState<DiscoveryScope>({ kind: 'world' });
+  const [scope, setScope] = useState<DiscoveryScope>(() =>
+    credential?.country ? { kind: 'country', code: credential.country } : { kind: 'world' },
+  );
+  const [subject, setSubject] = useState<keyof typeof SUBJECTS.en>('all');
+  useEffect(() => {
+    if (credential?.country) setScope({ kind: 'country', code: credential.country });
+  }, [credential?.country]);
   const [scopeSheetOpen, setScopeSheetOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -184,7 +195,7 @@ export function VotesView({
     );
   }, [locale, polls]);
 
-  const visiblePolls =
+  const scopedPolls =
     scope.kind === 'world'
       ? polls.filter((poll) => !isCountryPoll(poll))
       : polls.filter((poll) => isCountryPollForCountry(poll, scope.code));
@@ -194,13 +205,14 @@ export function VotesView({
       scope.kind === 'country' &&
       credential.country.trim().toUpperCase() === scope.code.trim().toUpperCase(),
   );
-  const eligibleForScope = Boolean(credential && (scope.kind === 'world' || passMatchesCountry));
 
   const chooseGlobal = () => {
+    setSubject('all');
     setScope({ kind: 'world' });
     setScopeSheetOpen(false);
   };
   const chooseCountry = (code: string) => {
+    setSubject('all');
     setScope({ kind: 'country', code: code.trim().toUpperCase() });
     setScopeSheetOpen(false);
   };
@@ -226,6 +238,29 @@ export function VotesView({
           </Button>
         </div>
       </section>
+
+      {onOpenGuide ? (
+        <button className="dashboard-guide-entry" type="button" onClick={onOpenGuide}>
+          <Robot size={26} />
+          <span>
+            <strong>
+              {locale === 'en'
+                ? 'Ask about a consultation'
+                : locale === 'es'
+                  ? 'Preguntá sobre una consulta'
+                  : 'Une question sur une consultation ?'}
+            </strong>
+            <small>
+              {locale === 'en'
+                ? 'Find a project. Get the essentials.'
+                : locale === 'es'
+                  ? 'Encontrá un proyecto. Conocé lo esencial.'
+                  : 'Trouvez un projet. Comprenez l’essentiel.'}
+            </small>
+          </span>
+          <ArrowRight size={18} />
+        </button>
+      ) : null}
 
       <button
         type="button"
@@ -257,72 +292,137 @@ export function VotesView({
         </span>
       </p>
 
-      <section className="votes__results" aria-labelledby="discover-results-title">
-        <div className="votes__results-head">
-          <div>
-            <p className="sys-eyebrow">
-              {scope.kind === 'world' ? copy.globalScope : copy.countryScope}
-            </p>
-            <h2 id="discover-results-title">{countryLabel}</h2>
-          </div>
-          {passMatchesCountry ? (
-            <span className="votes__eligible">
-              <ShieldCheck size={15} weight="fill" /> {copy.passOnFile} {countryLabel}
-            </span>
-          ) : null}
-        </div>
-
-        {visiblePolls.length ? (
-          <ul className="votes__list">
-            {visiblePolls.map((poll) => {
-              const displayPoll = localizePoll(poll, locale);
-              const isOpen = getPollAvailability(poll, now).isOpen;
-              return (
-                <li key={poll.id}>
-                  <Card className="poll">
-                    <div className="poll__meta">
-                      <span className={`poll__status ${isOpen ? 'poll__status--open' : ''}`.trim()}>
-                        {isOpen ? copy.open : copy.closed}
-                      </span>
-                      <span>
-                        {/* Formatted from `closesAt`, not the pre-rendered
+      <fieldset className="discovery-subjects" aria-label={SUBJECTS[locale].all}>
+        {(Object.keys(SUBJECTS[locale]) as (keyof typeof SUBJECTS.en)[])
+          .filter(
+            (key) =>
+              key === 'all' ||
+              polls
+                .filter(
+                  (poll) =>
+                    !isCountryPoll(poll) ||
+                    (scope.kind === 'country' && isCountryPollForCountry(poll, scope.code)),
+                )
+                .some((poll) => pollSubject(poll) === key),
+          )
+          .map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={subject === key}
+              onClick={() => {
+                setSubject(key);
+              }}
+            >
+              {SUBJECTS[locale][key]}
+            </button>
+          ))}
+      </fieldset>
+      {[
+        { key: 'global', label: copy.world, items: polls.filter((poll) => !isCountryPoll(poll)) },
+        ...(scope.kind === 'country'
+          ? [{ key: scope.code, label: countryLabel, items: scopedPolls }]
+          : []),
+      ].map(({ key: sectionKey, label: countryLabel, items: sectionPolls }) => {
+        const visiblePolls = sectionPolls.filter(
+          (poll) => subject === 'all' || pollSubject(poll) === subject,
+        );
+        return (
+          <section
+            className="votes__results"
+            aria-labelledby={`discover-${sectionKey}`}
+            key={sectionKey}
+          >
+            <div className="votes__results-head">
+              <div>
+                <p className="sys-eyebrow">
+                  {sectionKey === 'global' ? copy.globalScope : copy.countryScope}
+                </p>
+                <h2 id={`discover-${sectionKey}`}>{countryLabel}</h2>
+              </div>
+              {sectionKey !== 'global' && passMatchesCountry ? (
+                <span className="votes__eligible">
+                  <ShieldCheck size={15} weight="fill" />{' '}
+                  {credential?.kind === 'synthetic-demo-credential' ? 'DEMO ·' : copy.passOnFile}{' '}
+                  {countryLabel}
+                </span>
+              ) : null}
+            </div>
+            {visiblePolls.length ? (
+              <ConsultationRail
+                key={countryLabel + subject}
+                label={countryLabel}
+                count={visiblePolls.length}
+                locale={locale}
+              >
+                {visiblePolls.map((poll) => {
+                  const displayPoll = localizePoll(poll, locale);
+                  const eligibleForScope = Boolean(
+                    credential &&
+                      (!isCountryPoll(poll) || isCountryPollForCountry(poll, credential.country)),
+                  );
+                  const isOpen = getPollAvailability(poll, now).isOpen;
+                  return (
+                    <li key={poll.id}>
+                      <Card className="poll">
+                        <ConsultationMedia poll={displayPoll} locale={locale} />
+                        <div className="poll__meta">
+                          <span
+                            className={`poll__status ${isOpen ? 'poll__status--open' : ''}`.trim()}
+                          >
+                            {isOpen ? copy.open : copy.closed}
+                          </span>
+                          <span>
+                            {/* Formatted from `closesAt`, not the pre-rendered
                             `deadline` string: that one is authored per fixture
                             (French on the French one, whatever the reader
                             chose) and it disagreed with the date Activity
                             computed for the same consultation. */}
-                        {copy.closes} {formatDate(poll.closesAt, locale) ?? poll.deadline}
-                      </span>
-                    </div>
-                    <h3 className="poll__title">{displayPoll.title}</h3>
-                    <p className="poll__body">{displayPoll.description}</p>
-                    <p className="poll__note">
-                      {poll.runtimeContractAddress ? copy.fromContract : copy.simulated}
-                    </p>
-                    <div className="poll__actions">
-                      {isOpen ? (
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            eligibleForScope ? onStartVote(poll.id) : onOpenPassportJourney()
-                          }
-                        >
-                          {eligibleForScope ? copy.vote : copy.addEligibility}{' '}
-                          <ArrowRight size={16} />
-                        </Button>
-                      ) : null}
-                      <Button variant="link" size="sm" onClick={() => onOpenPolicy(poll.id)}>
-                        {copy.read}
-                      </Button>
-                    </div>
-                  </Card>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <EmptyState message={copy.empty} />
-        )}
-      </section>
+                            {copy.closes} {formatDate(poll.closesAt, locale) ?? poll.deadline}
+                          </span>
+                        </div>
+                        <h3 className="poll__title">{displayPoll.title}</h3>
+                        <p className="poll__body">{displayPoll.description}</p>
+                        <p className="poll__note">
+                          {poll.runtimeContractAddress ? copy.fromContract : copy.simulated}
+                        </p>
+                        <div className="poll__actions">
+                          {isOpen ? (
+                            <Button
+                              size="sm"
+                              disabled={
+                                credential?.kind === 'synthetic-demo-credential' &&
+                                !canUseDemoPass(poll, credential, now) &&
+                                eligibleForScope
+                              }
+                              onClick={() =>
+                                eligibleForScope ? onStartVote(poll.id) : onOpenPassportJourney()
+                              }
+                            >
+                              {credential?.kind === 'synthetic-demo-credential' &&
+                              credential.ageClass !== '18+'
+                                ? '18+'
+                                : eligibleForScope
+                                  ? copy.vote
+                                  : copy.addEligibility}{' '}
+                              <ArrowRight size={16} />
+                            </Button>
+                          ) : null}
+                          <Button variant="link" size="sm" onClick={() => onOpenPolicy(poll.id)}>
+                            {copy.read}
+                          </Button>
+                        </div>
+                      </Card>
+                    </li>
+                  );
+                })}
+              </ConsultationRail>
+            ) : (
+              <EmptyState message={copy.empty} />
+            )}
+          </section>
+        );
+      })}
 
       {scope.kind === 'world' ? (
         <ResultsPanel contractAddress={publicContractAddress} locale={locale} />

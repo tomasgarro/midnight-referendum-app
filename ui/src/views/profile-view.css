@@ -359,3 +359,7 @@
   align-self: center;
   margin-top: 0;
 }
+.profile__identity-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
